@@ -18,13 +18,13 @@ class Provider {
              uint16_t provider_id = 0,
              const tl::pool& pool = tl::pool());
     
-    Provider(const Provider&); 
+    Provider(const Provider&) = delete;
 
     Provider(Provider&&);
 
-    Provider& operator=(const Provider&);
+    Provider& operator=(const Provider&) = delete;
 
-    Provider& operator=(Provider&&);
+    Provider& operator=(Provider&&) = delete;
 
     ~Provider();
 

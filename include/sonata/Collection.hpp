@@ -30,39 +30,37 @@ class Collection {
 
     operator bool() const;
 
-    bool store(const std::string& record,
-               uint64_t* id) const;
+    uint64_t store(const std::string& record) const;
 
-    bool store(const Json::Value& record,
-               uint64_t* id) const;
+    uint64_t store(const Json::Value& record) const;
 
-    bool fetch(uint64_t id,
+    void fetch(uint64_t id,
                std::string* result) const;
 
-    bool fetch(uint64_t id,
+    void fetch(uint64_t id,
                Json::Value* result) const;
 
-    bool filter(const std::string& filterCode,
+    void filter(const std::string& filterCode,
                 std::string* result) const;
 
-    bool filter(const std::string& filterCode,
+    void filter(const std::string& filterCode,
                 Json::Value* result) const;
 
-    bool update(uint64_t id,
+    void update(uint64_t id,
                 const Json::Value& record) const;
 
-    bool update(uint64_t id,
+    void update(uint64_t id,
                 const std::string& record) const;
 
-    bool all(std::string* result) const;
+    void all(std::string* result) const;
 
-    bool all(Json::Value* result) const;
+    void all(Json::Value* result) const;
 
     uint64_t last_record_id() const;
 
     size_t size() const;
 
-    bool erase(uint64_t id) const;
+    void erase(uint64_t id) const;
 
     private:
 

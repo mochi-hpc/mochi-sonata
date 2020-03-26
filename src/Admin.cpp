@@ -1,6 +1,7 @@
 #include "sonata/Admin.hpp"
 
 #include "AdminImpl.hpp"
+#include "RequestResult.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
 
@@ -26,14 +27,47 @@ Admin::operator bool() const {
     return static_cast<bool>(self);
 }
 
-bool Admin::createDatabase(const std::string& address,
+void Admin::attachDatabase(const std::string& address,
                            uint16_t provider_id,
                            const std::string& db_name,
-                           const std::string& db_path) const {
+                           const std::string& db_type,
+                           const std::string& db_config) const {
     auto endpoint  = self->m_engine.lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
-    bool ok = self->m_create_database.on(ph)(self->m_token, db_name, db_path);
-    return ok;
+    RequestResult<bool> result = self->m_attach_database.on(ph)(self->m_token, db_name, db_type, db_config);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
+}
+
+void Admin::attachDatabase(const std::string& address,
+                           uint16_t provider_id,
+                           const std::string& db_name,
+                           const std::string& db_type,
+                           const Json::Value& db_config) const {
+    attachDatabase(address, provider_id, db_name, db_type, db_config.toStyledString());
+}
+
+void Admin::detachDatabase(const std::string& address,
+                           uint16_t provider_id,
+                           const std::string& db_name) const {
+    auto endpoint  = self->m_engine.lookup(address);
+    auto ph        = tl::provider_handle(endpoint, provider_id);
+    RequestResult<bool> result = self->m_detach_database.on(ph)(self->m_token, db_name);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
+}
+
+void Admin::destroyDatabase(const std::string& address,
+                            uint16_t provider_id,
+                            const std::string& db_name) const {
+    auto endpoint  = self->m_engine.lookup(address);
+    auto ph        = tl::provider_handle(endpoint, provider_id);
+    RequestResult<bool> result = self->m_destroy_database.on(ph)(self->m_token, db_name);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
 }
 
 }

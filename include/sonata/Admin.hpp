@@ -1,6 +1,7 @@
 #ifndef __SONATA_ADMIN_HPP
 #define __SONATA_ADMIN_HPP
 
+#include <json/json.h>
 #include <thallium.hpp>
 #include <memory>
 
@@ -26,10 +27,25 @@ class Admin {
 
     operator bool() const;
 
-    bool createDatabase(const std::string& address,
+    void attachDatabase(const std::string& address,
                         uint16_t provider_id,
                         const std::string& name,
-                        const std::string& path) const;
+                        const std::string& type,
+                        const std::string& config) const;
+
+    void attachDatabase(const std::string& address,
+                        uint16_t provider_id,
+                        const std::string& name,
+                        const std::string& type,
+                        const Json::Value& config) const;
+
+    void detachDatabase(const std::string& address,
+                        uint16_t provider_id,
+                        const std::string& name) const;
+
+    void destroyDatabase(const std::string& address,
+                         uint16_t provider_id,
+                         const std::string& name) const;
 
     private:
 

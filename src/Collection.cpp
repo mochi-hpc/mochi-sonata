@@ -3,6 +3,7 @@
 #include "ClientImpl.hpp"
 #include "DatabaseImpl.hpp"
 #include "CollectionImpl.hpp"
+#include "RequestResult.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/pair.hpp>
@@ -26,66 +27,75 @@ Collection::operator bool() const {
     return static_cast<bool>(self);
 }
 
-bool Collection::store(const std::string& record, uint64_t* id) const {
+uint64_t Collection::store(const std::string& record) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_store;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    std::pair<bool,uint64_t> ret = rpc.on(ph)(db_name, self->m_name, record);
-    if(ret.first && id) {
-        *id = ret.second;
+    RequestResult<uint64_t> result = rpc.on(ph)(db_name, self->m_name, record);
+    if(result.success()) {
+        return result.value();
+    } else {
+        throw std::runtime_error(result.error());
     }
-    return ret.first;
+    return 0;
 }
 
-bool Collection::store(const Json::Value& record, uint64_t* id) const {
-    return store(record.toStyledString(), id);
+uint64_t Collection::store(const Json::Value& record) const {
+    return store(record.toStyledString());
 }
 
-bool Collection::fetch(uint64_t id, std::string* result) const {
+void Collection::fetch(uint64_t id, std::string* out) const {
+    if(not out) return;
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_fetch;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    std::pair<bool,std::string> ret = rpc.on(ph)(db_name, self->m_name, id);
-    if(ret.first && result) {
-        *result = std::move(ret.second);
+    RequestResult<std::string> result = rpc.on(ph)(db_name, self->m_name, id);
+    if(result.success()) {
+        *out = std::move(result.value());
+    } else {
+        throw std::runtime_error(result.error());
     }
-    return ret.first;
 }
 
-bool Collection::fetch(uint64_t id, Json::Value* result) const {
+void Collection::fetch(uint64_t id, Json::Value* result) const {
+    if(not result) return;
     std::string str;
-    bool b = fetch(id, &str);
-    if(b && result) {
-        std::string errors;
-        bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
-                                               str.c_str() + str.size(),
-                                               result,
-                                               &errors);
-        if(!parsingSuccessful) {
-            throw std::runtime_error(errors);
-        }
+    fetch(id, &str);
+    
+    std::string errors;
+    bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
+            str.c_str() + str.size(),
+            result,
+            &errors);
+
+    if(!parsingSuccessful) {
+        throw std::runtime_error(errors);
     }
-    return b;
 }
 
-bool Collection::filter(const std::string& filterCode, std::string* result) const {
+void Collection::filter(const std::string& filterCode, std::string* out) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_filter;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    std::pair<bool,std::string> ret = rpc.on(ph)(db_name, self->m_name, filterCode);
-    if(ret.first && result) {
-        *result = std::move(ret.second);
+    RequestResult<std::string> result = rpc.on(ph)(db_name, self->m_name, filterCode);
+    if(result.success()) {
+        if(out) *out = std::move(result.value());
+    } else {
+        throw std::runtime_error(result.error());
     }
-    return ret.first;
 }
 
-bool Collection::filter(const std::string& filterCode, Json::Value* result) const {
+void Collection::filter(const std::string& filterCode, Json::Value* result) const {
     std::string str;
-    bool b = filter(filterCode, &str);
-    if(b && result) {
+    if(result)
+        filter(filterCode, &str);
+    else
+        filter(filterCode, static_cast<std::string*>(nullptr));
+
+    if(result) {
         std::string errors;
         bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
                                                str.c_str() + str.size(),
@@ -95,38 +105,40 @@ bool Collection::filter(const std::string& filterCode, Json::Value* result) cons
             throw std::runtime_error(errors);
         }
     }
-    return b;
 }
 
-bool Collection::update(uint64_t id, const std::string& record) const {
+void Collection::update(uint64_t id, const std::string& record) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_update;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    bool ret = rpc.on(ph)(db_name, self->m_name, id, record);
-    return ret;
+    RequestResult<bool> result = rpc.on(ph)(db_name, self->m_name, id, record);
+    if(result.success()) return;
+    else throw std::runtime_error(result.error());
 }
 
-bool Collection::update(uint64_t id, const Json::Value& record) const {
-    return update(id, record.toStyledString());
+void Collection::update(uint64_t id, const Json::Value& record) const {
+    update(id, record.toStyledString());
 }
 
-bool Collection::all(std::string* result) const {
+void Collection::all(std::string* out) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_all;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    std::pair<bool,std::string> ret = rpc.on(ph)(db_name, self->m_name);
-    if(ret.first && result) {
-        *result = std::move(ret.second);
+    RequestResult<std::string> result = rpc.on(ph)(db_name, self->m_name);
+    if(result.success()) {
+        if(out) *out = std::move(result.value());
+    } else {
+        throw std::runtime_error(result.error());
     }
-    return ret.first;
 }
 
-bool Collection::all(Json::Value* result) const {
+void Collection::all(Json::Value* result) const {
     std::string str;
-    bool b = all(&str);
-    if(b && result) {
+    if(result) all(&str);
+    else all(static_cast<std::string*>(nullptr));
+    if(result) {
         std::string errors;
         bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
                                                str.c_str() + str.size(),
@@ -136,7 +148,6 @@ bool Collection::all(Json::Value* result) const {
             throw std::runtime_error(errors);
         }
     }
-    return b;
 }
 
 uint64_t Collection::last_record_id() const {
@@ -144,8 +155,10 @@ uint64_t Collection::last_record_id() const {
     auto& rpc = self->m_database->m_client->m_coll_last_id;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    uint64_t ret = rpc.on(ph)(db_name, self->m_name);
-    return ret;
+    RequestResult<uint64_t> result = rpc.on(ph)(db_name, self->m_name);
+    if(not result.success())
+        throw std::runtime_error(result.error());
+    return result.value();
 }
 
 size_t Collection::size() const {
@@ -153,17 +166,21 @@ size_t Collection::size() const {
     auto& rpc = self->m_database->m_client->m_coll_size;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    size_t ret = rpc.on(ph)(db_name, self->m_name);
-    return ret;
+    RequestResult<size_t> result = rpc.on(ph)(db_name, self->m_name);
+    if(not result.success())
+        throw std::runtime_error(result.error());
+    return result.value();
 }
 
-bool Collection::erase(uint64_t id) const {
+void Collection::erase(uint64_t id) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_erase;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    bool ret = rpc.on(ph)(db_name, self->m_name);
-    return ret;
+    RequestResult<bool> result = rpc.on(ph)(db_name, self->m_name);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
 }
 
 }

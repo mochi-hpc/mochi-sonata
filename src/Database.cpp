@@ -4,6 +4,7 @@
 #include "ClientImpl.hpp"
 #include "DatabaseImpl.hpp"
 #include "CollectionImpl.hpp"
+#include "RequestResult.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
 
@@ -28,19 +29,22 @@ Database::operator bool() const {
 
 Collection Database::create(const std::string& collectionName) const {
     if(not self) throw std::runtime_error("Invalid sonata::Database object");
-    bool b = self->m_client->m_create_collection.on(self->m_ph)(self->m_name, collectionName);
-    if(b) {
+    RequestResult<bool> result = self->m_client->m_create_collection.on(self->m_ph)(self->m_name, collectionName);
+    if(result.success()) {
         auto coll_impl = std::make_shared<CollectionImpl>(self, collectionName);
         return Collection(coll_impl);
     } else {
+        throw std::runtime_error(result.error());
         return Collection(nullptr);
     }
 }
 
-bool Database::drop(const std::string& collectionName) const {
+void Database::drop(const std::string& collectionName) const {
     if(not self) throw std::runtime_error("Invalid sonata::Database object");
-    bool b = self->m_client->m_drop_collection.on(self->m_ph)(self->m_name, collectionName);
-    return b;
+    RequestResult<bool> result = self->m_client->m_drop_collection.on(self->m_ph)(self->m_name, collectionName);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
 }
 
 }

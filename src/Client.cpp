@@ -2,6 +2,7 @@
 #include "sonata/Database.hpp"
 #include "sonata/Collection.hpp"
 
+#include "RequestResult.hpp"
 #include "ClientImpl.hpp"
 #include "DatabaseImpl.hpp"
 
@@ -34,11 +35,12 @@ Database Client::open(const std::string& address,
                       const std::string& db_name) const {
     auto endpoint  = self->m_engine.lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
-    bool db_exists = self->m_open_database.on(ph)(db_name);
-    if(db_exists) {
+    RequestResult<bool> result = self->m_open_database.on(ph)(db_name);
+    if(result.success()) {
         auto db_impl = std::make_shared<DatabaseImpl>(self, std::move(ph), db_name);
         return Database(db_impl);
     } else {
+        throw std::runtime_error(result.error());
         return Database(nullptr);
     }
 }

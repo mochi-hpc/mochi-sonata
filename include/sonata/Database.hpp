@@ -30,7 +30,7 @@ class Database {
 
     Collection create(const std::string& collectionName) const;
 
-    bool drop(const std::string& collectionName) const;
+    void drop(const std::string& collectionName) const;
 
     operator bool() const;
 
