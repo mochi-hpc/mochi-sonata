@@ -1,10 +1,10 @@
 #include "sonata/Database.hpp"
 #include "sonata/Collection.hpp"
+#include "sonata/RequestResult.hpp"
 
 #include "ClientImpl.hpp"
 #include "DatabaseImpl.hpp"
 #include "CollectionImpl.hpp"
-#include "RequestResult.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
 

@@ -1,8 +1,8 @@
 #include "sonata/Client.hpp"
 #include "sonata/Database.hpp"
 #include "sonata/Collection.hpp"
+#include "sonata/RequestResult.hpp"
 
-#include "RequestResult.hpp"
 #include "ClientImpl.hpp"
 #include "DatabaseImpl.hpp"
 

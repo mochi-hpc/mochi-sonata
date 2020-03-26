@@ -141,115 +141,109 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void destroyDatabase(const tl::request& req,
                          const std::string& token,
                          const std::string& db_name) {
-        auto ret = std::make_pair<bool,std::string>(true,"");
+        RequestResult<bool> result;
         if(m_backends.count(db_name) == 0) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
 
-        m_backends[db_name]->destroy();
+        result = m_backends[db_name]->destroy();
         m_backends.erase(db_name);
 
-        req.respond(ret);
+        req.respond(result);
     }
 
     void openDatabase(const tl::request& req,
                       const std::string& db_name) {
-        auto ret = std::make_pair<bool,std::string>(true,"");;
         auto it = m_backends.find(db_name);
+        RequestResult<bool> result;
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        req.respond(ret);
+        req.respond(result);
     }
 
     void createCollection(const tl::request& req,
                           const std::string& db_name,
                           const std::string& coll_name) {
-        auto ret = std::make_pair<bool,std::string>(true,"");;
+        RequestResult<bool> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        ret.first = it->second->createCollection(coll_name);
-        if(not ret.first) {
-            ret.second = "Could not create collection "s + coll_name;
-        }
-        req.respond(ret);
+        result = it->second->createCollection(coll_name);
+        req.respond(result);
     }
 
     void dropCollection(const tl::request& req,
                         const std::string& db_name,
                         const std::string& coll_name) {
-        auto ret = std::make_pair<bool,std::string>(true,"");;
+        RequestResult<bool> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        ret.first = it->second->dropCollection(coll_name);
-        if(not ret.first) {
-            ret.second = "Could not drop collection "s + coll_name;
-        }
-        req.respond(ret);    
+        result = it->second->dropCollection(coll_name);
+        req.respond(result);    
     }
 
     void store(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
                const std::string& record) {
-        auto ret = std::make_tuple<bool,uint64_t,std::string>(true,0,"");
+        RequestResult<uint64_t> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            std::get<0>(ret) = false;
-            std::get<2>(ret) = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->store(coll_name, record);
+        req.respond(result);
     }
 
     void fetch(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
                uint64_t record_id) {
-        auto ret = std::make_pair<bool,std::string>(true, "");
+        RequestResult<std::string> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->fetch(coll_name, record_id);
+        req.respond(result);
     }
 
     void filter(const tl::request& req,
                 const std::string& db_name,
                 const std::string& coll_name,
                 const std::string& filter_code) {
-        auto ret = std::make_pair<bool,std::string>(true, "");
+        RequestResult<std::string> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->filter(coll_name, filter_code);
+        req.respond(result);
     }
 
     void update(const tl::request& req,
@@ -257,77 +251,77 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                 const std::string& coll_name,
                 uint64_t record_id,
                 const std::string& new_content) {
-        auto ret = std::make_pair<bool,std::string>(true, "");
+        RequestResult<bool> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->update(coll_name, record_id, new_content);
+        req.respond(result);
     }
 
     void all(const tl::request& req,
              const std::string& db_name,
              const std::string& coll_name) {
-        auto ret = std::make_pair<bool,std::string>(true,"");
+        RequestResult<std::string> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            ret.first = false;
-            ret.second = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->all(coll_name);
+        req.respond(result);
     }
 
     void lastID(const tl::request& req,
                 const std::string& db_name,
                 const std::string& coll_name) {
-        auto ret = std::make_tuple<bool,uint64_t,std::string>(true,0,"");
+        RequestResult<uint64_t> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            std::get<0>(ret) = false;
-            std::get<2>(ret) = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->lastID(coll_name); 
+        req.respond(result);
     }
 
     void size(const tl::request& req,
               const std::string& db_name,
               const std::string& coll_name) {
-        auto ret = std::make_tuple<bool,uint64_t,std::string>(true,0,"");
+        RequestResult<uint64_t> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            std::get<0>(ret) = false;
-            std::get<2>(ret) = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->size(coll_name);
+        req.respond(result);
     }
 
     void erase(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
                uint64_t record_id) {
-        auto ret = std::make_pair<bool,std::string>(true,"");
+        RequestResult<bool> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
-            std::get<0>(ret) = false;
-            std::get<1>(ret) = "Backend "s + db_name + " not found";
-            req.respond(ret);
+            result.success() = false;
+            result.error() = "Backend "s + db_name + " not found";
+            req.respond(result);
             return;
         }
-        // TODO
-        req.respond(ret);
+        result = it->second->erase(coll_name, record_id);
+        req.respond(result);
     }
 };
 

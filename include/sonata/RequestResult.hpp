@@ -47,8 +47,8 @@ class RequestResult {
 
     private:
 
-    bool        m_success;
-    std::string m_error;
+    bool        m_success = true;
+    std::string m_error   = "";
     T           m_value;
 };
 
@@ -95,8 +95,8 @@ class RequestResult<std::string> {
 
     private:
 
-    bool        m_success;
-    std::string m_content;
+    bool        m_success = true;
+    std::string m_content = "";
 };
 
 template<>
@@ -142,8 +142,8 @@ class RequestResult<bool> {
 
     private:
 
-    bool        m_success;
-    std::string m_error;
+    bool        m_success = true;
+    std::string m_error   = "";
 };
 
 }

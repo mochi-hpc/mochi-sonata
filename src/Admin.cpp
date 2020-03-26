@@ -1,7 +1,7 @@
 #include "sonata/Admin.hpp"
+#include "sonata/RequestResult.hpp"
 
 #include "AdminImpl.hpp"
-#include "RequestResult.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
 

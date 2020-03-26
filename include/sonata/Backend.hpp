@@ -1,6 +1,8 @@
 #ifndef __SONATA_BACKEND_HPP
 #define __SONATA_BACKEND_HPP
 
+#include <sonata/RequestResult.hpp>
+
 #include <json/json.h>
 
 namespace sonata {
@@ -21,43 +23,43 @@ class Backend {
 
     virtual ~Backend() = default;
 
-    virtual bool createCollection(
+    virtual RequestResult<bool> createCollection(
             const std::string& coll_name) = 0;
 
-    virtual bool dropCollection(
+    virtual RequestResult<bool> dropCollection(
             const std::string& coll_name) = 0;
 
-    virtual std::pair<bool,uint64_t> store(
+    virtual RequestResult<uint64_t> store(
             const std::string& coll_name,
             const std::string& record) = 0;
 
-    virtual std::pair<bool,std::string> fetch(
+    virtual RequestResult<std::string> fetch(
             const std::string& coll_name,
             uint64_t record_id) = 0;
 
-    virtual std::pair<bool,std::string> filter(
+    virtual RequestResult<std::string> filter(
             const std::string& coll_name,
             const std::string& filter_code) = 0;
 
-    virtual bool update(
+    virtual RequestResult<bool> update(
             const std::string& coll_name,
             uint64_t record_id,
             const std::string& new_content) = 0;
 
-    virtual std::pair<bool,std::string> all(
+    virtual RequestResult<std::string> all(
             const std::string& coll_name) = 0;
 
-    virtual uint64_t lastID(
+    virtual RequestResult<uint64_t> lastID(
             const std::string& coll_name) = 0;
 
-    virtual size_t size(
+    virtual RequestResult<size_t> size(
             const std::string& coll_name) = 0;
 
-    virtual bool erase(
+    virtual RequestResult<bool> erase(
             const std::string& coll_name,
             uint64_t record_id) = 0;
 
-    virtual bool destroy() = 0;
+    virtual RequestResult<bool> destroy() = 0;
 
 };
 
