@@ -1,6 +1,6 @@
 # list of source files
 set(sonata-client-src Client.cpp Database.cpp Collection.cpp)
-set(sonata-server-src Provider.cpp)
+set(sonata-server-src Provider.cpp UnQLiteBackend.cpp)
 set(sonata-admin-src  Admin.cpp)
 
 # load package helper for generating cmake CONFIG packages

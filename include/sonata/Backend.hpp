@@ -2,8 +2,12 @@
 #define __SONATA_BACKEND_HPP
 
 #include <sonata/RequestResult.hpp>
-
+#include <unordered_map>
+#include <functional>
 #include <json/json.h>
+
+template<typename BackendType>
+class __SonataBackendRegistration;
 
 namespace sonata {
 
@@ -65,6 +69,9 @@ class Backend {
 
 class BackendFactory {
 
+    template<typename BackendType>
+    friend class ::__SonataBackendRegistration;
+
     public:
 
     BackendFactory() = delete;
@@ -78,23 +85,23 @@ class BackendFactory {
                 std::function<std::unique_ptr<Backend>(const Json::Value&)>> factories;
 };
 
+} // namespace sonata
+
+
 #define SONATA_REGISTER_BACKEND(__backend_name, __backend_type) \
-    static __BackendRegistration<__backend_type> __sonata ## __backend_name ## _backend( #__backend_name );
+    static __SonataBackendRegistration<__backend_type> __sonata ## __backend_name ## _backend( #__backend_name )
 
 template<typename BackendType>
-class __BackendRegistration {
+class __SonataBackendRegistration {
     
     public:
 
-    template<typename FactoryType>
-    __BackendRegistration(const std::string& backend_name)
+    __SonataBackendRegistration(const std::string& backend_name)
     {
-        BackendFactory::factories[backend_name] = [](const Json::Value& config) {
-            return BackendType::New(config);
+        sonata::BackendFactory::factories[backend_name] = [](const Json::Value& config) {
+            return std::make_unique<BackendType>(config);
         };
     }
 };
-
-}
 
 #endif

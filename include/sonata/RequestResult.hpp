@@ -1,6 +1,8 @@
 #ifndef __REQUEST_RESULT_HPP
 #define __REQUEST_RESULT_HPP
 
+#include <string>
+
 namespace sonata {
 
 template<typename T>
