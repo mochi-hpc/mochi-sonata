@@ -1,0 +1,12 @@
+prefix=@DEST_DIR@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: sonata-client 
+Description: Mochi-based structured document service
+Version: @SONATA_VERSION@
+
+Requires: thallium
+Libs: -L${libdir} @PRIVATE_CLIENT_LIBS@
+Cflags: -I${includedir}

@@ -1,0 +1,9 @@
+spack:
+  specs:
+  - mochi-thallium
+  - cppunit
+  - unqlite
+  - cmake
+  - libuuid
+  - jsoncpp
+  concretization: together
