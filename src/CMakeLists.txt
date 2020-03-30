@@ -1,6 +1,6 @@
 # list of source files
 set(sonata-client-src Client.cpp Database.cpp Collection.cpp)
-set(sonata-server-src Provider.cpp UnQLiteBackend.cpp)
+set(sonata-server-src Provider.cpp Backend.cpp UnQLiteBackend.cpp)
 set(sonata-admin-src  Admin.cpp)
 
 # load package helper for generating cmake CONFIG packages
@@ -19,15 +19,15 @@ set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")
 
 add_library(sonata-client ${sonata-client-src})
-target_link_libraries (sonata-client thallium margo)
+target_link_libraries (sonata-client thallium margo jsoncpp spdlog)
 target_include_directories (sonata-client PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-admin ${sonata-admin-src})
-target_link_libraries (sonata-admin thallium margo)
+target_link_libraries (sonata-admin thallium margo jsoncpp spdlog)
 target_include_directories (sonata-admin PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-server ${sonata-server-src})
-target_link_libraries (sonata-server thallium margo unqlite)
+target_link_libraries (sonata-server thallium margo unqlite jsoncpp spdlog)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
 # local include's BEFORE, in case old incompatable .h files in prefix/include

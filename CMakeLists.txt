@@ -40,10 +40,13 @@ xpkg_import_module (margo REQUIRED margo)
 xpkg_import_module (uuid REQUIRED uuid)
 xpkg_import_module (jsoncpp REQUIRED jsoncpp)
 find_package (UnQLite REQUIRED)
+find_package (TCLAP REQUIRED)
+find_package(spdlog REQUIRED)
 
 message(STATUS ${UNQLITE_LIBRARIES})
 
 add_subdirectory (src)
+add_subdirectory (bin)
 if(${ENABLE_TESTS})
   add_subdirectory (test)
 endif(${ENABLE_TESTS})

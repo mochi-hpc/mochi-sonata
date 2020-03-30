@@ -75,12 +75,12 @@ void Collection::fetch(uint64_t id, Json::Value* result) const {
     }
 }
 
-void Collection::filter(const std::string& filterCode, std::string* out) const {
+void Collection::filter(const std::string& filterCode, std::vector<std::string>* out) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_filter;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    RequestResult<std::string> result = rpc.on(ph)(db_name, self->m_name, filterCode);
+    RequestResult<std::vector<std::string>> result = rpc.on(ph)(db_name, self->m_name, filterCode);
     if(result.success()) {
         if(out) *out = std::move(result.value());
     } else {
@@ -89,21 +89,27 @@ void Collection::filter(const std::string& filterCode, std::string* out) const {
 }
 
 void Collection::filter(const std::string& filterCode, Json::Value* result) const {
-    std::string str;
+    std::vector<std::string> array;
     if(result)
-        filter(filterCode, &str);
+        filter(filterCode, &array);
     else
-        filter(filterCode, static_cast<std::string*>(nullptr));
+        filter(filterCode, static_cast<std::vector<std::string>*>(nullptr));
 
     if(result) {
-        std::string errors;
-        bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
-                                               str.c_str() + str.size(),
-                                               result,
+        Json::Value tmp_array;
+        for(unsigned i=0; i < array.size(); i++) {
+            std::string errors;
+            Json::Value tmp;
+            bool parsingSuccessful = self->m_json_reader->parse(array[i].c_str(),
+                                               array[i].c_str() + array[i].size(),
+                                               &tmp,
                                                &errors);
-        if(!parsingSuccessful) {
-            throw std::runtime_error(errors);
+            if(!parsingSuccessful) {
+                throw std::runtime_error(errors);
+            }
+            tmp_array[i] = std::move(tmp);
         }
+        *result = std::move(tmp_array);
     }
 }
 
@@ -121,12 +127,12 @@ void Collection::update(uint64_t id, const Json::Value& record) const {
     update(id, record.toStyledString());
 }
 
-void Collection::all(std::string* out) const {
+void Collection::all(std::vector<std::string>* out) const {
     if(not self) throw std::runtime_error("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_all;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    RequestResult<std::string> result = rpc.on(ph)(db_name, self->m_name);
+    RequestResult<std::vector<std::string>> result = rpc.on(ph)(db_name, self->m_name);
     if(result.success()) {
         if(out) *out = std::move(result.value());
     } else {
@@ -135,18 +141,24 @@ void Collection::all(std::string* out) const {
 }
 
 void Collection::all(Json::Value* result) const {
-    std::string str;
-    if(result) all(&str);
-    else all(static_cast<std::string*>(nullptr));
+    std::vector<std::string> array;
+    if(result) all(&array);
+    else all(static_cast<std::vector<std::string>*>(nullptr));
     if(result) {
-        std::string errors;
-        bool parsingSuccessful = self->m_json_reader->parse(str.c_str(),
-                                               str.c_str() + str.size(),
-                                               result,
+        Json::Value tmp_array;
+        for(unsigned i=0; i < array.size(); i++) {
+            std::string errors;
+            Json::Value tmp;
+            bool parsingSuccessful = self->m_json_reader->parse(array[i].c_str(),
+                                               array[i].c_str() + array[i].size(),
+                                               &tmp,
                                                &errors);
-        if(!parsingSuccessful) {
-            throw std::runtime_error(errors);
+            if(!parsingSuccessful) {
+                throw std::runtime_error(errors);
+            }
+            tmp_array[i] = std::move(tmp);
         }
+        *result = std::move(tmp_array);
     }
 }
 
@@ -177,7 +189,7 @@ void Collection::erase(uint64_t id) const {
     auto& rpc = self->m_database->m_client->m_coll_erase;
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
-    RequestResult<bool> result = rpc.on(ph)(db_name, self->m_name);
+    RequestResult<bool> result = rpc.on(ph)(db_name, self->m_name, id);
     if(not result.success()) {
         throw std::runtime_error(result.error());
     }

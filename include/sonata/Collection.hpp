@@ -34,6 +34,10 @@ class Collection {
 
     uint64_t store(const Json::Value& record) const;
 
+    uint64_t store(const char* record) const {
+        return store(std::string(record));
+    }
+
     void fetch(uint64_t id,
                std::string* result) const;
 
@@ -41,7 +45,7 @@ class Collection {
                Json::Value* result) const;
 
     void filter(const std::string& filterCode,
-                std::string* result) const;
+                std::vector<std::string>* result) const;
 
     void filter(const std::string& filterCode,
                 Json::Value* result) const;
@@ -52,7 +56,12 @@ class Collection {
     void update(uint64_t id,
                 const std::string& record) const;
 
-    void all(std::string* result) const;
+    void update(uint64_t id,
+                const char* record) const {
+        return update(id, std::string(record));
+    }
+
+    void all(std::vector<std::string>* result) const;
 
     void all(Json::Value* result) const;
 

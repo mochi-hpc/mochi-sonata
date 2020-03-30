@@ -14,6 +14,7 @@ class ClientImpl {
     tl::engine&          m_engine;
     tl::remote_procedure m_open_database;
     tl::remote_procedure m_create_collection;
+    tl::remote_procedure m_open_collection;
     tl::remote_procedure m_drop_collection;
     tl::remote_procedure m_coll_store;
     tl::remote_procedure m_coll_fetch;
@@ -28,6 +29,7 @@ class ClientImpl {
     : m_engine(engine)
     , m_open_database(     engine.define("sonata_open_database")     )
     , m_create_collection( engine.define("sonata_create_collection") )
+    , m_open_collection(   engine.define("sonata_open_collection")   )
     , m_drop_collection(   engine.define("sonata_drop_collection")   )
     , m_coll_store(        engine.define("sonata_store")             )
     , m_coll_fetch(        engine.define("sonata_fetch")             )

@@ -30,6 +30,9 @@ class Backend {
     virtual RequestResult<bool> createCollection(
             const std::string& coll_name) = 0;
 
+    virtual RequestResult<bool> openCollection(
+            const std::string& coll_name) = 0;
+
     virtual RequestResult<bool> dropCollection(
             const std::string& coll_name) = 0;
 
@@ -41,7 +44,7 @@ class Backend {
             const std::string& coll_name,
             uint64_t record_id) = 0;
 
-    virtual RequestResult<std::string> filter(
+    virtual RequestResult<std::vector<std::string>> filter(
             const std::string& coll_name,
             const std::string& filter_code) = 0;
 
@@ -50,7 +53,7 @@ class Backend {
             uint64_t record_id,
             const std::string& new_content) = 0;
 
-    virtual RequestResult<std::string> all(
+    virtual RequestResult<std::vector<std::string>> all(
             const std::string& coll_name) = 0;
 
     virtual RequestResult<uint64_t> lastID(
@@ -79,10 +82,16 @@ class BackendFactory {
     static std::unique_ptr<Backend> createBackend(const std::string& backend_name,
                                                   const Json::Value& config);
 
+    static std::unique_ptr<Backend> attachBackend(const std::string& backend_name,
+                                                  const Json::Value& config);
+
     private:
 
     static std::unordered_map<std::string,
-                std::function<std::unique_ptr<Backend>(const Json::Value&)>> factories;
+                std::function<std::unique_ptr<Backend>(const Json::Value&)>> create_fn;
+    
+    static std::unordered_map<std::string,
+                std::function<std::unique_ptr<Backend>(const Json::Value&)>> attach_fn;
 };
 
 } // namespace sonata
@@ -98,8 +107,11 @@ class __SonataBackendRegistration {
 
     __SonataBackendRegistration(const std::string& backend_name)
     {
-        sonata::BackendFactory::factories[backend_name] = [](const Json::Value& config) {
-            return std::make_unique<BackendType>(config);
+        sonata::BackendFactory::create_fn[backend_name] = [](const Json::Value& config) {
+            return BackendType::create(config);
+        };
+        sonata::BackendFactory::attach_fn[backend_name] = [](const Json::Value& config) {
+            return BackendType::attach(config);
         };
     }
 };

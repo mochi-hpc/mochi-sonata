@@ -26,6 +26,18 @@ class Admin {
     ~Admin();
 
     operator bool() const;
+    
+    void createDatabase(const std::string& address,
+                        uint16_t provider_id,
+                        const std::string& name,
+                        const std::string& type,
+                        const std::string& config) const;
+
+    void createDatabase(const std::string& address,
+                        uint16_t provider_id,
+                        const std::string& name,
+                        const std::string& type,
+                        const Json::Value& config) const;
 
     void attachDatabase(const std::string& address,
                         uint16_t provider_id,
@@ -46,6 +58,8 @@ class Admin {
     void destroyDatabase(const std::string& address,
                          uint16_t provider_id,
                          const std::string& name) const;
+
+    void shutdownServer(const std::string& address) const;
 
     private:
 

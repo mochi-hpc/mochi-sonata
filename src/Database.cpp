@@ -39,12 +39,30 @@ Collection Database::create(const std::string& collectionName) const {
     }
 }
 
+Collection Database::open(const std::string& collectionName) const {
+    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    RequestResult<bool> result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
+    if(result.success()) {
+        auto coll_impl = std::make_shared<CollectionImpl>(self, collectionName);
+        return Collection(coll_impl);
+    } else {
+        throw std::runtime_error(result.error());
+        return Collection(nullptr);
+    }
+}
+
 void Database::drop(const std::string& collectionName) const {
     if(not self) throw std::runtime_error("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_drop_collection.on(self->m_ph)(self->m_name, collectionName);
     if(not result.success()) {
         throw std::runtime_error(result.error());
     }
+}
+
+bool Database::exists(const std::string& collectionName) const {
+    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    RequestResult<bool> result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
+    return result.success();
 }
 
 }

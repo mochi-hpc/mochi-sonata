@@ -29,4 +29,8 @@ Provider::operator bool() const {
     return static_cast<bool>(self);
 }
 
+void Provider::setSecurityToken(const std::string& token) {
+    if(self) self->m_token = token;
+}
+
 }

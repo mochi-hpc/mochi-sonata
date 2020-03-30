@@ -6,4 +6,6 @@ spack:
   - cmake
   - libuuid
   - jsoncpp
+  - tclap
+  - spdlog
   concretization: together

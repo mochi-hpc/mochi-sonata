@@ -28,6 +28,8 @@ class Provider {
 
     ~Provider();
 
+    void setSecurityToken(const std::string& token);
+
     operator bool() const;
 
     private:

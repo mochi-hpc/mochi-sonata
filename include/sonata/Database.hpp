@@ -30,6 +30,10 @@ class Database {
 
     Collection create(const std::string& collectionName) const;
 
+    bool exists(const std::string& collectionName) const;
+
+    Collection open(const std::string& collectionName) const;
+
     void drop(const std::string& collectionName) const;
 
     operator bool() const;
