@@ -22,6 +22,6 @@ target_link_libraries(ExecTest sonata-test)
 
 add_test(NAME AdminTest COMMAND ./AdminTest AdminTest.xml)
 add_test(NAME ClientTest COMMAND ./ClientTest ClientTest.xml)
-add_test(NAME DatabaseTest COMMAND ./DatabaseTest DatabaseText.xml)
+add_test(NAME DatabaseTest COMMAND ./DatabaseTest DatabaseTest.xml)
 add_test(NAME CollectionTest COMMAND ./CollectionTest CollectionTest.xml)
 add_test(NAME ExecTest COMMAND ./ExecTest ExecTest.xml)
