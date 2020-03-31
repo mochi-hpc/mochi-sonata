@@ -26,7 +26,7 @@ class Admin {
      * @param engine Thallium engine.
      * @param token Security token setup by providers.
      */
-    Admin(thallium::engine& engine, const std::string& token);
+    Admin(thallium::engine& engine, const std::string& token="");
     
     /**
      * @brief Copy constructor.
@@ -74,6 +74,25 @@ class Admin {
                         const std::string& name,
                         const std::string& type,
                         const std::string& config) const;
+    
+    /**
+     * @brief Creates a database on the target provider.
+     * The config string must be a JSON object acceptable
+     * by the desired backend's creation function.
+     *
+     * @param address Address of the target provider.
+     * @param provider_id Provider id.
+     * @param name Name of the database to create.
+     * @param type Type of the database to create.
+     * @param config JSON configuration for the database.
+     */
+    void createDatabase(const std::string& address,
+                        uint16_t provider_id,
+                        const std::string& name,
+                        const std::string& type,
+                        const char* config) const {
+        return createDatabase(address, provider_id, name, type, std::string(config));
+    }
 
     /**
      * @brief Creates a database on the target provider.

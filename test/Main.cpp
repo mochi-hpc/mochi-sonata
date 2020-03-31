@@ -3,6 +3,7 @@
 #include <cppunit/XmlOutputter.h>
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/ui/text/TestRunner.h>
+#include <spdlog/spdlog.h>
 
 #include <sonata/Client.hpp>
 #include <sonata/Admin.hpp>
@@ -13,6 +14,10 @@ namespace tl = thallium;
 tl::engine* engine = nullptr;
 
 int main(int argc, char** argv) {
+
+    // Initialize logging
+    spdlog::set_level(spdlog::level::trace);
+
     // Get the top level suite from the registry    
     CppUnit::Test *suite = CppUnit::TestFactoryRegistry::getRegistry().makeTest();
 

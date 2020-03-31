@@ -120,7 +120,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             result.success() = false;
             result.error() = "Database "s + db_name + " already attached";
             req.respond(result);
-            spdlog::error("[provider:{}] Database {} alread attached", id()); 
+            spdlog::error("[provider:{}] Database {} alread attached", id(), db_name); 
             return;
         }
 
