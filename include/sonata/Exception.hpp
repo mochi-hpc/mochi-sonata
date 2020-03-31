@@ -8,7 +8,7 @@ namespace sonata {
 
 class Exception : public std::exception {
 
-    const std::string& m_error;
+    std::string m_error;
 
     public:
 

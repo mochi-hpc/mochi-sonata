@@ -5,6 +5,7 @@
 
 #include <type_traits>
 #include <string>
+#include <spdlog/spdlog.h>
 
 namespace sonata {
 
@@ -74,17 +75,17 @@ class UnQLiteVM {
     }
 
     void parse_and_throw_error() {
-        const char *errorBuffer;
-        int len;
+        const char *errorBuffer = nullptr;
+        int len = 0;
         unqlite_config(m_db, UNQLITE_CONFIG_JX9_ERR_LOG, &errorBuffer, &len);
         std::string error = "UnQLite error: "s;
         if(len > 0) {
-            error += errorBuffer;
+            error += std::string(errorBuffer, len);
             throw Exception(error);
         }
         unqlite_config(m_db, UNQLITE_CONFIG_ERR_LOG, &errorBuffer, &len);
         if(len > 0) {
-            error += errorBuffer;
+            error += std::string(errorBuffer, len);
             throw Exception(error);
         }
         error += "(unknown)";
