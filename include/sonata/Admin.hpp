@@ -3,9 +3,13 @@
 
 #include <json/json.h>
 #include <thallium.hpp>
+#include <string>
 #include <memory>
+#include <sonata/Exception.hpp>
 
 namespace sonata {
+
+namespace tl = thallium;
 
 class AdminImpl;
 
@@ -26,7 +30,7 @@ class Admin {
      * @param engine Thallium engine.
      * @param token Security token setup by providers.
      */
-    Admin(thallium::engine& engine, const std::string& token="");
+    Admin(tl::engine& engine, const std::string& token="");
     
     /**
      * @brief Copy constructor.
@@ -91,7 +95,7 @@ class Admin {
                         const std::string& name,
                         const std::string& type,
                         const char* config) const {
-        return createDatabase(address, provider_id, name, type, std::string(config));
+        createDatabase(address, provider_id, name, type, std::string(config));
     }
 
     /**

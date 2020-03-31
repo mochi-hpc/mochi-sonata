@@ -1,0 +1,22 @@
+[
+    {
+        "name" : "Matthieu",
+        "city" : "Cambridge",
+        "papers" : 45
+    },
+    {
+        "name" : "Niel",
+        "city" : "Houston",
+        "papers" : 64
+    },
+    {
+        "name" : "Herman",
+        "city" : "Berlin",
+        "papers" : 32
+    },
+    {
+        "name" : "Mario",
+        "city" : "Rome",
+        "papers" : 2
+    }
+]

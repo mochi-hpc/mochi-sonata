@@ -25,6 +25,11 @@ class Database {
     public:
 
     /**
+     * @brief Constructor. The resulting Database handle will be invalid.
+     */
+    Database();
+
+    /**
      * @brief Copy-constructor.
      */
     Database(const Database&);

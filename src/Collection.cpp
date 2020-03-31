@@ -11,6 +11,8 @@
 
 namespace sonata {
 
+Collection::Collection() = default;
+
 Collection::Collection(const std::shared_ptr<CollectionImpl>& impl)
 : self(impl) {}
 

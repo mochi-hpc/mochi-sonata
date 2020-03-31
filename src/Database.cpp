@@ -10,6 +10,8 @@
 
 namespace sonata {
 
+Database::Database() = default;
+
 Database::Database(const std::shared_ptr<DatabaseImpl>& impl)
 : self(impl) {}
 

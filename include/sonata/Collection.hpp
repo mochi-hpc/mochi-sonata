@@ -22,7 +22,13 @@ class Collection {
     friend class Database;
 
     public:
-    
+
+    /**
+     * @brief Default constructor. The resulting collection
+     * instance will be invalid.
+     */
+    Collection();
+
     /**
      * @brief Copy constructor.
      */

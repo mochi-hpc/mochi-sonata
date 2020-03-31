@@ -7,41 +7,122 @@ extern thallium::engine* engine;
 class DatabaseTest : public CppUnit::TestFixture
 {
     CPPUNIT_TEST_SUITE( DatabaseTest );
-    CPPUNIT_TEST( testAdminCreateDatabase );
+    CPPUNIT_TEST( testCreateCollection );
+    CPPUNIT_TEST( testOpenCollection );
+    CPPUNIT_TEST( testCollectionExists );
+    CPPUNIT_TEST( testDropCollection );
     CPPUNIT_TEST_SUITE_END();
 
     static constexpr const char* db_config = "{ \"path\" : \"mydb\" }";
 
     public:
 
-    void setUp() {}
-    void tearDown() {}
-
-    void testAdminCreateDatabase() {
+    void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
+        admin.createDatabase(addr, 0, "mydb", "unqlite", db_config);
+    }
 
-        // Create a valid Database
-        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
-                admin.createDatabase(addr, 0, "db1", "unqlite", db_config));
+    void tearDown() {
+        sonata::Admin admin(*engine);
+        std::string addr = engine->self();
+        admin.destroyDatabase(addr, 0, "mydb");
+    }
 
-        // Create a Database with a name already taken
-        CPPUNIT_ASSERT_THROW_MESSAGE("admin.createDatabase should throw an exception (wrong name)",
-                admin.createDatabase(addr, 0, "db1", "unqlite", db_config),
+    void testCreateCollection() {
+        sonata::Client client(*engine);
+        std::string addr = engine->self();
+        
+        sonata::Database mydb = client.open(addr, 0, "mydb");
+
+        // Creating a collection
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "mydb.create should not throw.",
+                mydb.create("mycollection"));
+
+        // Creating a collection with the same name
+        CPPUNIT_ASSERT_THROW_MESSAGE(
+                "mydb.create should fail because the collection already exists.",
+                mydb.create("mycollection"),
                 sonata::Exception);
+    }
 
-        // Create a Database with a wrong backend type
-        CPPUNIT_ASSERT_THROW_MESSAGE("admin.createDatabase should throw an exception (wrong backend)",
-                admin.createDatabase(addr, 0, "db_blabla", "blabla", db_config),
+    void testCollectionExists() {
+        sonata::Client client(*engine);
+        std::string addr = engine->self();
+        
+        sonata::Database mydb = client.open(addr, 0, "mydb");
+
+        // Creating a collection
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "mydb.create should not throw.",
+                mydb.create("mycollection"));
+
+        // Check if a collection exists
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "mycollection should exist.",
+                true, mydb.exists("mycollection"));
+
+        // Check that a collection does not exist
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "blabla collection should not exist.",
+                false, mydb.exists("blabla"));
+    }
+
+    void testOpenCollection() {
+        sonata::Client client(*engine);
+        std::string addr = engine->self();
+        
+        sonata::Database mydb = client.open(addr, 0, "mydb");
+
+        // Creating a collection
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "mydb.create should not throw.",
+                mydb.create("mycollection"));
+
+        // Open a collection that exist
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "mydb.open should not throw.",
+                mydb.open("mycollection"));
+
+        // Open a collection that does not exist
+        CPPUNIT_ASSERT_THROW_MESSAGE(
+                "mydb.open should throw because collectiom blabla does not exist.",
+                mydb.open("blabla"),
                 sonata::Exception);
+    }
 
-        // Create a Database with a wrong configuration
-        CPPUNIT_ASSERT_THROW_MESSAGE("admin.createDatabase should throw an exception (wrong config)",
-                admin.createDatabase(addr, 0, "db_no_config", "unqlite", ""),
-                sonata::Exception);
+    void testDropCollection() {
+        sonata::Client client(*engine);
+        std::string addr = engine->self();
+        
+        sonata::Database mydb = client.open(addr, 0, "mydb");
 
-        // Destroy the Database
-        admin.destroyDatabase(addr, 0, "db1");
+        // Creating a collection
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "mydb.create should not throw.",
+                mydb.create("mycollection"));
+
+        // Check if a collection exists
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "mycollection should exist.",
+                true, mydb.exists("mycollection"));
+
+        // Dropping the collection
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "dropping mycollection should not throw.",
+                mydb.drop("mycollection"));
+
+        // Check that the collection does not exist anymore
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "mycollection collection should not exist.",
+                false, mydb.exists("mycollection"));
+
+        // Check that we throw if we drop it twice
+        CPPUNIT_ASSERT_THROW_MESSAGE(
+                "dropping collection twice should throw.",
+                 mydb.drop("mycollection"),
+                 sonata::Exception);
     }
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( DatabaseTest );
