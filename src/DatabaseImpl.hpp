@@ -12,6 +12,7 @@ class DatabaseImpl {
     std::string                 m_name;
     std::shared_ptr<ClientImpl> m_client;
     tl::provider_handle         m_ph;
+    Json::CharReader*           m_json_reader = nullptr;
 
     DatabaseImpl() = default;
 
@@ -19,7 +20,14 @@ class DatabaseImpl {
                  tl::provider_handle&& ph, const std::string& name)
     : m_name(name)
     , m_client(client)
-    , m_ph(std::move(ph)) {}
+    , m_ph(std::move(ph)) {
+        Json::CharReaderBuilder builder;
+        m_json_reader = builder.newCharReader();
+    }
+
+    ~DatabaseImpl() {
+        delete m_json_reader;
+    }
 
 };
 

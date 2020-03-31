@@ -48,12 +48,17 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<bool> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -67,11 +72,16 @@ class UnQLiteBackend : public Backend {
             "$ret = false;"
         "}";
         RequestResult<bool> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        result.error() = "Collection"s + coll_name + " does not exist";
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            result.error() = "Collection"s + coll_name + " does not exist";
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
         return result;
     }
 
@@ -89,12 +99,17 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<bool> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -117,14 +132,19 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<uint64_t> result;
-        UnQLiteVM vm(m_db, ss.str().c_str());
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            result.value() = vm.get<uint64_t>("id");
+        try {
+            UnQLiteVM vm(m_db, ss.str().c_str());
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm.get<uint64_t>("id");
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -146,17 +166,22 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<std::string> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.set("id", record_id);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            std::ostringstream ss;
-            vm["output"].printToStream(ss);
-            result.value() = ss.str();
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.set("id", record_id);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                std::ostringstream ss;
+                vm["output"].printToStream(ss);
+                result.value() = ss.str();
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -178,23 +203,27 @@ class UnQLiteBackend : public Backend {
                 "$ret = TRUE;"
             "}"
         "}";
-        std::cerr << script << std::endl;
         RequestResult<std::vector<std::string>> result;
-        UnQLiteVM vm(m_db, script.c_str());
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            std::vector<std::string> array;
-            UnQLiteValue uql_values = vm["data"];
-            uql_values.foreach([&array](unsigned index, const UnQLiteValue& val) {
+        try {
+            UnQLiteVM vm(m_db, script.c_str());
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                std::vector<std::string> array;
+                UnQLiteValue uql_values = vm["data"];
+                uql_values.foreach([&array](unsigned index, const UnQLiteValue& val) {
                         std::ostringstream ss;
                         val.printToStream(ss);
                         array.push_back(ss.str());
                     });
-            result.value() = std::move(array);
+                result.value() = std::move(array);
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -216,13 +245,18 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<bool> result;
-        UnQLiteVM vm(m_db, ss.str().c_str());
-        vm.set("collection", coll_name);
-        vm.set("record_id", record_id);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
+        try {
+            UnQLiteVM vm(m_db, ss.str().c_str());
+            vm.set("collection", coll_name);
+            vm.set("record_id", record_id);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -243,21 +277,26 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<std::vector<std::string>> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            std::vector<std::string> array;
-            UnQLiteValue uql_values = vm["data"];
-            uql_values.foreach([&array](unsigned index, const UnQLiteValue& val) {
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                std::vector<std::string> array;
+                UnQLiteValue uql_values = vm["data"];
+                uql_values.foreach([&array](unsigned index, const UnQLiteValue& val) {
                         std::ostringstream ss;
                         val.printToStream(ss);
                         array.push_back(ss.str());
                     });
-            result.value() = std::move(array);
+                result.value() = std::move(array);
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -278,14 +317,19 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<uint64_t> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            result.value() = vm["id"];
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm["id"];
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -306,14 +350,19 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<size_t> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
-        } else {
-            result.value() = vm["size"];
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm["size"];
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
         }
         return result;
     }
@@ -335,13 +384,40 @@ class UnQLiteBackend : public Backend {
             "}"
         "}";
         RequestResult<bool> result;
-        UnQLiteVM vm(m_db, script);
-        vm.set("collection", coll_name);
-        vm.set("id", record_id);
-        vm.execute();
-        result.success() = vm.get<bool>("ret");
-        if(!result.success()) {
-            result.error() = vm.get<std::string>("err");
+        try {
+            UnQLiteVM vm(m_db, script);
+            vm.set("collection", coll_name);
+            vm.set("id", record_id);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
+    virtual RequestResult<std::unordered_map<std::string,std::string>>
+        execute(const std::string& code,
+                const std::unordered_set<std::string>& vars) override {
+        RequestResult<std::unordered_map<std::string,std::string>> result;
+        try {
+            UnQLiteVM vm(m_db, code.c_str());
+            vm.execute();
+            result.success() = true;
+            for(auto& name : vars) {
+                auto val = vm[name];
+                std::ostringstream ss;
+                val.printToStream(ss);
+                result.value().emplace(name, ss.str());
+            }
+        } catch(const std::runtime_error& e) {
+            result.success() = false;
+            result.error() = e.what();
+            result.value().clear();
         }
         return result;
     }

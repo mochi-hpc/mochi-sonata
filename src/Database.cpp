@@ -65,4 +65,46 @@ bool Database::exists(const std::string& collectionName) const {
     return result.success();
 }
 
+void Database::execute(const std::string& code,
+                       const std::unordered_set<std::string>& vars,
+                       std::unordered_map<std::string,std::string>* out) const {
+    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    RequestResult<std::unordered_map<std::string,std::string>> result
+        = self->m_client->m_execute_on_database.on(self->m_ph)(self->m_name, code, vars);
+    if(not result.success()) {
+        throw std::runtime_error(result.error());
+    }
+    if(out)
+        *out = std::move(result.value());
+}
+
+void Database::execute(const std::string& code,
+                       const std::unordered_set<std::string>& vars,
+                       Json::Value* result) const {
+    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    std::unordered_map<std::string,std::string> ret;
+    if(result) {
+        std::unordered_map<std::string,std::string> ret;
+        execute(code, vars, &ret);
+        Json::Value tmp_result;
+        for(auto& p : ret) {
+            Json::Value tmp;
+            const auto& name  = p.first;
+            const auto& value = p.second;
+            std::string errors;
+            bool parsingSuccessful = self->m_json_reader->parse(value.c_str(),
+                                               value.c_str() + value.size(),
+                                               &tmp,
+                                               &errors);
+            if(!parsingSuccessful) {
+                throw std::runtime_error(errors);
+            }
+            tmp_result[name] = std::move(tmp);
+        }
+        *result = std::move(tmp_result);
+    } else {
+        execute(code, vars, static_cast<std::unordered_map<std::string,std::string>*>(nullptr));
+    }
+}
+
 }

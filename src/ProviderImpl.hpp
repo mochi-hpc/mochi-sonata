@@ -4,6 +4,8 @@
 #include "sonata/Backend.hpp"
 
 #include <thallium.hpp>
+#include <thallium/serialization/stl/unordered_set.hpp>
+#include <thallium/serialization/stl/unordered_map.hpp>
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/pair.hpp>
 
@@ -31,6 +33,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     tl::remote_procedure m_detach_database;
     tl::remote_procedure m_destroy_database;
     // Client RPC
+    tl::remote_procedure m_exec_on_database;
     tl::remote_procedure m_open_database;
     tl::remote_procedure m_create_collection;
     tl::remote_procedure m_open_collection;
@@ -53,6 +56,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     , m_attach_database(   define("sonata_attach_database",   &ProviderImpl::attachDatabase,   pool))
     , m_detach_database(   define("sonata_detach_database",   &ProviderImpl::detachDatabase,   pool))
     , m_destroy_database(  define("sonata_destroy_database",  &ProviderImpl::destroyDatabase,  pool))
+    , m_exec_on_database(  define("sonata_exec_on_database",  &ProviderImpl::execOnDatabase,   pool))
     , m_open_database(     define("sonata_open_database",     &ProviderImpl::openDatabase,     pool))
     , m_create_collection( define("sonata_create_collection", &ProviderImpl::createCollection, pool))
     , m_open_collection(   define("sonata_open_collection",   &ProviderImpl::openCollection,   pool))
@@ -75,6 +79,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         m_attach_database.deregister();
         m_detach_database.deregister();
         m_destroy_database.deregister();
+        m_exec_on_database.deregister();
         m_open_database.deregister();
         m_create_collection.deregister();
         m_open_collection.deregister();
@@ -291,6 +296,25 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}] Database {} successfully destroyed", id(), db_name);
     }
 
+    void execOnDatabase(const tl::request& req,
+                        const std::string& db_name,
+                        const std::string& code,
+                        const std::unordered_set<std::string>& vars) {
+        spdlog::trace("provider:{}] Received execOnDatabase request for database {}", id(), db_name);
+        auto it = m_backends.find(db_name);
+        RequestResult<std::unordered_map<std::string,std::string>> result;
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->execute(code, vars);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Code successfully executed on database {}", id(), db_name);
+    }
+
     void openDatabase(const tl::request& req,
                       const std::string& db_name) {
         spdlog::trace("[provider:{}] Received openDatabase request for database {}", id(), db_name);
@@ -298,7 +322,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         RequestResult<bool> result;
         if(it == m_backends.end()) {
             result.success() = false;
-            result.error() = "Backend "s + db_name + " not found";
+            result.error() = "Database "s + db_name + " not found";
             req.respond(result);
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
