@@ -71,6 +71,7 @@ set (PRIVATE_SERVER_LIBS "-lsonata-server -L${UNQLITE_LIBDIR} -lunqlite")
 set (PRIVATE_ADMIN_LIBS  "-lsonata-admin")
 configure_file ("sonata-client.pc.in" "sonata-client.pc" @ONLY)
 configure_file ("sonata-server.pc.in" "sonata-server.pc" @ONLY)
+configure_file ("sonata-admin.pc.in" "sonata-admin.pc" @ONLY)
 
 #
 # "make install" rules
