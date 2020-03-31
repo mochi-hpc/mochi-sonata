@@ -56,7 +56,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -78,7 +78,7 @@ class UnQLiteBackend : public Backend {
             vm.execute();
             result.success() = vm.get<bool>("ret");
             result.error() = "Collection"s + coll_name + " does not exist";
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -107,7 +107,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -142,7 +142,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -179,7 +179,7 @@ class UnQLiteBackend : public Backend {
                 vm["output"].printToStream(ss);
                 result.value() = ss.str();
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -221,7 +221,7 @@ class UnQLiteBackend : public Backend {
                     });
                 result.value() = std::move(array);
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -254,7 +254,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -294,7 +294,7 @@ class UnQLiteBackend : public Backend {
                     });
                 result.value() = std::move(array);
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -327,7 +327,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm["id"];
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -360,7 +360,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm["size"];
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -393,7 +393,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
@@ -414,7 +414,7 @@ class UnQLiteBackend : public Backend {
                 val.printToStream(ss);
                 result.value().emplace(name, ss.str());
             }
-        } catch(const std::runtime_error& e) {
+        } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
             result.value().clear();
@@ -445,12 +445,12 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const Json::Value& config) {
     bool temporary = config.get("temporary", false).asBool();
     bool inmemory  = config.get("in-memory", false).asBool();
     if((not config.isMember("path")) && not inmemory)
-        throw std::runtime_error("UnQLiteBackend needs to be initialized with a path");
+        throw Exception("UnQLiteBackend needs to be initialized with a path");
     std::string db_path = config.get("path","").asString();
     if(db_path.size() > 0) {
         std::ifstream f(db_path.c_str());
         if(f.good()) {
-            throw std::runtime_error("Database file "s + db_path + " already exists");
+            throw Exception("Database file "s + db_path + " already exists");
         }
     }
     unqlite* pDB;
@@ -463,7 +463,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const Json::Value& config) {
         if(temporary) mode = mode | UNQLITE_OPEN_TEMP_DB;
         ret = unqlite_open(&pDB, db_path.c_str(), mode);
         if(ret != UNQLITE_OK) {
-            throw std::runtime_error("Could not open or create database at "s + db_path);
+            throw Exception("Could not open or create database at "s + db_path);
         }
         // forcing the file to be created
         unqlite_kv_store(pDB,"___",-1,"",1);
@@ -478,11 +478,11 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const Json::Value& config) {
 
 std::unique_ptr<Backend> UnQLiteBackend::attach(const Json::Value& config) {
     if(not config.isMember("path"))
-        throw std::runtime_error("UnQLiteBackend needs to be initialized with a path");
+        throw Exception("UnQLiteBackend needs to be initialized with a path");
     std::string db_path = config["path"].asString();
     std::ifstream f(db_path.c_str());
     if(!f.good()) {
-        throw std::runtime_error("Database file "s + db_path + " does not exist");
+        throw Exception("Database file "s + db_path + " does not exist");
     }
     unqlite* pDB;
     spdlog::trace("[unqlite] Opening UnQLite database");
@@ -490,7 +490,7 @@ std::unique_ptr<Backend> UnQLiteBackend::attach(const Json::Value& config) {
     int mode = UNQLITE_OPEN_READWRITE;
     ret = unqlite_open(&pDB, db_path.c_str(), mode);
     if(ret != UNQLITE_OK) {
-        throw std::runtime_error("Could not open database at "s + db_path);
+        throw Exception("Could not open database at "s + db_path);
     }
     auto backend = std::make_unique<UnQLiteBackend>();
     backend->m_db = pDB;

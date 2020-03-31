@@ -28,39 +28,39 @@ Database::operator bool() const {
 }
 
 Collection Database::create(const std::string& collectionName) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_create_collection.on(self->m_ph)(self->m_name, collectionName);
     if(result.success()) {
         auto coll_impl = std::make_shared<CollectionImpl>(self, collectionName);
         return Collection(coll_impl);
     } else {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
         return Collection(nullptr);
     }
 }
 
 Collection Database::open(const std::string& collectionName) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
     if(result.success()) {
         auto coll_impl = std::make_shared<CollectionImpl>(self, collectionName);
         return Collection(coll_impl);
     } else {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
         return Collection(nullptr);
     }
 }
 
 void Database::drop(const std::string& collectionName) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_drop_collection.on(self->m_ph)(self->m_name, collectionName);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
 }
 
 bool Database::exists(const std::string& collectionName) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
     return result.success();
 }
@@ -68,11 +68,11 @@ bool Database::exists(const std::string& collectionName) const {
 void Database::execute(const std::string& code,
                        const std::unordered_set<std::string>& vars,
                        std::unordered_map<std::string,std::string>* out) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<std::unordered_map<std::string,std::string>> result
         = self->m_client->m_execute_on_database.on(self->m_ph)(self->m_name, code, vars);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
     if(out)
         *out = std::move(result.value());
@@ -81,7 +81,7 @@ void Database::execute(const std::string& code,
 void Database::execute(const std::string& code,
                        const std::unordered_set<std::string>& vars,
                        Json::Value* result) const {
-    if(not self) throw std::runtime_error("Invalid sonata::Database object");
+    if(not self) throw Exception("Invalid sonata::Database object");
     std::unordered_map<std::string,std::string> ret;
     if(result) {
         std::unordered_map<std::string,std::string> ret;
@@ -97,7 +97,7 @@ void Database::execute(const std::string& code,
                                                &tmp,
                                                &errors);
             if(!parsingSuccessful) {
-                throw std::runtime_error(errors);
+                throw Exception(errors);
             }
             tmp_result[name] = std::move(tmp);
         }

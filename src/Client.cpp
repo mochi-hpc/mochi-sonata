@@ -1,3 +1,4 @@
+#include "sonata/Exception.hpp"
 #include "sonata/Client.hpp"
 #include "sonata/Database.hpp"
 #include "sonata/Collection.hpp"
@@ -40,7 +41,7 @@ Database Client::open(const std::string& address,
         auto db_impl = std::make_shared<DatabaseImpl>(self, std::move(ph), db_name);
         return Database(db_impl);
     } else {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
         return Database(nullptr);
     }
 }

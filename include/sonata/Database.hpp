@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_set>
 #include <sonata/Collection.hpp>
+#include <sonata/Exception.hpp>
 
 namespace sonata {
 

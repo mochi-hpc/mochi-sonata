@@ -1,4 +1,5 @@
 #include "sonata/Admin.hpp"
+#include "sonata/Exception.hpp"
 #include "sonata/RequestResult.hpp"
 
 #include "AdminImpl.hpp"
@@ -36,7 +37,7 @@ void Admin::createDatabase(const std::string& address,
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_create_database.on(ph)(self->m_token, db_name, db_type, db_config);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
 }
 
@@ -57,7 +58,7 @@ void Admin::attachDatabase(const std::string& address,
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_attach_database.on(ph)(self->m_token, db_name, db_type, db_config);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
 }
 
@@ -76,7 +77,7 @@ void Admin::detachDatabase(const std::string& address,
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_detach_database.on(ph)(self->m_token, db_name);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
 }
 
@@ -87,7 +88,7 @@ void Admin::destroyDatabase(const std::string& address,
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_destroy_database.on(ph)(self->m_token, db_name);
     if(not result.success()) {
-        throw std::runtime_error(result.error());
+        throw Exception(result.error());
     }
 }
 

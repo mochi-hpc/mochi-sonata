@@ -80,15 +80,15 @@ class UnQLiteVM {
         std::string error = "UnQLite error: "s;
         if(len > 0) {
             error += errorBuffer;
-            throw std::runtime_error(error);
+            throw Exception(error);
         }
         unqlite_config(m_db, UNQLITE_CONFIG_ERR_LOG, &errorBuffer, &len);
         if(len > 0) {
             error += errorBuffer;
-            throw std::runtime_error(error);
+            throw Exception(error);
         }
         error += "(unknown)";
-        throw std::runtime_error(error);
+        throw Exception(error);
     }
 
     static int output_callback(const void *pOutput, unsigned int nOutputLen, void *pUserData) {

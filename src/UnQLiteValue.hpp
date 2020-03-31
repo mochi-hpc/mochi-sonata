@@ -9,26 +9,12 @@
 #include <unordered_map>
 #include <iostream>
 
+#include "sonata/Exception.hpp"
 #include "invoke/invoke.hpp"
 
 namespace sonata {
 
 class UnQLiteVM;
-
-class UnQLiteValueException : public std::exception {
-
-    std::string m_message;
-
-    public:
-
-    UnQLiteValueException(const std::string& msg)
-    : std::exception()
-    , m_message(msg) {}
-    
-    virtual const char* what() const noexcept {
-        return m_message.c_str();
-    }
-};
 
 class UnQLiteValue {
 
@@ -259,7 +245,7 @@ class UnQLiteValue {
     template<typename T>
     operator T() const {
         if(!is<T>()) {
-            throw UnQLiteValueException("Invalid type conversion requested");
+            throw Exception("Invalid type conversion requested");
         }
         return as<T>();
     }
@@ -293,7 +279,7 @@ class UnQLiteValue {
 
     void foreach(const std::function<void(unsigned, const UnQLiteValue&)>& f) {
         if(not unqlite_value_is_json_array(m_value)) {
-            throw UnQLiteValueException("UnQLiteValue is not an array");
+            throw Exception("UnQLiteValue is not an array");
         }
         using arg_type =
             std::tuple<size_t,
@@ -309,7 +295,7 @@ class UnQLiteValue {
 
     void foreach(const std::function<void(const std::string&, const UnQLiteValue&)>& f) {
         if(not unqlite_value_is_json_object(m_value)) {
-            throw UnQLiteValueException("UnQLiteValue is not an array");
+            throw Exception("UnQLiteValue is not an array");
         }
         using arg_type =
             std::tuple<size_t,
