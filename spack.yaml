@@ -4,7 +4,6 @@ spack:
   - cppunit
   - unqlite
   - cmake
-  - libuuid
   - jsoncpp
   - tclap
   - spdlog
