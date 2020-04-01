@@ -55,12 +55,12 @@ class UnQLiteVM {
     template<typename T>
     T get(const std::string& name) const {
         unqlite_value* value = unqlite_vm_extract_variable(m_vm, name.c_str());
-        return UnQLiteValue(value, m_vm).as<T>();
+        return UnQLiteValue(value, m_vm, nullptr).as<T>();
     }
 
     UnQLiteValue operator[](const std::string& name) const {
         unqlite_value* value = unqlite_vm_extract_variable(m_vm, name.c_str());
-        return UnQLiteValue(value, m_vm);
+        return UnQLiteValue(value, m_vm, nullptr);
     }
 
     private:

@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <json/json.h>
+#include <spdlog/spdlog.h>
 
 #include "sonata/Exception.hpp"
 #include "invoke/invoke.hpp"
@@ -29,10 +30,13 @@ class UnQLiteValue {
 
     unqlite_value* m_value = nullptr;
     unqlite_vm*    m_vm    = nullptr;
+    unqlite_context* m_ctx = nullptr;
 
-    UnQLiteValue(unqlite_value* val, unqlite_vm* vm)
+    UnQLiteValue(unqlite_value* val, unqlite_vm* vm, unqlite_context* ctx)
     : m_value(val)
-    , m_vm(vm) {}
+    , m_vm(vm)
+    , m_ctx(ctx)
+    {}
 
     public:
 
@@ -40,9 +44,12 @@ class UnQLiteValue {
 
     UnQLiteValue(UnQLiteValue&& other)
     : m_vm(other.m_vm)
-    , m_value(other.m_value) {
+    , m_value(other.m_value)
+    , m_ctx(other.m_ctx) 
+    {
         other.m_vm = nullptr;
         other.m_value = nullptr;
+        other.m_ctx = nullptr;
     }
 
     UnQLiteValue(const UnQLiteValue& other) = delete;
@@ -51,11 +58,16 @@ class UnQLiteValue {
         if(&other == this) return *this;
         if(m_value && m_vm) {
             unqlite_vm_release_value(m_vm, m_value);
+        } else
+        if(m_value && m_ctx) {
+            unqlite_context_release_value(m_ctx, m_value);
         }
         m_vm = other.m_vm;
         m_value = other.m_value;
+        m_ctx = other.m_ctx;
         other.m_vm = nullptr;
         other.m_value = nullptr;
+        other.m_ctx = nullptr;
         return *this;
     }
 
@@ -64,6 +76,12 @@ class UnQLiteValue {
     UnQLiteValue(unqlite_vm* vm)
     : m_vm(vm)
     , m_value(unqlite_vm_new_scalar(vm)) {
+        unqlite_value_null(m_value);
+    }
+
+    UnQLiteValue(unqlite_context* ctx)
+    : m_ctx(ctx)
+    , m_value(unqlite_context_new_scalar(ctx)) {
         unqlite_value_null(m_value);
     }
 
@@ -97,11 +115,9 @@ class UnQLiteValue {
         case Json::arrayValue:
             m_value = unqlite_vm_new_array(vm);
             for(unsigned i=0; i < val.size(); i++) {
-                unqlite_value* index = unqlite_vm_new_scalar(vm);
-                unqlite_value_int64(index, i);
+                UnQLiteValue index(i, vm);
                 UnQLiteValue element(val[i], vm);
-                unqlite_array_add_elem(m_value, index, element.m_value);
-                unqlite_vm_release_value(vm, index);
+                unqlite_array_add_elem(m_value, index.m_value, element.m_value);
             }
             break;
         case Json::objectValue:
@@ -114,9 +130,60 @@ class UnQLiteValue {
         }
     }
 
+    UnQLiteValue(const Json::Value& val, unqlite_context* ctx)
+    : m_ctx(ctx) {
+        switch(val.type()) {
+        case Json::nullValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_null(m_value);
+            break;
+        case Json::intValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_int64(m_value, val.asInt64());
+            break;
+        case Json::uintValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_int64(m_value, val.asInt64());
+            break;
+        case Json::realValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_double(m_value, val.asDouble());
+            break;
+        case Json::stringValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_string(m_value, val.asString().c_str(), -1);
+            break;
+        case Json::booleanValue:
+            m_value = unqlite_context_new_scalar(ctx);
+            unqlite_value_bool(m_value, val.asBool());
+            break;
+        case Json::arrayValue:
+            m_value = unqlite_context_new_array(ctx);
+            for(unsigned i=0; i < val.size(); i++) {
+                UnQLiteValue index(i, ctx);
+                UnQLiteValue element(val[i], ctx);
+                unqlite_array_add_elem(m_value, index.m_value, element.m_value);
+            }
+            break;
+        case Json::objectValue:
+            m_value = unqlite_context_new_array(ctx);
+            for(auto it = val.begin(); it != val.end(); it++) {
+                UnQLiteValue element(*it, ctx);
+                unqlite_array_add_strkey_elem(m_value, it.name().c_str(), element.m_value);
+            }
+            break; 
+        }
+    }
+
     UnQLiteValue(const Null&, unqlite_vm* vm)
     : m_vm(vm)
     , m_value(unqlite_vm_new_scalar(vm)) {
+        unqlite_value_null(m_value);
+    }
+
+    UnQLiteValue(const Null&, unqlite_context* ctx)
+    : m_ctx(ctx)
+    , m_value(unqlite_context_new_scalar(m_ctx)) {
         unqlite_value_null(m_value);
     }
 
@@ -132,11 +199,31 @@ class UnQLiteValue {
         }
     }
 
+    template<typename IntegerType,
+             std::enable_if_t<std::is_integral<IntegerType>::value, int> = 0>
+    UnQLiteValue(const IntegerType& val, unqlite_context* ctx) 
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_scalar(ctx)) {
+        if(sizeof(IntegerType) <= 4) {
+            unqlite_value_int(m_value, val);
+        } else {
+            unqlite_value_int64(m_value, val);
+        }
+    }
+
     template <typename FloatType,
               std::enable_if_t<std::is_floating_point<FloatType>::value, int> = 0>
     UnQLiteValue(const FloatType& val, unqlite_vm* vm) 
     : m_vm(vm) 
     , m_value(unqlite_vm_new_scalar(vm)) {
+        unqlite_value_double(m_value, val);
+    }
+
+    template <typename FloatType,
+              std::enable_if_t<std::is_floating_point<FloatType>::value, int> = 0>
+    UnQLiteValue(const FloatType& val, unqlite_context* ctx) 
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_scalar(ctx)) {
         unqlite_value_double(m_value, val);
     }
 
@@ -146,15 +233,33 @@ class UnQLiteValue {
         unqlite_value_bool(m_value, val);
     }
 
+    UnQLiteValue(const bool& val, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_scalar(ctx)) {
+        unqlite_value_bool(m_value, val);
+    }
+
     UnQLiteValue(const std::string& str, unqlite_vm* vm)
     : m_vm(vm) 
     , m_value(unqlite_vm_new_scalar(vm)) {
         unqlite_value_string(m_value, str.c_str(), str.size());
     }
 
+    UnQLiteValue(const std::string& str, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_scalar(ctx)) {
+        unqlite_value_string(m_value, str.c_str(), str.size());
+    }
+
     UnQLiteValue(const char* str, unqlite_vm* vm)
     : m_vm(vm) 
     , m_value(unqlite_vm_new_scalar(vm)) {
+        unqlite_value_string(m_value, str, strlen(str));
+    }
+
+    UnQLiteValue(const char* str, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_scalar(ctx)) {
         unqlite_value_string(m_value, str, strlen(str));
     }
 
@@ -168,9 +273,27 @@ class UnQLiteValue {
         }
     }
 
+    template<typename T>
+    UnQLiteValue(const std::vector<T>& vec, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& val : vec) {
+            UnQLiteValue uval(val, ctx);
+            unqlite_array_add_elem(m_value, nullptr, uval.m_value);
+        }
+    }
+
     UnQLiteValue(const std::vector<UnQLiteValue>& vec, unqlite_vm* vm)
     : m_vm(vm) 
     , m_value(unqlite_vm_new_array(vm)) {
+        for(const auto& val : vec) {
+            unqlite_array_add_elem(m_value, nullptr, val.m_value);
+        }
+    }
+
+    UnQLiteValue(const std::vector<UnQLiteValue>& vec, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
         for(const auto& val : vec) {
             unqlite_array_add_elem(m_value, nullptr, val.m_value);
         }
@@ -186,6 +309,16 @@ class UnQLiteValue {
         }
     }
 
+    template<typename T, size_t N>
+    UnQLiteValue(const std::array<T,N>& vec, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& val : vec) {
+            UnQLiteValue uval(val, ctx);
+            unqlite_array_add_elem(m_value, nullptr, uval.m_value);
+        }
+    }
+
     template<size_t N>
     UnQLiteValue(const std::array<UnQLiteValue,N>& vec, unqlite_vm* vm)
     : m_vm(vm) 
@@ -195,9 +328,25 @@ class UnQLiteValue {
         }
     }
 
+    template<size_t N>
+    UnQLiteValue(const std::array<UnQLiteValue,N>& vec, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& val : vec) {
+            unqlite_array_add_elem(m_value, nullptr, val.m_value);
+        }
+    }
+
     UnQLiteValue(const std::pair<UnQLiteValue,UnQLiteValue>& p, unqlite_vm* vm)
     : m_vm(vm)
     , m_value(unqlite_vm_new_array(vm)) {
+        unqlite_array_add_elem(m_value, nullptr, p.first.m_value);
+        unqlite_array_add_elem(m_value, nullptr, p.second.m_value);
+    }
+
+    UnQLiteValue(const std::pair<UnQLiteValue,UnQLiteValue>& p, unqlite_context* ctx)
+    : m_ctx(ctx)
+    , m_value(unqlite_context_new_array(ctx)) {
         unqlite_array_add_elem(m_value, nullptr, p.first.m_value);
         unqlite_array_add_elem(m_value, nullptr, p.second.m_value);
     }
@@ -213,11 +362,31 @@ class UnQLiteValue {
     }
 
     template<typename T>
+    UnQLiteValue(const std::map<std::string,T>& values, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& p : values) {
+            UnQLiteValue uval(p.second, ctx);
+            unqlite_array_add_strkey_elem(m_value, p.first.c_str(), uval.m_value);
+        }
+    }
+
+    template<typename T>
     UnQLiteValue(const std::unordered_map<std::string,T>& values, unqlite_vm* vm)
     : m_vm(vm) 
     , m_value(unqlite_vm_new_array(vm)) {
         for(const auto& p : values) {
             UnQLiteValue uval(p.second, vm);
+            unqlite_array_add_strkey_elem(m_value, p.first.c_str(), uval.m_value);
+        }
+    }
+
+    template<typename T>
+    UnQLiteValue(const std::unordered_map<std::string,T>& values, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& p : values) {
+            UnQLiteValue uval(p.second, ctx);
             unqlite_array_add_strkey_elem(m_value, p.first.c_str(), uval.m_value);
         }
     }
@@ -232,6 +401,15 @@ class UnQLiteValue {
     }
 
     template<typename T>
+    UnQLiteValue(const std::map<std::string,UnQLiteValue>& values, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& p : values) {
+            unqlite_array_add_strkey_elem(m_value, p.first.c_str(), p.second.m_value);
+        }
+    }
+
+    template<typename T>
     UnQLiteValue(const std::unordered_map<std::string,UnQLiteValue>& values, unqlite_vm* vm)
     : m_vm(vm) 
     , m_value(unqlite_vm_new_array(vm)) {
@@ -240,9 +418,21 @@ class UnQLiteValue {
         }
     }
 
+    template<typename T>
+    UnQLiteValue(const std::unordered_map<std::string,UnQLiteValue>& values, unqlite_context* ctx)
+    : m_ctx(ctx) 
+    , m_value(unqlite_context_new_array(ctx)) {
+        for(const auto& p : values) {
+            unqlite_array_add_strkey_elem(m_value, p.first.c_str(), p.second.m_value);
+        }
+    }
+
     ~UnQLiteValue() {
         if(m_vm && m_value) {
             unqlite_vm_release_value(m_vm, m_value);
+        }
+        else if(m_ctx && m_value) {
+            unqlite_context_release_value(m_ctx, m_value);
         }
     }
 
@@ -257,27 +447,30 @@ class UnQLiteValue {
         auto index_str = std::to_string(index);
         unqlite_value* result = unqlite_array_fetch(m_value, index_str.c_str(), -1);
         if(result) {
-            return UnQLiteValue(result, m_vm);
+            return UnQLiteValue(result, m_vm, m_ctx);
         } else {
-            return UnQLiteValue(Null(), m_vm);
+            if(m_vm) return UnQLiteValue(Null(), m_vm);
+            else     return UnQLiteValue(Null(), m_ctx);
         }
     }
 
     UnQLiteValue operator[](const std::string& key) const {
         unqlite_value* result = unqlite_array_fetch(m_value, key.c_str(), -1);
         if(result) {
-            return UnQLiteValue(result, m_vm);
+            return UnQLiteValue(result, m_vm, m_ctx);
         } else {
-            return UnQLiteValue(Null(), m_vm);
+            if(m_vm) return UnQLiteValue(Null(), m_vm);
+            else     return UnQLiteValue(Null(), m_ctx);
         }
     }
 
     UnQLiteValue operator[](const char* key) const {
         unqlite_value* result = unqlite_array_fetch(m_value, key, -1);
         if(result) {
-            return UnQLiteValue(result, m_vm);
+            return UnQLiteValue(result, m_vm, m_ctx);
         } else {
-            return UnQLiteValue(Null(), m_vm);
+            if(m_vm) return UnQLiteValue(Null(), m_vm);
+            else     return UnQLiteValue(Null(), m_ctx);
         }
     }
 
@@ -326,75 +519,58 @@ class UnQLiteValue {
     template<typename Stream>
     Stream& printToStream(Stream& os) const;
 
-    void foreach(const std::function<void(unsigned, const UnQLiteValue&)>& f) {
-        if(not unqlite_value_is_json_array(m_value)) {
-            throw Exception("UnQLiteValue is not an array");
+    static int foreach(unqlite_value *pArr, const std::function<int(unsigned, unqlite_value*)>& f) {
+        if(not unqlite_value_is_json_array(pArr)) {
+            throw Exception("UnQLiteValue is not a JSON array");
         }
-        using arg_type =
-            std::tuple<size_t,
-                   std::function<void(unsigned, const UnQLiteValue&)>*,
-                   unqlite_vm*>;
-        arg_type args;
-        std::get<0>(args) = 0;
-        std::get<1>(args) = const_cast<std::function<void(unsigned, const UnQLiteValue&)>*>(&f);
-        std::get<2>(args) = m_vm;
-        unqlite_array_walk(m_value, foreachArrayCallback,
+        std::pair<unsigned, const std::function<int(unsigned, unqlite_value*)>*> args;
+        args.first = 0;
+        args.second = &f;
+        return unqlite_array_walk(pArr, foreachArrayCallback,
                 const_cast<void*>(reinterpret_cast<const void*>(&args)));
     }
 
-    void foreach(const std::function<void(const std::string&, const UnQLiteValue&)>& f) {
-        if(not unqlite_value_is_json_object(m_value)) {
-            throw Exception("UnQLiteValue is not an array");
+    static int foreach(unqlite_value *pMap, const std::function<int(const std::string&, unqlite_value*)>& f) {
+        if(not unqlite_value_is_json_object(pMap)) {
+            throw Exception("UnQLiteValue is not a JSON object");
         }
-        using arg_type =
-            std::tuple<size_t,
-                   std::function<void(const std::string&, const UnQLiteValue&)>*,
-                   unqlite_vm*>;
-        arg_type args;
-        std::get<0>(args) = 0;
-        std::get<1>(args) = const_cast<std::function<void(const std::string&, const UnQLiteValue&)>*>(&f);
-        std::get<2>(args) = m_vm;
-        unqlite_array_walk(m_value, foreachMapCallback,
+        return unqlite_array_walk(pMap, foreachMapCallback,
                 const_cast<void*>(reinterpret_cast<const void*>(&f)));
+    }
+    
+    void foreach(const std::function<void(unsigned, const UnQLiteValue&)>& f) {
+        foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](unsigned i, unqlite_value* elem) {
+            UnQLiteValue val(elem, vm, ctx);
+            f(i, val);
+            val.m_value = nullptr;
+            return UNQLITE_OK;
+        });
+    }
+
+    void foreach(const std::function<void(const std::string&, const UnQLiteValue&)>& f) {
+        foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](const std::string& key, unqlite_value* elem) {
+            UnQLiteValue val(elem, vm, ctx);
+            f(key, val);
+            val.m_value = nullptr;
+            return UNQLITE_OK;
+        });
     }
 
     private:
 
     static int foreachArrayCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-        using arg_type =
-            std::tuple<size_t,
-                   std::function<void(unsigned, const UnQLiteValue&)>*,
-                   unqlite_vm*>;
-        auto p_args = reinterpret_cast<arg_type*>(pUserData);
-        auto i = std::get<0>(*p_args);
-        auto f = std::get<1>(*p_args);
-        auto vm = std::get<2>(*p_args);
-        UnQLiteValue val(pValue, vm);
-        (*f)(i, val);
-        val.m_vm = nullptr;
-        val.m_value = nullptr;
-        i += 1;
-        return UNQLITE_OK;
+        using arg_type = std::pair<unsigned, std::function<int(unsigned, unqlite_value*)>*>;
+        auto args = reinterpret_cast<arg_type*>(pUserData);
+        int ret = (*(args->second))(args->first, pValue);
+        args->first += 1;
+        return ret;
     }
 
     static int foreachMapCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-        using arg_type =
-            std::tuple<size_t,
-                   std::function<void(const std::string&, const UnQLiteValue&)>*,
-                   unqlite_vm*>;
-        auto p_args = reinterpret_cast<arg_type*>(pUserData);
-        auto& i = std::get<0>(*p_args);
-        auto f = std::get<1>(*p_args);
-        auto vm = std::get<2>(*p_args);
-        UnQLiteValue key(pKey, vm);
-        UnQLiteValue val(pValue, vm);
-        (*f)(key, val);
-        val.m_vm    = nullptr;
-        val.m_value = nullptr;
-        key.m_vm    = nullptr;
-        key.m_value = nullptr;
-        i += 1;
-        return UNQLITE_OK;
+        using arg_type = std::function<int(const std::string&, unqlite_value*)>;
+        auto f = reinterpret_cast<arg_type*>(pUserData);
+        std::string key = unqlite_value_to_string(pKey, nullptr);
+        return (*f)(key, pValue);
     }
 
     template<typename Stream>
@@ -405,8 +581,14 @@ class UnQLiteValue {
 
     template<typename T1>
     void fillArrayFromTuple(T1&& x) {
-        UnQLiteValue v(x, m_vm);
-        unqlite_array_add_elem(m_value, nullptr, v.m_value);
+        if(m_vm) {
+            UnQLiteValue v(x, m_vm);
+            unqlite_array_add_elem(m_value, nullptr, v.m_value);
+        }
+        else {
+            UnQLiteValue v(x, m_ctx);
+            unqlite_array_add_elem(m_value, nullptr, v.m_value);
+        }
     }
 
     template<typename T1, typename ... Tn>
@@ -498,6 +680,10 @@ class UnQLiteValue {
         return unqlite_value_is_null(value);
     }
 
+    static bool checkType(unqlite_value* value, const type<Json::Value>&) {
+        return true;
+    }
+
     template<typename IntegerType,
              std::enable_if_t<std::is_integral<IntegerType>::value, int> = 0>
     static bool checkType(unqlite_value* value, const type<IntegerType>&) {
@@ -570,10 +756,11 @@ int UnQLiteValue::fillMapCallback(unqlite_value *pKey, unqlite_value *pValue, vo
     
 template<typename Stream>
 struct UnQLitePrinterArgs {
-    Stream*     stream;
-    unqlite_vm* vm;
-    size_t      count;
-    size_t      current = 0;
+    Stream*          stream;
+    unqlite_vm*      vm      = nullptr;
+    unqlite_context* ctx     = nullptr;
+    size_t           count   = 0;
+    size_t           current = 0;
 };
 
 template<typename Stream>
@@ -581,8 +768,8 @@ static int printUnQLiteMap(unqlite_value *pKey, unqlite_value *pValue, void *pUs
     auto args = reinterpret_cast<UnQLitePrinterArgs<Stream>*>(pUserData);
     auto& os = *(args->stream);
 
-    UnQLiteValue key(pKey, args->vm);
-    UnQLiteValue val(pValue, args->vm);
+    UnQLiteValue key(pKey, args->vm, args->ctx);
+    UnQLiteValue val(pValue, args->vm, args->ctx);
     
     key.printToStream(os);
     os << " : ";
@@ -600,7 +787,7 @@ int printUnQLiteVec(unqlite_value *pKey, unqlite_value *pValue, void *pUserData)
     auto args = reinterpret_cast<UnQLitePrinterArgs<Stream>*>(pUserData);
     auto& os = *(args->stream);
 
-    UnQLiteValue val(pValue, args->vm);
+    UnQLiteValue val(pValue, args->vm, args->ctx);
     
     val.printToStream(os);
     if(args->current < args->count-1)
@@ -631,6 +818,7 @@ Stream& UnQLiteValue::printToStream(Stream& os) const {
         UnQLitePrinterArgs<Stream> args;
         args.stream = &os;
         args.vm = m_vm;
+        args.ctx = m_ctx;
         args.count = unqlite_array_count(m_value);
         unqlite_array_walk(m_value, printUnQLiteVec<Stream>, &args);
         os << "]";
@@ -639,6 +827,7 @@ Stream& UnQLiteValue::printToStream(Stream& os) const {
         UnQLitePrinterArgs<Stream> args;
         args.stream = &os;
         args.vm = m_vm;
+        args.ctx = m_ctx;
         args.count = unqlite_array_count(m_value);
         unqlite_array_walk(m_value, printUnQLiteMap<Stream>, &args);
         os << "}";
@@ -650,6 +839,5 @@ Stream& UnQLiteValue::printToStream(Stream& os) const {
 }
 
 }
-
 
 #endif
