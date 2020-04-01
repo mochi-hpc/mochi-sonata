@@ -6,8 +6,10 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cstring>
 #include <unordered_map>
 #include <iostream>
+#include <json/json.h>
 
 #include "sonata/Exception.hpp"
 #include "invoke/invoke.hpp"
@@ -63,6 +65,53 @@ class UnQLiteValue {
     : m_vm(vm)
     , m_value(unqlite_vm_new_scalar(vm)) {
         unqlite_value_null(m_value);
+    }
+
+    UnQLiteValue(const Json::Value& val, unqlite_vm* vm)
+    : m_vm(vm) {
+        switch(val.type()) {
+        case Json::nullValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_null(m_value);
+            break;
+        case Json::intValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_int64(m_value, val.asInt64());
+            break;
+        case Json::uintValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_int64(m_value, val.asInt64());
+            break;
+        case Json::realValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_double(m_value, val.asDouble());
+            break;
+        case Json::stringValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_string(m_value, val.asString().c_str(), -1);
+            break;
+        case Json::booleanValue:
+            m_value = unqlite_vm_new_scalar(vm);
+            unqlite_value_bool(m_value, val.asBool());
+            break;
+        case Json::arrayValue:
+            m_value = unqlite_vm_new_array(vm);
+            for(unsigned i=0; i < val.size(); i++) {
+                unqlite_value* index = unqlite_vm_new_scalar(vm);
+                unqlite_value_int64(index, i);
+                UnQLiteValue element(val[i], vm);
+                unqlite_array_add_elem(m_value, index, element.m_value);
+                unqlite_vm_release_value(vm, index);
+            }
+            break;
+        case Json::objectValue:
+            m_value = unqlite_vm_new_array(vm);
+            for(auto it = val.begin(); it != val.end(); it++) {
+                UnQLiteValue element(*it, vm);
+                unqlite_array_add_strkey_elem(m_value, it.name().c_str(), element.m_value);
+            }
+            break; 
+        }
     }
 
     UnQLiteValue(const Null&, unqlite_vm* vm)
@@ -421,6 +470,30 @@ class UnQLiteValue {
         return result;
     }
 
+    static int fillJsonValueMapCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
+    static int fillJsonValueArrayCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
+
+    static Json::Value convertType(unqlite_value* value, const type<Json::Value>&) {
+        Json::Value result;
+        if(unqlite_value_is_null(value)) {
+        } else if(unqlite_value_is_int(value)) {
+            result = (int64_t)unqlite_value_to_int64(value);
+        } else if(unqlite_value_is_float(value)) {
+            result = unqlite_value_to_double(value);
+        } else if(unqlite_value_is_bool(value)) {
+            result = (bool)unqlite_value_to_bool(value);
+        } else if(unqlite_value_is_string(value)) {
+            result = unqlite_value_to_string(value, nullptr);
+        } else if(unqlite_value_is_json_object(value)) {
+            unqlite_array_walk(value, fillJsonValueMapCallback, &result);
+        } else if(unqlite_value_is_json_array(value)) {
+            unqlite_array_walk(value, fillJsonValueArrayCallback, &result);
+        } else {
+            // TODO error
+        }
+        return result;
+    }
+
     static bool checkType(unqlite_value* value, const type<Null>&) {
         return unqlite_value_is_null(value);
     }
@@ -494,7 +567,7 @@ int UnQLiteValue::fillMapCallback(unqlite_value *pKey, unqlite_value *pValue, vo
     (*m)[key] = UnQLiteValue::convertType(pValue, UnQLiteValue::type<typename MapType::mapped_type>());
     return UNQLITE_OK;
 }
-
+    
 template<typename Stream>
 struct UnQLitePrinterArgs {
     Stream*     stream;

@@ -19,6 +19,7 @@ class UnQLiteVM {
     : m_code(code)
     , m_db(database) {
         compile();
+        registerSonataFunctions();
     }
 
     UnQLiteVM(UnQLiteVM&& other) = delete;
@@ -74,6 +75,33 @@ class UnQLiteVM {
         if(ret != UNQLITE_OK) parse_and_throw_error();
     }
 
+    void registerSonataFunctions() {
+        int ret;
+        // Admin functions
+        ret = unqlite_create_function(m_vm, "snta_db_create",      snta_db_create,      nullptr);
+        ret = unqlite_create_function(m_vm, "snta_db_attach",      snta_db_attach,      nullptr);
+        ret = unqlite_create_function(m_vm, "snta_db_detach",      snta_db_detach,      nullptr);
+        ret = unqlite_create_function(m_vm, "snta_db_destroy",     snta_db_destroy,     nullptr);
+        // Database functions
+        ret = unqlite_create_function(m_vm, "sntd_coll_create",    sntd_coll_create,    nullptr);
+        ret = unqlite_create_function(m_vm, "sntd_coll_exists",    sntd_coll_exists,    nullptr);
+        ret = unqlite_create_function(m_vm, "sntd_coll_open",      sntd_coll_open,      nullptr);
+        ret = unqlite_create_function(m_vm, "sntd_coll_drop",      sntd_coll_drop,      nullptr);
+        ret = unqlite_create_function(m_vm, "sntd_execute",        sntd_execute,        nullptr);
+        // Collection functions
+        ret = unqlite_create_function(m_vm, "sntc_store",          sntc_store,          nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_fetch",          sntc_fetch,          nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_filter",         sntc_filter,         nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_update",         sntc_update,         nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_all",            sntc_all,            nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_last_record_id", sntc_last_record_id, nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_size",           sntc_size,           nullptr);
+        ret = unqlite_create_function(m_vm, "sntc_erase",          sntc_erase,          nullptr);
+        // Wait functions
+        ret = unqlite_create_function(m_vm, "sntr_wait",           sntr_wait,           nullptr);
+        ret = unqlite_create_function(m_vm, "sntr_test",           sntr_test,           nullptr);
+    }
+
     void parse_and_throw_error() {
         const char *errorBuffer = nullptr;
         int len = 0;
@@ -100,6 +128,30 @@ class UnQLiteVM {
             return UNQLITE_OK;
         }
     }
+
+    // Functions to expose into the VM
+    static int snta_db_create(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int snta_db_attach(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int snta_db_detach(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int snta_db_destroy(unqlite_context *pCtx, int argc, unqlite_value **argv);
+
+    static int sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntd_coll_exists(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntd_coll_open(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntd_coll_drop(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntd_execute(unqlite_context *pCtx, int argc, unqlite_value **argv);
+
+    static int sntc_store(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_fetch(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_filter(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_update(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_all(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_last_record_id(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_size(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntc_erase(unqlite_context *pCtx, int argc, unqlite_value **argv);
+
+    static int sntr_wait(unqlite_context *pCtx, int argc, unqlite_value **argv);
+    static int sntr_test(unqlite_context *pCtx, int argc, unqlite_value **argv);
 };
 
 }
