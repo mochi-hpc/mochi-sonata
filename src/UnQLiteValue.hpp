@@ -626,34 +626,32 @@ class UnQLiteValue {
     }
 
     template<typename T>
-    static int fillArrayCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
-
-    template<typename T>
     static std::vector<T> convertType(unqlite_value* value, const type<std::vector<T>>&) {
         std::vector<T> result;
-        unqlite_array_walk(value, fillArrayCallback<T>, &result);
+        foreach(value, [&result](unsigned, unqlite_value *pValue) {
+            result.push_back(UnQLiteValue::convertType(pValue, UnQLiteValue::type<T>()));
+            return UNQLITE_OK;
+        });
         return result;
     }
-
-    template<typename MapType>
-    static int fillMapCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
 
     template<typename T>
     static std::map<std::string, T> convertType(unqlite_value* value, const type<std::map<std::string, T>>&) {
         std::map<std::string, T> result;
-        unqlite_array_walk(value, fillMapCallback<std::map<std::string,T>>, &result);
+        foreach(value, [&result](const std::string& key, unqlite_value* pValue) {
+            result[key] = UnQLiteValue::convertType(pValue, UnQLiteValue::type<T>());
+        });
         return result;
     }
 
     template<typename T>
     static std::unordered_map<std::string, T> convertType(unqlite_value* value, const type<std::unordered_map<std::string, T>>&) {
         std::unordered_map<std::string, T> result;
-        unqlite_array_walk(value, fillMapCallback<std::unordered_map<std::string,T>>, &result);
+        foreach(value, [&result](const std::string& key, unqlite_value* pValue) {
+            result[key] = UnQLiteValue::convertType(pValue, UnQLiteValue::type<T>());
+        });
         return result;
     }
-
-    static int fillJsonValueMapCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
-    static int fillJsonValueArrayCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
 
     static Json::Value convertType(unqlite_value* value, const type<Json::Value>&) {
         Json::Value result;
@@ -667,9 +665,15 @@ class UnQLiteValue {
         } else if(unqlite_value_is_string(value)) {
             result = unqlite_value_to_string(value, nullptr);
         } else if(unqlite_value_is_json_object(value)) {
-            unqlite_array_walk(value, fillJsonValueMapCallback, &result);
+            foreach(value, [&result](const std::string& key, unqlite_value *pValue) {
+                result[key] = convertType(pValue, type<Json::Value>());
+                return UNQLITE_OK;
+            });
         } else if(unqlite_value_is_json_array(value)) {
-            unqlite_array_walk(value, fillJsonValueArrayCallback, &result);
+            foreach(value, [&result](unsigned, unqlite_value *pValue) {
+                result.append(convertType(pValue, type<Json::Value>()));
+                return UNQLITE_OK;
+            });
         } else {
             // TODO error
         }
@@ -705,13 +709,12 @@ class UnQLiteValue {
     }
 
     template<typename T>
-    static int typeCheckerCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData);
-
-    template<typename T>
     static bool checkType(unqlite_value* value, const type<std::vector<T>>&) {
         bool b =  unqlite_value_is_json_array(value);
         if(!b) return false;
-        unqlite_array_walk(value, typeCheckerCallback<T>, &b);
+        foreach(value, [&b](unsigned, unqlite_value *pValue) {
+            b = b && checkType(pValue, type<T>());
+        });
         return b;
     }
 
@@ -719,7 +722,9 @@ class UnQLiteValue {
     static bool checkType(unqlite_value* value, const type<std::map<std::string, T>>&) {
         bool b = unqlite_value_is_json_object(value);
         if(!b) return false;
-        unqlite_array_walk(value, typeCheckerCallback<T>, &b);
+        foreach(value, [&b](const std::string&, unqlite_value *pValue) {
+            b = b && checkType(pValue, type<T>());
+        });
         return b;
     }
 
@@ -727,32 +732,12 @@ class UnQLiteValue {
     static bool checkType(unqlite_value* value, const type<std::unordered_map<std::string, T>>&) {
         bool b = unqlite_value_is_json_object(value);
         if(!b) return false;
-        unqlite_array_walk(value, typeCheckerCallback<T>, &b);
+        foreach(value, [&b](const std::string&, unqlite_value *pValue) {
+            b = b && checkType(pValue, type<T>());
+        });
         return b;
     }
 };
-    
-template<typename T>
-int UnQLiteValue::typeCheckerCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-    bool* result = reinterpret_cast<bool*>(pUserData);
-    *result = *result && UnQLiteValue::checkType(pValue, UnQLiteValue::type<T>());
-    return UNQLITE_OK;
-}
- 
-template<typename T>
-int UnQLiteValue::fillArrayCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-    std::vector<T>* v = reinterpret_cast<std::vector<T>*>(pUserData);
-    v->push_back(UnQLiteValue::convertType(pValue, UnQLiteValue::type<T>()));
-    return UNQLITE_OK;
-}
-
-template<typename MapType>
-int UnQLiteValue::fillMapCallback(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-    MapType* m = reinterpret_cast<MapType*>(pUserData);
-    std::string key = UnQLiteValue::convertType(pKey, UnQLiteValue::type<std::string>());
-    (*m)[key] = UnQLiteValue::convertType(pValue, UnQLiteValue::type<typename MapType::mapped_type>());
-    return UNQLITE_OK;
-}
     
 template<typename Stream>
 struct UnQLitePrinterArgs {
