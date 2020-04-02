@@ -517,7 +517,49 @@ class UnQLiteValue {
     }
 
     template<typename Stream>
-    Stream& printToStream(Stream& os) const;
+    Stream& printToStream(Stream& os) const {
+        if(is<int64_t>()) {
+            os << as<int64_t>();
+        } else if(is<double>()) {
+            os << as<double>();
+        } else if(is<bool>()) {
+            bool b = as<bool>();
+            if(b) os << "true";
+            else os << "false";
+        } else if(is<UnQLiteValue::Null>()) {
+            os << "null";
+        } else if(is<std::string>()) {
+            os << "\"" << as<std::string>() << "\"";
+        } else if(unqlite_value_is_json_array(m_value)
+                && !unqlite_value_is_json_object(m_value)) {
+            os << "[ ";
+            size_t size = unqlite_array_count(m_value);
+            size_t i = 0;
+            const_cast<UnQLiteValue*>(this)->foreach([&os, size, &i](unsigned index, const UnQLiteValue& val) {
+                    val.printToStream(os);
+                    if(i < size-1)
+                        os << ", ";
+                    i += 1;
+            });
+            os << "]";
+        } else if(unqlite_value_is_json_object(m_value)) {
+            os << "{ ";
+            size_t size = unqlite_array_count(m_value);
+            size_t i = 0;
+            const_cast<UnQLiteValue*>(this)->foreach([&os, size, &i](const std::string& key, const UnQLiteValue& val) {
+                    os << "\"" << key << "\" : ";
+                    val.printToStream(os);
+                    if(i < size-1)
+                        os << ", ";
+                    i += 1;
+            });
+            os << "}";
+        } else if(unqlite_value_is_resource) {
+            os << "\"resource@" << std::hex
+                << (intptr_t)unqlite_value_to_resource(m_value) << "\"";
+        }
+        return os;
+    }
 
     static int foreach(unqlite_value *pArr, const std::function<int(unsigned, unqlite_value*)>& f) {
         if(not unqlite_value_is_json_array(pArr)) {
@@ -675,7 +717,7 @@ class UnQLiteValue {
                 return UNQLITE_OK;
             });
         } else {
-            // TODO error
+            throw Exception("Cannot convert UnQLiteValue into Json::Value");
         }
         return result;
     }
@@ -738,90 +780,6 @@ class UnQLiteValue {
         return b;
     }
 };
-    
-template<typename Stream>
-struct UnQLitePrinterArgs {
-    Stream*          stream;
-    unqlite_vm*      vm      = nullptr;
-    unqlite_context* ctx     = nullptr;
-    size_t           count   = 0;
-    size_t           current = 0;
-};
-
-template<typename Stream>
-static int printUnQLiteMap(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-    auto args = reinterpret_cast<UnQLitePrinterArgs<Stream>*>(pUserData);
-    auto& os = *(args->stream);
-
-    UnQLiteValue key(pKey, args->vm, args->ctx);
-    UnQLiteValue val(pValue, args->vm, args->ctx);
-    
-    key.printToStream(os);
-    os << " : ";
-    val.printToStream(os);
-    if(args->current < args->count-1)
-        os << ",";
-    os << " ";
-    args->current += 1;
-
-    return UNQLITE_OK;
-}
-
-template<typename Stream>
-int printUnQLiteVec(unqlite_value *pKey, unqlite_value *pValue, void *pUserData) {
-    auto args = reinterpret_cast<UnQLitePrinterArgs<Stream>*>(pUserData);
-    auto& os = *(args->stream);
-
-    UnQLiteValue val(pValue, args->vm, args->ctx);
-    
-    val.printToStream(os);
-    if(args->current < args->count-1)
-        os << ",";
-    os << " ";
-    args->current += 1;
-
-    return UNQLITE_OK;
-}
-
-template<typename Stream>
-Stream& UnQLiteValue::printToStream(Stream& os) const {
-    if(is<int64_t>()) {
-        os << as<int64_t>();
-    } else if(is<double>()) {
-        os << as<double>();
-    } else if(is<bool>()) {
-        bool b = as<bool>();
-        if(b) os << "true";
-        else os << "false";
-    } else if(is<UnQLiteValue::Null>()) {
-        os << "null";
-    } else if(is<std::string>()) {
-        os << "\"" << as<std::string>() << "\"";
-    } else if(unqlite_value_is_json_array(m_value)
-            && !unqlite_value_is_json_object(m_value)) {
-        os << "[ ";
-        UnQLitePrinterArgs<Stream> args;
-        args.stream = &os;
-        args.vm = m_vm;
-        args.ctx = m_ctx;
-        args.count = unqlite_array_count(m_value);
-        unqlite_array_walk(m_value, printUnQLiteVec<Stream>, &args);
-        os << "]";
-    } else if(unqlite_value_is_json_object(m_value)) {
-        os << "{ ";
-        UnQLitePrinterArgs<Stream> args;
-        args.stream = &os;
-        args.vm = m_vm;
-        args.ctx = m_ctx;
-        args.count = unqlite_array_count(m_value);
-        unqlite_array_walk(m_value, printUnQLiteMap<Stream>, &args);
-        os << "}";
-    } else if(unqlite_value_is_resource) {
-        os << "\"resource@" << std::hex
-           << (intptr_t)unqlite_value_to_resource(m_value) << "\"";
-    }
-    return os;
-}
 
 }
 
