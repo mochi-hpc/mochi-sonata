@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __SONATA_DATABASE_IMPL_H
 #define __SONATA_DATABASE_IMPL_H
 

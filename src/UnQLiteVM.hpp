@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __SONATA_UNQLITE_VM_HPP
 #define __SONATA_UNQLITE_VM_HPP
 

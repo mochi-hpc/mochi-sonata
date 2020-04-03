@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __SONATA_JSON_VALUE_SERIALIZE_HPP
 #define __SONATA_JSON_VALUE_SERIALIZE_HPP
 

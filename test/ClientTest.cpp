@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #include <cppunit/extensions/HelperMacros.h>
 #include <sonata/Client.hpp>
 #include <sonata/Admin.hpp>

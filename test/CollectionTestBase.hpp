@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __COLLECTION_TEST_BASE
 #define __COLLECTION_TEST_BASE
 

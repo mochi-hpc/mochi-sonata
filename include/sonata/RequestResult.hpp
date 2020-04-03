@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #ifndef __REQUEST_RESULT_HPP
 #define __REQUEST_RESULT_HPP
 

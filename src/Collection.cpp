@@ -1,3 +1,8 @@
+/*
+ * (C) 2020 The University of Chicago
+ * 
+ * See COPYRIGHT in top-level directory.
+ */
 #include "sonata/Collection.hpp"
 #include "sonata/RequestResult.hpp"
 #include "sonata/Exception.hpp"
