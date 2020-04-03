@@ -22,7 +22,7 @@ const char* records[] = {
 void example(sonata::Collection& collection) {
 
     // Store records
-    for(unsigned i=0; i < sizeof(records); i++) {
+    for(unsigned i=0; i < sizeof(records)/sizeof(records[0]); i++) {
         uint64_t id = collection.store(records[i]);
     }
 
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
         sonata::Admin admin(engine);
 
         // Create a database in provider 0
-        std::string config = "{ \"path\" : \"./mydatabase\" \"}";
+        std::string config = "{ \"path\" : \"./mydatabase\" }";
         admin.createDatabase(addr, 0, "bands", "unqlite", config);
 
         // Initialize a Client

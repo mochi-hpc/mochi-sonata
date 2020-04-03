@@ -420,10 +420,14 @@ class UnQLiteBackend : public Backend {
             vm.execute();
             result.success() = true;
             for(auto& name : vars) {
-                auto val = vm[name];
-                std::ostringstream ss;
-                val.printToStream(ss);
-                result.value().emplace(name, ss.str());
+                if(name != "__output__") {
+                    auto val = vm[name];
+                    std::ostringstream ss;
+                    val.printToStream(ss);
+                    result.value().emplace(name, ss.str());
+                } else {
+                    result.value().emplace("__output__", vm.output());
+                }
             }
         } catch(const Exception& e) {
             result.success() = false;

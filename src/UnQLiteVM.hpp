@@ -58,6 +58,15 @@ class UnQLiteVM {
         return UnQLiteValue(value, m_vm, nullptr).as<T>();
     }
 
+    std::string output() const {
+        const char *pOut;
+        unsigned int nLen;
+        unqlite_vm_config(m_vm,
+                 UNQLITE_VM_CONFIG_EXTRACT_OUTPUT,
+                 &pOut, &nLen);
+        return std::string(pOut, nLen);
+    }
+
     UnQLiteValue operator[](const std::string& name) const {
         unqlite_value* value = unqlite_vm_extract_variable(m_vm, name.c_str());
         return UnQLiteValue(value, m_vm, nullptr);

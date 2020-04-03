@@ -15,6 +15,8 @@ int main(int argc, char** argv) {
     // Initialize a Sonata provider
     sonata::Provider provider(engine);
 
-    // Wait for finalize in the engine's destructor
+    // Wait for finalize explicitely to avoid
+    // calling the provider's destructor
+    engine.wait_for_finalize();
     return 0;
 }

@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
         sonata::Admin admin(engine);
 
         // Create a database in provider 0
-        std::string config = "{ \"path\" : \"./mydatabase\" \"}";
+        std::string config = "{ \"path\" : \"./mydatabase\" }";
         admin.createDatabase(addr, 0, "mydatabase", "unqlite", config);
 
         // Initialize a Client
