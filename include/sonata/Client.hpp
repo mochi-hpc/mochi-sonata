@@ -13,12 +13,15 @@
 namespace sonata {
 
 class ClientImpl;
+class Database;
 
 /**
  * @brief The Client object is the main object used to establish
  * a connection with a Sonata service.
  */
 class Client {
+
+    friend class Database;
 
     public:
 
@@ -55,6 +58,16 @@ class Client {
     ~Client();
 
     /**
+     * @brief Returns the thallium engine used by the client.
+     */
+    const thallium::engine& engine() const;
+
+    /**
+     * @brief Returns the thallium engine used by the client.
+     */
+    thallium::engine& engine();
+
+    /**
      * @brief Opens a remote database and returns a
      * Database instance to access it.
      *
@@ -74,6 +87,8 @@ class Client {
     operator bool() const;
 
     private:
+
+    Client(const std::shared_ptr<ClientImpl>& impl);
 
     std::shared_ptr<ClientImpl> self;
 };

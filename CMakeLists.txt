@@ -42,6 +42,8 @@ find_package (UnQLite REQUIRED)
 find_package (TCLAP REQUIRED)
 find_package(spdlog REQUIRED)
 
+include_directories(${UnQLite_INCLUDE_DIR})
+
 find_package (CppUnit)
 if (CPPUNIT_FOUND)
     message(STATUS "CppUnit found, unit tests will be compiled")

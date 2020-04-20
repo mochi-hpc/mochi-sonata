@@ -34,6 +34,10 @@ Database::operator bool() const {
     return static_cast<bool>(self);
 }
 
+Client Database::client() const {
+    return Client(self->m_client);
+}
+
 Collection Database::create(const std::string& collectionName) const {
     if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<bool> result = self->m_client->m_create_collection.on(self->m_ph)(self->m_name, collectionName);

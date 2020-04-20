@@ -7,4 +7,5 @@ spack:
   - jsoncpp
   - tclap
   - spdlog
+  - mpi
   concretization: together

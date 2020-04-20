@@ -21,6 +21,9 @@ namespace sonata {
 Client::Client(tl::engine& engine)
 : self(std::make_shared<ClientImpl>(engine)) {}
 
+Client::Client(const std::shared_ptr<ClientImpl>& impl)
+: self(impl) {}
+
 Client::Client(Client&& other) = default;
 
 Client& Client::operator=(Client&& other) = default;
@@ -31,6 +34,14 @@ Client& Client::operator=(const Client& other) = default;
 
 
 Client::~Client() = default;
+
+const tl::engine& Client::engine() const {
+    return self->m_engine;
+}
+
+tl::engine& Client::engine() {
+    return self->m_engine;
+}
 
 Client::operator bool() const {
     return static_cast<bool>(self);

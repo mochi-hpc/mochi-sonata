@@ -1,0 +1,29 @@
+{
+    "protocol" : "tcp",
+    "seed" : 0,
+    "server" : {
+        "use-progress-thread" : false,
+        "rpc-thread-count" : 0
+    },
+    "client" : {
+        "use-progress-thread" : false
+    },
+    "benchmarks" : [
+        {
+            "type" : "store",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 10000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            }
+        }
+    ]
+}

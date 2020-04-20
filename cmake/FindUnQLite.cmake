@@ -1,12 +1,12 @@
 #
-#  UNQLITE_FOUND - system has UnQLite
-#  UNQLITE_INCLUDE_DIR - the UnQLite include directory
-#  UNQLITE_LIBRARIES - UnQLite library
+#  UnQLite_FOUND - system has UnQLite
+#  UnQLite_INCLUDE_DIR - the UnQLite include directory
+#  UnQLite_LIBRARIES - UnQLite library
 
-set(UNQLITE_LIBRARY_DIRS "")
+set(UnQLite_LIBRARY_DIRS "")
 
-find_library(UNQLITE_LIBRARIES NAMES unqlite)
-find_path(UNQLITE_INCLUDE_DIRS NAMES unqlite.h)
+find_library(UnQLite_LIBRARIES NAMES unqlite)
+find_path(UnQLite_INCLUDE_DIRS NAMES unqlite.h)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(UNQLITE DEFAULT_MSG UNQLITE_LIBRARIES UNQLITE_INCLUDE_DIRS)
+find_package_handle_standard_args(UnQLite DEFAULT_MSG UnQLite_LIBRARIES UnQLite_INCLUDE_DIRS)

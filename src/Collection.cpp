@@ -35,6 +35,10 @@ Collection::operator bool() const {
     return static_cast<bool>(self);
 }
 
+Database Collection::database() const {
+    return Database(self->m_database);
+}
+
 uint64_t Collection::store(const std::string& record) const {
     if(not self) throw Exception("Invalid sonata::Collection object");
     auto& rpc = self->m_database->m_client->m_coll_store;

@@ -9,6 +9,8 @@
 #include <thallium.hpp>
 #include <memory>
 #include <unordered_set>
+#include <json/json.h>
+#include <sonata/Client.hpp>
 #include <sonata/Collection.hpp>
 #include <sonata/Exception.hpp>
 
@@ -18,6 +20,7 @@ namespace tl = thallium;
 
 class Client;
 class DatabaseImpl;
+class Collection;
 
 /**
  * @brief A Database object is a handle for a remote database
@@ -26,6 +29,7 @@ class DatabaseImpl;
 class Database {
 
     friend class Client;
+    friend class Collection;
 
     public:
 
@@ -58,6 +62,11 @@ class Database {
      * @brief Destructor.
      */
     ~Database();
+
+    /**
+     * @brief Returns the client this database has been opened with.
+     */
+    Client client() const;
 
     /**
      * @brief Creates a collection.

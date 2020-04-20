@@ -43,7 +43,7 @@ void example(sonata::Collection& collection) {
     std::vector<std::string> filtered;
     std::string code = R"(
         function($member) {
-            if($member > 1941) {
+            if($member.year > 1941) {
                 return TRUE;
             } else {
                 return FALSE;

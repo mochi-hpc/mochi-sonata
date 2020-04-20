@@ -6,6 +6,7 @@
 #ifndef __SONATA_COLLECTION_HPP
 #define __SONATA_COLLECTION_HPP
 
+#include <sonata/Database.hpp>
 #include <json/json.h>
 #include <thallium.hpp>
 #include <memory>
@@ -16,6 +17,7 @@ namespace tl = thallium;
 
 class DatabaseImpl;
 class CollectionImpl;
+class Database;
 
 /**
  * @brief The Collection object is a handle to a collection
@@ -63,6 +65,11 @@ class Collection {
      * @brief Checks if the Collection object is valid.
      */
     operator bool() const;
+
+    /**
+     * @brief Returns the database this collection belongs to.
+     */
+    Database database() const;
 
     /**
      * @brief Stores a document into the collection.

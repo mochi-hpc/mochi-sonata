@@ -62,7 +62,7 @@ write_basic_package_version_file(
 # generate our config file for find_package()
 configure_file (sonata-config.cmake.in sonata-config.cmake @ONLY)
 
-get_filename_component(UNQLITE_LIBDIR ${UNQLITE_LIBRARIES} DIRECTORY)
+get_filename_component(UNQLITE_LIBDIR ${UnQLite_LIBRARIES} DIRECTORY)
 
 # some bits for the pkg-config file
 set (DEST_DIR "${CMAKE_INSTALL_PREFIX}")
