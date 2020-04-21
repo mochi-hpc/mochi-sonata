@@ -1,3 +1,4 @@
+#include <random>
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -37,6 +38,8 @@ struct RecordInfo {
     size_t max_key_size = 0;
     size_t min_val_size = 0;
     size_t max_val_size = 0;
+    std::uniform_real_distribution<double> unif = std::uniform_real_distribution<double>(0,1);
+    std::default_random_engine rng;
 
     RecordInfo(const Json::Value& config) {
         num = config.get("num", 0).asUInt64();
@@ -51,9 +54,9 @@ struct RecordInfo {
             } else {
                 throw std::runtime_error("invalid key-size field");
             }
-            if(min_key_size == 0 || min_key_size > max_key_size) {
-                throw std::runtime_error("invalid key-size value(s)");
-            }
+        }
+        if(min_key_size == 0 || min_key_size > max_key_size) {
+            throw std::runtime_error("invalid key-size value(s)");
         }
         if(config["val-size"]) {
             if(config["val-size"].isArray() && config["val-size"].size() == 2) {
@@ -71,7 +74,7 @@ struct RecordInfo {
         }
     }
 
-    void generateRandomRecordString(std::string* result) const {
+    void generateRandomRecordString(std::string* result) {
         std::stringstream ss;
         ss << "{ ";
         for(size_t i = 0; i < fields; i++) {
@@ -80,14 +83,15 @@ struct RecordInfo {
             size_t vs = min_val_size + (rand() % (max_val_size - min_val_size + 1));
             std::string val = gen_random_string(vs);
             ss << "\"" << key << "\" : \"" << val << "\"";
-            if(i < fields)
-                ss << ", ";
+            ss << ", ";
         }
+
+        ss << "\"__p__\" : " << std::setprecision(12) << unif(rng);
         ss << " }";
         *result = ss.str();
     }
 
-    void generateRandomRecordString(Json::Value* result) const {
+    void generateRandomRecordString(Json::Value* result) {
         Json::Value record;
         for(size_t i = 0; i < fields; i++) {
             size_t ks = min_key_size + (rand() % (max_key_size - min_key_size + 1));
@@ -211,7 +215,7 @@ std::map<std::string, AbstractBenchmark::benchmark_factory_function> AbstractBen
     static BenchmarkRegistration<__class> __class##_registration(__name)
 
 /**
- * StoreBenchmark executes a series of bake_create operations and measures their duration.
+ * StoreBenchmark executes a series of store operations and measures their duration.
  */
 class StoreBenchmark : public AbstractBenchmark {
 
@@ -269,9 +273,291 @@ class StoreBenchmark : public AbstractBenchmark {
     virtual void teardown() override {
         m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
         m_records.clear();
+        m_records_json.clear();
     }
 };
 REGISTER_BENCHMARK("store", StoreBenchmark);
+
+/**
+ * FetchBenchmark executes a series of fetch operations and measures their duration.
+ */
+class FetchBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    RecordInfo      m_record_info;
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    bool            m_use_json = false;
+    size_t          m_num_fetch = 0; 
+
+    public:
+
+    template<typename ... T>
+    FetchBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_record_info(config["records"])
+    , m_collection_info(config["collection"]) 
+    {
+        m_use_json = config.get("use-json", false).asBool();
+        if(!config["num-operations"]) {
+            throw std::runtime_error("Fetch benchmark needs a num-operations parameter");
+        }
+        m_num_fetch = config["num-operations"].asUInt64();
+    }
+
+    virtual void setup() override {
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            std::string r;
+            m_record_info.generateRandomRecordString(&r);
+            m_collection.store(r);
+        }
+    }
+
+    virtual void execute() override {
+        for(size_t i = 0; i < m_num_fetch; i++) {
+            uint64_t id = rand() % m_record_info.num;
+            if(!m_use_json) {
+                std::string r;
+                m_collection.fetch(id, &r);
+            } else {
+                Json::Value r;
+                m_collection.fetch(id, &r);
+            }
+        }
+    }
+
+    virtual void teardown() override {
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+    }
+};
+REGISTER_BENCHMARK("fetch", FetchBenchmark);
+
+/**
+ * FilterBenchmark executes a series of filter operations and measures their duration.
+ */
+class FilterBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    RecordInfo      m_record_info;
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    bool            m_use_json = false;
+    double          m_selectivity = 0.0;
+    std::string     m_function;
+
+    public:
+
+    template<typename ... T>
+    FilterBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_record_info(config["records"])
+    , m_collection_info(config["collection"]) 
+    {
+        m_use_json = config.get("use-json", false).asBool();
+        if(!config["filter-selectivity"]) {
+            throw std::runtime_error("Fetch benchmark needs a filter-selectivity parameter");
+        }
+        m_selectivity = config["filter-selectivity"].asDouble();
+        std::stringstream ss;
+        ss << "function($rec) { return $rec.__p__ < ";
+        ss << std::setprecision(12) << m_selectivity;
+        ss << "; }";
+        m_function = ss.str();
+    }
+
+    virtual void setup() override {
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            std::string r;
+            m_record_info.generateRandomRecordString(&r);
+            m_collection.store(r);
+        }
+    }
+
+    virtual void execute() override {
+        if(!m_use_json) {
+            std::vector<std::string> result;
+            m_collection.filter(m_function, &result);
+        } else {
+            Json::Value result;
+            m_collection.filter(m_function, &result);
+        }
+    }
+
+    virtual void teardown() override {
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+    }
+};
+REGISTER_BENCHMARK("filter", FilterBenchmark);
+
+/**
+ * UpdateBenchmark executes a series of update operations and measures their duration.
+ */
+class UpdateBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    RecordInfo      m_record_info;
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    bool            m_use_json = false;
+    size_t          m_num_updates = 0;
+    std::vector<std::string> m_new_records;
+    std::vector<Json::Value> m_new_records_json;
+
+    public:
+
+    template<typename ... T>
+    UpdateBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_record_info(config["records"])
+    , m_collection_info(config["collection"]) 
+    {
+        m_use_json = config.get("use-json", false).asBool();
+        if(!config["num-operations"]) {
+            throw std::runtime_error("Fetch benchmark needs a num-operations parameter");
+        }
+        m_num_updates = config["num-operations"].asUInt64();
+    }
+
+    virtual void setup() override {
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            std::string r;
+            m_record_info.generateRandomRecordString(&r);
+            m_collection.store(r);
+        }
+
+        if(m_use_json) m_new_records_json.reserve(m_num_updates);
+        else m_new_records.reserve(m_num_updates);
+
+        for(size_t i = 0; i < m_num_updates; i++) {
+            if(!m_use_json) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_new_records.push_back(std::move(r));
+            } else {
+                Json::Value r;
+                m_record_info.generateRandomRecordString(&r);
+                m_new_records_json.push_back(std::move(r));
+            }
+        }
+    }
+
+    virtual void execute() override {
+        for(size_t i = 0; i < m_num_updates; i++) {
+            uint64_t id = rand() % m_record_info.num;
+            if(!m_use_json) {
+                m_collection.update(id, m_new_records[i]);
+            } else {
+                m_collection.update(id, m_new_records_json[i]);
+            }
+        }
+    }
+
+    virtual void teardown() override {
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+    }
+};
+REGISTER_BENCHMARK("update", UpdateBenchmark);
+
+/**
+ * AllBenchmark executes a series of "all" operations and measures their duration.
+ */
+class AllBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    RecordInfo      m_record_info;
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    bool            m_use_json = false;
+
+    public:
+
+    template<typename ... T>
+    AllBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_record_info(config["records"])
+    , m_collection_info(config["collection"]) 
+    {
+        m_use_json = config.get("use-json", false).asBool();
+    }
+
+    virtual void setup() override {
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            std::string r;
+            m_record_info.generateRandomRecordString(&r);
+            m_collection.store(r);
+        }
+    }
+
+    virtual void execute() override {
+        if(m_use_json) {
+            Json::Value all;
+            m_collection.all(&all);
+        } else {
+            std::vector<std::string> all;
+            m_collection.all(&all);
+        }
+    }
+
+    virtual void teardown() override {
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+    }
+};
+REGISTER_BENCHMARK("all", AllBenchmark);
+
+/**
+ * EraseBenchmark executes a series of "erase" operations and measures their duration.
+ */
+class EraseBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    RecordInfo      m_record_info;
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    std::vector<uint64_t> m_erase_order;
+
+    public:
+
+    template<typename ... T>
+    EraseBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_record_info(config["records"])
+    , m_collection_info(config["collection"]) 
+    {}
+
+    virtual void setup() override {
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        m_erase_order.resize(0);
+        m_erase_order.reserve(m_record_info.num);
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            std::string r;
+            m_record_info.generateRandomRecordString(&r);
+            m_collection.store(r);
+            m_erase_order.push_back(i);
+        }
+        std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
+    }
+
+    virtual void execute() override {
+        for(size_t i = 0; i < m_erase_order.size(); i++) {
+            m_collection.erase(m_erase_order[i]);
+        }
+    }
+
+    virtual void teardown() override {
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+    }
+};
+REGISTER_BENCHMARK("erase", EraseBenchmark);
+
 
 
 static void run_server(MPI_Comm comm, Json::Value& config);

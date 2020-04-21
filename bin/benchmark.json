@@ -19,7 +19,90 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 10000,
+                "num" : 1000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            }
+        },
+        {
+            "type" : "fetch",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 1000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "num-operations" : 1000
+        },
+        {
+            "type" : "filter",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 1000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "filter-selectivity" : 0.5
+        },
+        {
+            "type" : "update",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 1000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "num-operations" : 1000
+        },
+        {
+            "type" : "all",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 1000,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            }
+        },
+        {
+            "type" : "erase",
+            "repetitions" : 10,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 1000,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]
