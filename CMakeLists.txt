@@ -12,8 +12,10 @@ cmake_minimum_required (VERSION 3.0)
 project (sonata C CXX)
 enable_testing ()
 
-option(ENABLE_TESTS    "Build tests. May require CppUnit_ROOT" OFF)
-option(ENABLE_EXAMPLES "Build examples" OFF)
+option(ENABLE_TESTS     "Build tests. May require CppUnit_ROOT" OFF)
+option(ENABLE_EXAMPLES  "Build examples" OFF)
+option(ENABLE_BENCHMARK "Build benchmark" OFF)
+option(ENABLE_DAEMON    "Build default daemon" OFF)
 
 # add our cmake module directory to the path
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}

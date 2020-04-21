@@ -15,6 +15,7 @@ class CollectionTest : public CppUnit::TestFixture,
 {
     CPPUNIT_TEST_SUITE( CollectionTest );
     CPPUNIT_TEST( testStore );
+    CPPUNIT_TEST( testStoreAsync );
     CPPUNIT_TEST( testFetch );
     CPPUNIT_TEST( testFilter );
     CPPUNIT_TEST( testUpdate );
@@ -73,6 +74,33 @@ class CollectionTest : public CppUnit::TestFixture,
                     "record id should be correct.",
                     ref_record_id, record_id);
             ref_record_id += 1;
+        }
+    }
+
+    void testStoreAsync() {
+        sonata::Client client(*engine);
+        std::string addr = engine->self();
+        sonata::Database mydb = client.open(addr, 0, "mydb");
+        sonata::Collection coll = mydb.open("mycollection");
+
+        uint64_t ref_record_id = 0;
+        std::vector<uint64_t> ids(records_str.size());
+        std::vector<sonata::AsyncRequest> requests(records_str.size());
+        // Strings can be stored
+        size_t i = 0;
+        for(const auto& r : records_str) {
+            CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                    "coll.store should not throw.",
+                    coll.store(r, &ids[i], &requests[i]));
+            i += 1;
+        }
+        for(size_t j = 0; j < i; j++) {
+            CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                    "request.wait should not throw.",
+                    requests[j].wait());
+            CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                    "record id should be correct.",
+                    (uint64_t)j, ids[j]);
         }
     }
 

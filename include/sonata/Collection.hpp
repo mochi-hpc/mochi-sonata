@@ -6,6 +6,7 @@
 #ifndef __SONATA_COLLECTION_HPP
 #define __SONATA_COLLECTION_HPP
 
+#include <sonata/AsyncRequest.hpp>
 #include <sonata/Database.hpp>
 #include <json/json.h>
 #include <thallium.hpp>
@@ -78,7 +79,11 @@ class Collection {
      *
      * @return the record id of the stored document.
      */
-    uint64_t store(const std::string& record) const;
+    inline uint64_t store(const std::string& record) const {
+        uint64_t record_id;
+        store(record, &record_id);
+        return record_id;
+    }
 
     /**
      * @brief Stores a document into the collection.
@@ -87,7 +92,11 @@ class Collection {
      *
      * @return the record id of the stored document.
      */
-    uint64_t store(const Json::Value& record) const;
+    inline uint64_t store(const Json::Value& record) const {
+        uint64_t record_id;
+        store(record, &record_id);
+        return record_id;
+    }
 
     /**
      * @brief Stores a document into the collection.
@@ -96,45 +105,101 @@ class Collection {
      *
      * @return the record id of the stored document.
      */
-    uint64_t store(const char* record) const {
-        return store(std::string(record));
+    inline uint64_t store(const char* record) const {
+        uint64_t record_id;
+        store(record, &record_id);
+        return record_id;
     }
 
     /**
-     * @brief Fetches a document by its record id.
+     * @brief Asynchronously stores a document into the collection.
+     * If the pointer to the request is null, this function will be
+     * executed synchronously.
+     *
+     * @param record A valid JSON-formated document.
+     * @param id Pointer to a record id set when the request completes.
+     * @param req Pointer to a request to wait on.
+     *
+     * @return the record id of the stored document.
+     */
+    void store(const std::string& record, 
+               uint64_t* id, AsyncRequest* req = nullptr) const;
+
+    /**
+     * @brief Asynchronously stores a document into the collection.
+     * If the pointer to the request is null, this function will be
+     * executed synchronously.
+     *
+     * @param record A JSON document.
+     * @param id Pointer to a record id set when the request completes.
+     * @param req Pointer to a request to wait on.
+     *
+     * @return the record id of the stored document.
+     */
+    void store(const Json::Value& record,
+               uint64_t* id, AsyncRequest* req = nullptr) const;
+
+    /**
+     * @brief Asynchronously stores a document into the collection.
+     * If the pointer to the request is null, this function will be
+     * executed synchronously.
+     *
+     * @param record A valid JSON-formated document.
+     * @param id Pointer to a record id set when the request completes.
+     * @param req Pointer to a request to wait on.
+     *
+     * @return the record id of the stored document.
+     */
+    void store(const char* record,
+               uint64_t* id, AsyncRequest* req = nullptr) const {
+        store(std::string(record), id, req);
+    }
+
+    /**
+     * @brief Asynchronously fetches a document by its record id.
+     * If req is null, this function becomes synchronous.
      *
      * @param[in] id Record id.
      * @param[out] result Resulting string.
+     * @param req Pointer to a request to wait on.
      */
     void fetch(uint64_t id,
-               std::string* result) const;
+               std::string* result,
+               AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Fetches a document by its record id.
+     * @brief Asynchronously fetches a document by its record id.
+     * If req is null, this function becomes synchronous.
      *
      * @param[in] id Record id.
      * @param[out] result Resulting JSON object.
+     * @param req Pointer to a request to wait on.
      */
     void fetch(uint64_t id,
-               Json::Value* result) const;
+               Json::Value* result,
+               AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Filters the collection and returns the
+     * @brief Asynchronously filters the collection and returns the
      * records that match the condition. This condition should
      * be expressed as a Jx9 function returning TRUE or FALSE.
      * For example the following Jx9 function selects only
      * the records where x < 4 :
      *
      * "function($record) { return $record.x < 4; }"
+     *
+     * If req is null, this function becomes synchronous.
      *
      * @param filterCode A Jx9 filter code.
      * @param result Resuling vector of records as strings.
+     * @param req Pointer to a request to wait on.
      */
     void filter(const std::string& filterCode,
-                std::vector<std::string>* result) const;
+                std::vector<std::string>* result,
+                AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Filters the collection and returns the
+     * @brief Asynchronously filters the collection and returns the
      * records that match the condition. This condition should
      * be expressed as a Jx9 function returning TRUE or FALSE.
      * For example the following Jx9 function selects only
@@ -142,61 +207,81 @@ class Collection {
      *
      * "function($record) { return $record.x < 4; }"
      *
+     * If req is null, this function becomes synchronous.
+     *
      * @param filterCode A Jx9 filter code.
      * @param result Resuling JSON object containing the array of results.
+     * @param req Pointer to a request to wait on.
      */
     void filter(const std::string& filterCode,
-                Json::Value* result) const;
+                Json::Value* result,
+                AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Updates the content of a document with a new content.
+     * @brief Asynchronously updates the content of a document with a new content.
+     * If req is null, this function becomes synchronous.
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
-                const Json::Value& record) const;
+                const Json::Value& record,
+                AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Updates the content of a document with a new content.
+     * @brief Asynchronously updates the content of a document with a new content.
+     * If req is null, this function becomes synchronous.
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
-                const std::string& record) const;
+                const std::string& record,
+                AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Updates the content of a document with a new content.
+     * @brief Asynchronously updates the content of a document with a new content.
+     * If req is null, this function becomes synchronous.
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
-                const char* record) const {
+                const char* record,
+                AsyncRequest* req = nullptr) const {
         return update(id, std::string(record));
     }
 
     /**
-     * @brief Returns all the documents from the collection
+     * @brief Asynchronously returns all the documents from the collection
      * as a vector of strings.
+     * If req is null, this function becomes synchronous.
      *
      * @param result All the documents from the collection.
+     * @param req Pointer to a request to wait on.
      */
-    void all(std::vector<std::string>* result) const;
+    void all(std::vector<std::string>* result,
+             AsyncRequest* req = nullptr) const;
 
     /**
-     * @brief Returns all the documents from the collection
+     * @brief Asynchronously returns all the documents from the collection
      * as a JSON object.
+     * If req is null, this function becomes synchronous.
      *
      * @param result All the documents from the collection.
+     * @param req Pointer to a request to wait on.
      */
-    void all(Json::Value* result) const;
+    void all(Json::Value* result,
+             AsyncRequest* req = nullptr) const;
 
     /**
      * @brief Returns the last record id used by the collection.
      *
      * @return The last record id.
+     * @param req Pointer to a request to wait on.
      */
     uint64_t last_record_id() const;
 
@@ -209,11 +294,13 @@ class Collection {
     size_t size() const;
 
     /**
-     * @brief Erases a document from the collection.
+     * @brief Asynchronously erases a document from the collection.
+     * If req is null, this function becomes synchronous.
      *
      * @param id Record id of the document to erase.
+     * @param req Pointer to a request to wait on.
      */
-    void erase(uint64_t id) const;
+    void erase(uint64_t id, AsyncRequest* req = nullptr) const;
 
     private:
 

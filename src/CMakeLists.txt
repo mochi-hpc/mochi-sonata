@@ -1,5 +1,5 @@
 # list of source files
-set(sonata-client-src Client.cpp Database.cpp Collection.cpp)
+set(sonata-client-src Client.cpp Database.cpp Collection.cpp AsyncRequest.cpp)
 set(sonata-server-src Provider.cpp Backend.cpp UnQLiteBackend.cpp UnQLiteVM.cpp)
 set(sonata-admin-src  Admin.cpp)
 
