@@ -13,16 +13,23 @@
 #include <cstdio>
 #include <sstream>
 #include <fstream>
+#include <thallium.hpp>
 
 namespace sonata {
 
+namespace tl = thallium;
 using namespace std::string_literals;
 
 class UnQLiteBackend : public Backend {
     
     public:
 
-    UnQLiteBackend() = default;
+    UnQLiteBackend() {
+        m_unqlite_is_threadsafe = unqlite_lib_is_threadsafe();
+        if(m_unqlite_is_threadsafe) {
+            unqlite_lib_config(UNQLITE_LIB_CONFIG_THREAD_LEVEL_MULTI);
+        }
+    }
 
     UnQLiteBackend(UnQLiteBackend&&) = delete;
 
@@ -54,6 +61,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<bool> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -61,6 +71,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -78,6 +89,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<bool> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -105,6 +119,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<bool> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -112,6 +129,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -138,6 +156,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<uint64_t> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, ss.str().c_str());
             vm.set("collection", coll_name);
             vm.execute();
@@ -147,6 +168,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -172,6 +194,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<std::string> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.set("id", record_id);
@@ -216,6 +241,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<std::vector<std::string>> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script.c_str());
             vm.set("collection", coll_name);
             vm.execute();
@@ -232,6 +260,7 @@ class UnQLiteBackend : public Backend {
                     });
                 result.value() = std::move(array);
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -257,6 +286,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<bool> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, ss.str().c_str());
             vm.set("collection", coll_name);
             vm.set("record_id", record_id);
@@ -265,6 +297,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -294,6 +327,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<std::vector<std::string>> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -334,6 +370,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<uint64_t> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -367,6 +406,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<size_t> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.execute();
@@ -401,6 +443,9 @@ class UnQLiteBackend : public Backend {
         "}";
         RequestResult<bool> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, script);
             vm.set("collection", coll_name);
             vm.set("id", record_id);
@@ -409,6 +454,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -421,6 +467,9 @@ class UnQLiteBackend : public Backend {
                 const std::unordered_set<std::string>& vars) override {
         RequestResult<std::unordered_map<std::string,std::string>> result;
         try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
             UnQLiteVM vm(m_db, code.c_str());
             vm.execute();
             result.success() = true;
@@ -434,6 +483,7 @@ class UnQLiteBackend : public Backend {
                     result.value().emplace("__output__", vm.output());
                 }
             }
+            unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -457,6 +507,8 @@ class UnQLiteBackend : public Backend {
 
     unqlite*    m_db = nullptr;
     std::string m_filename;
+    tl::mutex   m_mutex; // used only if unqlite doesn't have threads enables
+    bool        m_unqlite_is_threadsafe;
 };
 
 SONATA_REGISTER_BACKEND(unqlite, UnQLiteBackend);
