@@ -5,7 +5,15 @@
  */
 #include "sonata/Backend.hpp"
 
+// TODO once these PR land, just #include <jx9.h>
+// https://github.com/symisc/unqlite/pull/104
+// https://github.com/symisc/unqlite/pull/102
+#define JX9_LIB_CONFIG_USER_MUTEX 3
+#define JX9_LIB_CONFIG_THREAD_LEVEL_MULTI 5
+extern "C" int jx9_lib_config(int nConfigOp, ...);
+
 #include "UnQLiteVM.hpp"
+#include "UnQLiteMutex.hpp"
 
 #include <spdlog/spdlog.h>
 #include <json/json.h>
@@ -26,9 +34,6 @@ class UnQLiteBackend : public Backend {
 
     UnQLiteBackend() {
         m_unqlite_is_threadsafe = unqlite_lib_is_threadsafe();
-        if(m_unqlite_is_threadsafe) {
-            unqlite_lib_config(UNQLITE_LIB_CONFIG_THREAD_LEVEL_MULTI);
-        }
     }
 
     UnQLiteBackend(UnQLiteBackend&&) = delete;
@@ -103,7 +108,6 @@ class UnQLiteBackend : public Backend {
         }
         return result;
     }
-
 
     virtual RequestResult<bool> dropCollection(
             const std::string& coll_name) override {
@@ -525,6 +529,18 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const Json::Value& config) {
             throw Exception("Database file "s + db_path + " already exists");
         }
     }
+    // Setup Unqlite so it can be multithreaded
+    static bool unqlite_lib_is_initialized = false;
+    if(not unqlite_lib_is_initialized) {
+        jx9_lib_config(JX9_LIB_CONFIG_THREAD_LEVEL_MULTI);
+        jx9_lib_config(JX9_LIB_CONFIG_USER_MUTEX,
+            ExportUnqliteArgobotsMutexMethods());
+        unqlite_lib_config(UNQLITE_LIB_CONFIG_THREAD_LEVEL_MULTI);
+        unqlite_lib_config(UNQLITE_LIB_CONFIG_USER_MUTEX, 
+            ExportUnqliteArgobotsMutexMethods());
+        unqlite_lib_is_initialized = true;
+    }
+    // Open the Unqlite database
     unqlite* pDB;
     spdlog::trace("[unqlite] Creating UnQLite database");
     int ret;
