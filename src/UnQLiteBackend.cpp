@@ -4,20 +4,14 @@
  * See COPYRIGHT in top-level directory.
  */
 #include "sonata/Backend.hpp"
-
-// TODO once these PR land, just #include <jx9.h>
-// https://github.com/symisc/unqlite/pull/104
-// https://github.com/symisc/unqlite/pull/102
-#define JX9_LIB_CONFIG_USER_MUTEX 3
-#define JX9_LIB_CONFIG_THREAD_LEVEL_MULTI 5
-extern "C" int jx9_lib_config(int nConfigOp, ...);
+#include "unqlite/jx9.h"
+#include "unqlite/unqlite.h"
 
 #include "UnQLiteVM.hpp"
 #include "UnQLiteMutex.hpp"
 
 #include <spdlog/spdlog.h>
 #include <json/json.h>
-#include <unqlite.h>
 #include <cstdio>
 #include <sstream>
 #include <fstream>

@@ -2,7 +2,6 @@ spack:
   specs:
   - mochi-thallium
   - cppunit
-  - unqlite
   - cmake
   - jsoncpp
   - tclap

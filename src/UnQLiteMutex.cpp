@@ -1,5 +1,5 @@
+#include "unqlite/unqlite.h"
 #include <abt.h>
-#include <unqlite.h>
 #include <cstdlib>
 #include <iostream>
 
@@ -28,7 +28,6 @@ static ABTSyMutex aStaticMutexes[] = {
 };
 
 static int ABTMutexGlobalInit(void) {
-    std::cout << "ABTMutexGlobalInit" << std::endl;
     for(unsigned i=0; i < 6; i++) {
         ABT_mutex_create(&aStaticMutexes[i].sMutex);
     }
@@ -36,7 +35,6 @@ static int ABTMutexGlobalInit(void) {
 }
 
 static void ABTMutexGlobalRelease(void) {
-    std::cout << "ABTMutexGlobalRelease" << std::endl;
     for(unsigned i=0; i < 6; i++) {
         ABT_mutex_free(&aStaticMutexes[i].sMutex);
     }
@@ -44,7 +42,6 @@ static void ABTMutexGlobalRelease(void) {
 
 static SyMutex* ABTMutexNew(int nType)
 {
-    std::cout << "ABTMutexNew" << std::endl;
     if(nType == SXMUTEX_TYPE_FAST || nType == SXMUTEX_TYPE_RECURSIVE) {
         ABTSyMutex *pMutex = (ABTSyMutex *)malloc(sizeof(ABTSyMutex));
         pMutex->nType = nType;

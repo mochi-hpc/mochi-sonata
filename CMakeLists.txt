@@ -40,7 +40,6 @@ include (xpkg-import)
 find_package (thallium REQUIRED)
 xpkg_import_module (margo REQUIRED margo)
 xpkg_import_module (jsoncpp REQUIRED jsoncpp)
-find_package (UnQLite REQUIRED)
 find_package (TCLAP REQUIRED)
 find_package(spdlog REQUIRED)
 

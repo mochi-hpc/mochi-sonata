@@ -1,7 +1,21 @@
 # list of source files
-set(sonata-client-src Client.cpp Database.cpp Collection.cpp AsyncRequest.cpp)
-set(sonata-server-src Provider.cpp Backend.cpp UnQLiteBackend.cpp UnQLiteVM.cpp UnQLiteMutex.cpp)
-set(sonata-admin-src  Admin.cpp)
+set(sonata-client-src
+	Client.cpp
+	Database.cpp
+	Collection.cpp
+	AsyncRequest.cpp
+)
+set(sonata-server-src
+	Provider.cpp
+	Backend.cpp
+	UnQLiteBackend.cpp
+	UnQLiteVM.cpp
+	UnQLiteMutex.cpp
+	unqlite/unqlite.c
+)
+set(sonata-admin-src
+	Admin.cpp
+)
 
 # load package helper for generating cmake CONFIG packages
 include (CMakePackageConfigHelpers)
@@ -62,12 +76,10 @@ write_basic_package_version_file(
 # generate our config file for find_package()
 configure_file (sonata-config.cmake.in sonata-config.cmake @ONLY)
 
-get_filename_component(UNQLITE_LIBDIR ${UnQLite_LIBRARIES} DIRECTORY)
-
 # some bits for the pkg-config file
 set (DEST_DIR "${CMAKE_INSTALL_PREFIX}")
 set (PRIVATE_CLIENT_LIBS "-lsonata-client")
-set (PRIVATE_SERVER_LIBS "-lsonata-server -L${UNQLITE_LIBDIR} -lunqlite")
+set (PRIVATE_SERVER_LIBS "-lsonata-server")
 set (PRIVATE_ADMIN_LIBS  "-lsonata-admin")
 configure_file ("sonata-client.pc.in" "sonata-client.pc" @ONLY)
 configure_file ("sonata-server.pc.in" "sonata-server.pc" @ONLY)

@@ -6,7 +6,7 @@
 #ifndef __SONATA_UNQLITE_VALUE_HPP
 #define __SONATA_UNQLITE_VALUE_HPP
 
-#include <unqlite.h>
+#include "unqlite/unqlite.h"
 #include <type_traits>
 #include <string>
 #include <vector>
