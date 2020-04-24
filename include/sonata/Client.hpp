@@ -26,6 +26,11 @@ class Client {
     public:
 
     /**
+     * @brief Default constructor.
+     */
+    Client();
+
+    /**
      * @brief Constructor.
      *
      * @param engine Thallium engine.
@@ -69,17 +74,20 @@ class Client {
 
     /**
      * @brief Opens a remote database and returns a
-     * Database instance to access it.
+     * Database instance to access it. You may set "check" to false
+     * if you know for sure that the corresponding database exists.
      *
      * @param address Address of the provider holding the database.
      * @param provider_id Provider id.
      * @param db_name Database name.
+     * @param check Checks if the Database exists by issuing an RPC.
      *
      * @return a Database instance.
      */
     Database open(const std::string& address, 
                   uint16_t provider_id,
-                  const std::string& db_name) const;
+                  const std::string& db_name,
+                  bool check = true) const;
 
     /**
      * @brief Checks that the Client instance is valid.

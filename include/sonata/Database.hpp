@@ -87,14 +87,17 @@ class Database {
     bool exists(const std::string& collectionName) const;
 
     /**
-     * @brief Opens the specified collection. The collection
-     * must exist beforehand.
+     * @brief Opens the specified collection. If "check" is set to true,
+     * an RPC will be issued to check that the collection exists. The
+     * function will throw an exception if it does not. You may set "check"
+     * to false if you know for sure that the collection exists.
      *
      * @param collectionName Name of the collection.
+     * @param check Checks if the Collection exists by issuing an RPC.
      *
      * @return A valid Collection instance pointing to the collection.
      */
-    Collection open(const std::string& collectionName) const;
+    Collection open(const std::string& collectionName, bool check = true) const;
 
     /**
      * @brief Destroys the collection. The collection must exist.

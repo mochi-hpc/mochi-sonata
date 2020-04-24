@@ -30,12 +30,16 @@ class Admin {
     public:
 
     /**
+     * @brief Default constructor.
+     */
+    Admin();
+
+    /**
      * @brief Constructor.
      *
      * @param engine Thallium engine.
-     * @param token Security token setup by providers.
      */
-    Admin(tl::engine& engine, const std::string& token="");
+    Admin(tl::engine& engine);
     
     /**
      * @brief Copy constructor.
@@ -82,7 +86,8 @@ class Admin {
                         uint16_t provider_id,
                         const std::string& name,
                         const std::string& type,
-                        const std::string& config) const;
+                        const std::string& config,
+                        const std::string& token="") const;
     
     /**
      * @brief Creates a database on the target provider.
@@ -99,7 +104,8 @@ class Admin {
                         uint16_t provider_id,
                         const std::string& name,
                         const std::string& type,
-                        const char* config) const {
+                        const char* config,
+                        const std::string& token="") const {
         createDatabase(address, provider_id, name, type, std::string(config));
     }
 
@@ -118,7 +124,8 @@ class Admin {
                         uint16_t provider_id,
                         const std::string& name,
                         const std::string& type,
-                        const Json::Value& config) const;
+                        const Json::Value& config,
+                        const std::string& token="") const;
 
     /**
      * @brief Attaches an existing database to the target provider.
@@ -135,7 +142,8 @@ class Admin {
                         uint16_t provider_id,
                         const std::string& name,
                         const std::string& type,
-                        const std::string& config) const;
+                        const std::string& config,
+                        const std::string& token="") const;
 
     /**
      * @brief Attaches an existing database to the target provider.
@@ -152,7 +160,8 @@ class Admin {
                         uint16_t provider_id,
                         const std::string& name,
                         const std::string& type,
-                        const Json::Value& config) const;
+                        const Json::Value& config,
+                        const std::string& token="") const;
 
     /**
      * @brief Detach an attached database from the target provider.
@@ -163,7 +172,8 @@ class Admin {
      */
     void detachDatabase(const std::string& address,
                         uint16_t provider_id,
-                        const std::string& name) const;
+                        const std::string& name,
+                        const std::string& token="") const;
 
     /**
      * @brief Destroys an attached database from the target provider.
@@ -174,7 +184,8 @@ class Admin {
      */
     void destroyDatabase(const std::string& address,
                          uint16_t provider_id,
-                         const std::string& name) const;
+                         const std::string& name,
+                         const std::string& token="") const;
 
     /**
      * @brief Shuts down the target server. The Thallium engine

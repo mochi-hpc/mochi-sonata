@@ -18,6 +18,8 @@ namespace tl = thallium;
 
 namespace sonata {
 
+Client::Client() = default;
+
 Client::Client(tl::engine& engine)
 : self(std::make_shared<ClientImpl>(engine)) {}
 
@@ -49,10 +51,15 @@ Client::operator bool() const {
 
 Database Client::open(const std::string& address,
                       uint16_t provider_id,
-                      const std::string& db_name) const {
+                      const std::string& db_name,
+                      bool check) const {
     auto endpoint  = self->m_engine.lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
-    RequestResult<bool> result = self->m_open_database.on(ph)(db_name);
+    RequestResult<bool> result;
+    result.success() = true;
+    if(check) {
+        result = self->m_open_database.on(ph)(db_name);
+    }
     if(result.success()) {
         auto db_impl = std::make_shared<DatabaseImpl>(self, std::move(ph), db_name);
         return Database(db_impl);

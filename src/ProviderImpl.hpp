@@ -153,7 +153,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         
         std::unique_ptr<Backend> backend;
         try {
-            backend = BackendFactory::createBackend(db_type, json_config);
+            backend = BackendFactory::createBackend(db_type, get_engine(), json_config);
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();
@@ -230,7 +230,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         
         std::unique_ptr<Backend> backend;
         try {
-            backend = BackendFactory::attachBackend(db_type, json_config);
+            backend = BackendFactory::attachBackend(db_type, get_engine(), json_config);
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();

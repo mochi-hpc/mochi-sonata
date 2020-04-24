@@ -10,6 +10,5 @@ include (xpkg-import)
 find_dependency (thallium)
 xpkg_import_module (margo REQUIRED margo)
 xpkg_import_module (jsoncpp REQUIRED jsoncpp)
-xpkg_import_module (uuid REQUIRED uuid)
 
 include ("${CMAKE_CURRENT_LIST_DIR}/sonata-targets.cmake")

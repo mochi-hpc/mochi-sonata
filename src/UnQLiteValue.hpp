@@ -33,17 +33,19 @@ class UnQLiteValue {
     template<typename T>
     struct type {};
 
-    unqlite_value* m_value = nullptr;
-    unqlite_vm*    m_vm    = nullptr;
-    unqlite_context* m_ctx = nullptr;
+    unqlite_value*   m_value = nullptr;
+    unqlite_vm*      m_vm    = nullptr;
+    unqlite_context* m_ctx   = nullptr;
+    bool             m_ref   = false;
 
-    UnQLiteValue(unqlite_value* val, unqlite_vm* vm, unqlite_context* ctx)
+    public:
+
+    UnQLiteValue(unqlite_value* val, unqlite_vm* vm, unqlite_context* ctx, bool is_ref = false)
     : m_value(val)
     , m_vm(vm)
     , m_ctx(ctx)
+    , m_ref(is_ref)
     {}
-
-    public:
 
     struct Null {};
 
@@ -433,6 +435,7 @@ class UnQLiteValue {
     }
 
     ~UnQLiteValue() {
+        if(m_ref) return;
         if(m_vm && m_value) {
             unqlite_vm_release_value(m_vm, m_value);
         }
@@ -559,7 +562,7 @@ class UnQLiteValue {
                     i += 1;
             });
             os << "}";
-        } else if(unqlite_value_is_resource) {
+        } else if(unqlite_value_is_resource(m_value)) {
             os << "\"resource@" << std::hex
                 << (intptr_t)unqlite_value_to_resource(m_value) << "\"";
         }
@@ -587,18 +590,16 @@ class UnQLiteValue {
     
     void foreach(const std::function<void(unsigned, const UnQLiteValue&)>& f) {
         foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](unsigned i, unqlite_value* elem) {
-            UnQLiteValue val(elem, vm, ctx);
+            UnQLiteValue val(elem, vm, ctx, true);
             f(i, val);
-            val.m_value = nullptr;
             return UNQLITE_OK;
         });
     }
 
     void foreach(const std::function<void(const std::string&, const UnQLiteValue&)>& f) {
         foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](const std::string& key, unqlite_value* elem) {
-            UnQLiteValue val(elem, vm, ctx);
+            UnQLiteValue val(elem, vm, ctx, true);
             f(key, val);
-            val.m_value = nullptr;
             return UNQLITE_OK;
         });
     }

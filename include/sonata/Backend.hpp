@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <functional>
 #include <json/json.h>
+#include <thallium.hpp>
 
 /**
  * @brief Helper class to register backend types into the backend factory.
@@ -242,11 +243,13 @@ class BackendFactory {
      * backend instance.
      *
      * @param backend_name Name of the backend to use.
+     * @param engine Thallium engine.
      * @param config Configuration object to pass to the backend's create function.
      *
      * @return a unique_ptr to the created Backend.
      */
     static std::unique_ptr<Backend> createBackend(const std::string& backend_name,
+                                                  thallium::engine& engine,
                                                   const Json::Value& config);
 
     /**
@@ -254,20 +257,22 @@ class BackendFactory {
      * created backend instance.
      *
      * @param backend_name Name of the backend to use.
+     * @param engine Thallium engine.
      * @param config Configuration object to pass to the backend's attach function.
      *
      * @return a unique_ptr to the created Backend.
      */
     static std::unique_ptr<Backend> attachBackend(const std::string& backend_name,
+                                                  thallium::engine& engine,
                                                   const Json::Value& config);
 
     private:
 
     static std::unordered_map<std::string,
-                std::function<std::unique_ptr<Backend>(const Json::Value&)>> create_fn;
+                std::function<std::unique_ptr<Backend>(thallium::engine&, const Json::Value&)>> create_fn;
     
     static std::unordered_map<std::string,
-                std::function<std::unique_ptr<Backend>(const Json::Value&)>> attach_fn;
+                std::function<std::unique_ptr<Backend>(thallium::engine&, const Json::Value&)>> attach_fn;
 };
 
 } // namespace sonata
@@ -283,11 +288,11 @@ class __SonataBackendRegistration {
 
     __SonataBackendRegistration(const std::string& backend_name)
     {
-        sonata::BackendFactory::create_fn[backend_name] = [](const Json::Value& config) {
-            return BackendType::create(config);
+        sonata::BackendFactory::create_fn[backend_name] = [](thallium::engine& engine, const Json::Value& config) {
+            return BackendType::create(engine, config);
         };
-        sonata::BackendFactory::attach_fn[backend_name] = [](const Json::Value& config) {
-            return BackendType::attach(config);
+        sonata::BackendFactory::attach_fn[backend_name] = [](thallium::engine& engine, const Json::Value& config) {
+            return BackendType::attach(engine, config);
         };
     }
 };

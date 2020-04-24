@@ -7,12 +7,13 @@
 #define __SONATA_UNQLITE_VM_HPP
 
 #include "UnQLiteValue.hpp"
-
 #include <type_traits>
 #include <string>
 #include <spdlog/spdlog.h>
 
 namespace sonata {
+
+class UnQLiteBackend;
 
 using namespace std::string_literals;
 
@@ -20,11 +21,11 @@ class UnQLiteVM {
 
     public:
 
-    UnQLiteVM(unqlite* database, const char* code)
+    UnQLiteVM(unqlite* database, const char* code, UnQLiteBackend* backend)
     : m_code(code)
-    , m_db(database) {
+    , m_db(database)
+    , m_backend(backend) {
         compile();
-        registerSonataFunctions();
     }
 
     UnQLiteVM(UnQLiteVM&& other) = delete;
@@ -77,11 +78,40 @@ class UnQLiteVM {
         return UnQLiteValue(value, m_vm, nullptr);
     }
 
+    void registerSonataFunctions() {
+        int ret;
+        ret = unqlite_create_constant(m_vm, "__SCRIPT__", get_script, static_cast<void*>(this));
+        // Admin functions
+        ret = unqlite_create_function(m_vm, "snta_db_create",      snta_db_create,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "snta_db_attach",      snta_db_attach,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "snta_db_detach",      snta_db_detach,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "snta_db_destroy",     snta_db_destroy,     static_cast<void*>(this));
+        // Database functions
+        ret = unqlite_create_function(m_vm, "sntd_coll_create",    sntd_coll_create,    static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntd_coll_exists",    sntd_coll_exists,    static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntd_coll_open",      sntd_coll_open,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntd_coll_drop",      sntd_coll_drop,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntd_execute",        sntd_execute,        static_cast<void*>(this));
+        // Collection functions
+        ret = unqlite_create_function(m_vm, "sntc_store",          sntc_store,          static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_fetch",          sntc_fetch,          static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_filter",         sntc_filter,         static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_update",         sntc_update,         static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_all",            sntc_all,            static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_last_record_id", sntc_last_record_id, static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_size",           sntc_size,           static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntc_erase",          sntc_erase,          static_cast<void*>(this));
+        // Wait functions
+        ret = unqlite_create_function(m_vm, "sntr_wait",           sntr_wait,           static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sntr_test",           sntr_test,           static_cast<void*>(this));
+    }
+
     private:
 
-    const char* m_code = nullptr;
-    unqlite*    m_db = nullptr;
-    unqlite_vm* m_vm = nullptr;
+    const char*     m_code    = nullptr;
+    unqlite*        m_db      = nullptr;
+    unqlite_vm*     m_vm      = nullptr;
+    UnQLiteBackend* m_backend = nullptr;
     std::vector<std::unique_ptr<std::string>> m_encoded_names;
 
     void compile() {
@@ -89,31 +119,50 @@ class UnQLiteVM {
         if(ret != UNQLITE_OK) parse_and_throw_error();
     }
 
-    void registerSonataFunctions() {
-        int ret;
-        // Admin functions
-        ret = unqlite_create_function(m_vm, "snta_db_create",      snta_db_create,      nullptr);
-        ret = unqlite_create_function(m_vm, "snta_db_attach",      snta_db_attach,      nullptr);
-        ret = unqlite_create_function(m_vm, "snta_db_detach",      snta_db_detach,      nullptr);
-        ret = unqlite_create_function(m_vm, "snta_db_destroy",     snta_db_destroy,     nullptr);
-        // Database functions
-        ret = unqlite_create_function(m_vm, "sntd_coll_create",    sntd_coll_create,    nullptr);
-        ret = unqlite_create_function(m_vm, "sntd_coll_exists",    sntd_coll_exists,    nullptr);
-        ret = unqlite_create_function(m_vm, "sntd_coll_open",      sntd_coll_open,      nullptr);
-        ret = unqlite_create_function(m_vm, "sntd_coll_drop",      sntd_coll_drop,      nullptr);
-        ret = unqlite_create_function(m_vm, "sntd_execute",        sntd_execute,        nullptr);
-        // Collection functions
-        ret = unqlite_create_function(m_vm, "sntc_store",          sntc_store,          nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_fetch",          sntc_fetch,          nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_filter",         sntc_filter,         nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_update",         sntc_update,         nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_all",            sntc_all,            nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_last_record_id", sntc_last_record_id, nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_size",           sntc_size,           nullptr);
-        ret = unqlite_create_function(m_vm, "sntc_erase",          sntc_erase,          nullptr);
-        // Wait functions
-        ret = unqlite_create_function(m_vm, "sntr_wait",           sntr_wait,           nullptr);
-        ret = unqlite_create_function(m_vm, "sntr_test",           sntr_test,           nullptr);
+    std::string extract_function_code(const char* function_name) {
+        const char* tmp = m_code;
+        const char* function_beginning = nullptr;
+        size_t fun_name_len = strlen(function_name);
+        while((tmp = strstr(tmp, "function")) != NULL) {
+            function_beginning = tmp;
+            // check if the previous characted is not alphanum (i.e. the "function"
+            // substring found would be part of a name, like "myfunction"
+            if(tmp != m_code) {
+                if(isalpha(*(tmp-1)) || *(tmp-1) == '_') {
+                    tmp += 1;
+                    continue;
+                }
+            }
+            // check if the next characted is not alphanum (i.e. the "function"
+            // substring found would be part of a name, like "functionbla"
+            if(isalpha(*(tmp+8)) || *(tmp+8) == '_' || *(tmp+8) == '\0') {
+                tmp += 1;
+                continue;
+            }
+            // ok we know "function" was indeed used as a keyword
+            tmp += 8; // get passed the "function" keyword
+            // get passed non-alphabetical characters
+            while(!(isalpha(*tmp) || *tmp == '_' || *tmp == '\0'))
+                tmp += 1;
+            if(strncmp(tmp, function_name, fun_name_len) != 0) {
+                continue; // function name doesn't match, continue
+            }
+            if(isalnum(*(tmp+fun_name_len)) || *(tmp+fun_name_len) == '_')
+                continue; // the function name is longer than we are looking for
+            // find the '{' character
+            while(*tmp != '{') tmp += 1;
+            unsigned b = 1; // track opened {
+            do {
+                tmp += 1;
+                if(*tmp == '{') b += 1;
+                if(*tmp == '}') b -= 1;
+                if(*tmp == '\0') break;
+            } while(b != 0);
+            if(*tmp == '\0') return std::string();
+            const char* function_end = tmp+1;
+            return std::string(function_beginning, (size_t)(function_end-function_beginning));
+        }
+        return std::string();
     }
 
     void parse_and_throw_error() {
@@ -144,6 +193,8 @@ class UnQLiteVM {
     }
 
     // Functions to expose into the VM
+    static void get_script(unqlite_value *pValue, void *pUserData);
+    
     static int snta_db_create(unqlite_context *pCtx, int argc, unqlite_value **argv);
     static int snta_db_attach(unqlite_context *pCtx, int argc, unqlite_value **argv);
     static int snta_db_detach(unqlite_context *pCtx, int argc, unqlite_value **argv);
