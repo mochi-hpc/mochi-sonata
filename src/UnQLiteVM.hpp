@@ -75,6 +75,9 @@ class UnQLiteVM {
 
     UnQLiteValue operator[](const std::string& name) const {
         unqlite_value* value = unqlite_vm_extract_variable(m_vm, name.c_str());
+        if(value == nullptr) {
+            return UnQLiteValue(UnQLiteValue::Null(), m_vm);
+        }
         return UnQLiteValue(value, m_vm, nullptr);
     }
 
@@ -179,8 +182,6 @@ class UnQLiteVM {
             error += std::string(errorBuffer, len);
             throw Exception(error);
         }
-        error += "(unknown)";
-        throw Exception(error);
     }
 
     static int output_callback(const void *pOutput, unsigned int nOutputLen, void *pUserData) {

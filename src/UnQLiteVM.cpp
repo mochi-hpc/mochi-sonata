@@ -11,23 +11,30 @@ namespace sonata {
 #define CHECK_ARGS(__fun__, __num__) do {\
     if(argc != __num__) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
-        #__fun__ ": unexpected number of aruments (%d, expected %d)", argc, __num__);\
-        return UNQLITE_ABORT;\
+            #__fun__ ": unexpected number of aruments (%d, expected %d)", argc, __num__);\
+        unqlite_result_null(pCtx);\
+        return UNQLITE_OK;\
     }} while(false)
 
 #define CHECK_ARGS2(__fun__, __num1__, __num2__) do {\
     if(argc != (__num1__) && argc != (__num2__)) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
             #__fun__ ": unexpected number of aruments (%d, expected %d or %d)", argc, (__num1__), (__num2__));\
-        return UNQLITE_ABORT;\
+        unqlite_result_null(pCtx);\
+        return UNQLITE_OK;\
     }} while(false)
 
 #define CATCH_AND_ABORT(__fun__)\
     catch(const Exception& ex) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
             #__fun__ " threw an exception: %s", ex.what());\
-        return UNQLITE_ABORT;\
+        unqlite_result_null(pCtx);\
+        return UNQLITE_OK;\
     }
+
+#define LOG_ERROR(__fun__)\
+    unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_WARNING,\
+            #__fun__ " threw an exception: %s", ex.what());
 
 struct database_info {
 
@@ -101,6 +108,7 @@ int UnQLiteVM::snta_db_create(unqlite_context *pCtx, int argc, unqlite_value **a
                 db_type,
                 config.str(),
                 token);
+        unqlite_result_bool(pCtx, true);
     } CATCH_AND_ABORT(snta_db_create);
     return UNQLITE_OK;
 }
@@ -126,6 +134,7 @@ int UnQLiteVM::snta_db_attach(unqlite_context *pCtx, int argc, unqlite_value **a
                 db_type,
                 config.str(),
                 token);
+        unqlite_result_bool(pCtx, true);
     } CATCH_AND_ABORT(snta_db_attach);
     return UNQLITE_OK;
 }
@@ -145,6 +154,7 @@ int UnQLiteVM::snta_db_detach(unqlite_context *pCtx, int argc, unqlite_value **a
                 provider_id,
                 db_name,
                 token);
+        unqlite_result_bool(pCtx, true);
     } CATCH_AND_ABORT(snta_db_detach);
     return UNQLITE_OK;
 }
@@ -164,6 +174,7 @@ int UnQLiteVM::snta_db_destroy(unqlite_context *pCtx, int argc, unqlite_value **
                 provider_id,
                 db_name,
                 token);
+        unqlite_result_bool(pCtx, true);
     } CATCH_AND_ABORT(snta_db_destroy);
     return UNQLITE_OK;
 }
@@ -187,7 +198,6 @@ int UnQLiteVM::sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value *
         int ret = unqlite_result_bool(pCtx, b);
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
-
     } CATCH_AND_ABORT(sntd_coll_create);
     return UNQLITE_OK;
 }
@@ -219,10 +229,18 @@ int UnQLiteVM::sntd_coll_open(unqlite_context *pCtx, int argc, unqlite_value **a
             throw Exception("Invalid collection name argument");
         Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
         bool b = db.exists(coll_name);
-        unqlite_value* result = unqlite_context_new_array(pCtx);
-        unqlite_array_add_strkey_elem(result, "database_info", argv[0]);
-        unqlite_array_add_strkey_elem(result, "collection_name", argv[1]);
-        int ret = unqlite_result_value(pCtx, result);
+        unqlite_value* result;
+        int ret;
+        if(b) {
+            result = unqlite_context_new_array(pCtx);
+            unqlite_array_add_strkey_elem(result, "database_info", argv[0]);
+            unqlite_array_add_strkey_elem(result, "collection_name", argv[1]);
+            ret = unqlite_result_value(pCtx, result);
+        } else {
+            result = unqlite_context_new_scalar(pCtx);
+            unqlite_value_null(result);
+            ret = unqlite_result_value(pCtx, result);
+        }
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
     } CATCH_AND_ABORT(sntd_coll_exists);
@@ -260,7 +278,7 @@ int UnQLiteVM::sntd_execute(unqlite_context *pCtx, int argc, unqlite_value **arg
 }
 
 int UnQLiteVM::sntc_store(unqlite_context *pCtx, int argc, unqlite_value **argv) {
-
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
 }

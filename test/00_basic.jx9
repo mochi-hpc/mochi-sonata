@@ -1,0 +1,2 @@
+$rc = TRUE;
+print("test output")
