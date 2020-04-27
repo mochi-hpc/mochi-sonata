@@ -8,33 +8,35 @@
 
 namespace sonata {
 
-#define CHECK_ARGS(__fun__, __num__) do {\
+#define LOG_ERROR()\
+    unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_WARNING,\
+        "%s threw an exception: %s", unqlite_result_null(pCtx), ex.what());
+
+#define CHECK_ARGS(__num__) do {\
     if(argc != __num__) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
-            #__fun__ ": unexpected number of aruments (%d, expected %d)", argc, __num__);\
+            "%s: unexpected number of aruments (%d, expected %d)",\
+           unqlite_function_name(pCtx), argc, __num__);\
         unqlite_result_null(pCtx);\
         return UNQLITE_OK;\
     }} while(false)
 
-#define CHECK_ARGS2(__fun__, __num1__, __num2__) do {\
+#define CHECK_ARGS2(__num1__, __num2__) do {\
     if(argc != (__num1__) && argc != (__num2__)) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
-            #__fun__ ": unexpected number of aruments (%d, expected %d or %d)", argc, (__num1__), (__num2__));\
+            "%s: unexpected number of aruments (%d, expected %d or %d)",\
+            unqlite_function_name(pCtx), argc, (__num1__), (__num2__));\
         unqlite_result_null(pCtx);\
         return UNQLITE_OK;\
     }} while(false)
 
-#define CATCH_AND_ABORT(__fun__)\
+#define CATCH_AND_ABORT()\
     catch(const Exception& ex) {\
         unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
-            #__fun__ " threw an exception: %s", ex.what());\
+            "%s threw an exception: %s", unqlite_function_name(pCtx), ex.what());\
         unqlite_result_null(pCtx);\
         return UNQLITE_OK;\
     }
-
-#define LOG_ERROR(__fun__)\
-    unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_WARNING,\
-            #__fun__ " threw an exception: %s", ex.what());
 
 struct database_info {
 
@@ -89,7 +91,7 @@ void UnQLiteVM::get_script(unqlite_value *pValue, void *pUserData) {
 
 int UnQLiteVM::snta_db_create(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS2(snta_db_create, 5, 6);
+    CHECK_ARGS2(5, 6);
     // get parameters
     std::string address(unqlite_value_to_string(argv[0], nullptr));
     uint16_t provider_id = unqlite_value_to_int(argv[1]);
@@ -109,13 +111,13 @@ int UnQLiteVM::snta_db_create(unqlite_context *pCtx, int argc, unqlite_value **a
                 config.str(),
                 token);
         unqlite_result_bool(pCtx, true);
-    } CATCH_AND_ABORT(snta_db_create);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::snta_db_attach(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS2(snta_db_attach, 5, 6);
+    CHECK_ARGS2(5, 6);
     // get parameters
     std::string address(unqlite_value_to_string(argv[0], nullptr));
     uint16_t provider_id = unqlite_value_to_int(argv[1]);
@@ -135,13 +137,13 @@ int UnQLiteVM::snta_db_attach(unqlite_context *pCtx, int argc, unqlite_value **a
                 config.str(),
                 token);
         unqlite_result_bool(pCtx, true);
-    } CATCH_AND_ABORT(snta_db_attach);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::snta_db_detach(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS2(snta_db_detach, 3, 4);
+    CHECK_ARGS2(3, 4);
     // get parameters
     std::string address(unqlite_value_to_string(argv[0], nullptr));
     uint16_t provider_id = unqlite_value_to_int(argv[1]);
@@ -155,13 +157,13 @@ int UnQLiteVM::snta_db_detach(unqlite_context *pCtx, int argc, unqlite_value **a
                 db_name,
                 token);
         unqlite_result_bool(pCtx, true);
-    } CATCH_AND_ABORT(snta_db_detach);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::snta_db_destroy(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS2(snta_db_destroy, 3, 4);
+    CHECK_ARGS2(3, 4);
     // get parameters
     std::string address(unqlite_value_to_string(argv[0], nullptr));
     uint16_t provider_id = unqlite_value_to_int(argv[1]);
@@ -175,13 +177,13 @@ int UnQLiteVM::snta_db_destroy(unqlite_context *pCtx, int argc, unqlite_value **
                 db_name,
                 token);
         unqlite_result_bool(pCtx, true);
-    } CATCH_AND_ABORT(snta_db_destroy);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS(sntd_coll_create, 2);
+    CHECK_ARGS(2);
     try {
         database_info db_info(argv[0]);
         std::string coll_name = unqlite_value_to_string(argv[1], nullptr);
@@ -198,13 +200,13 @@ int UnQLiteVM::sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value *
         int ret = unqlite_result_bool(pCtx, b);
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
-    } CATCH_AND_ABORT(sntd_coll_create);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntd_coll_exists(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS(sntd_coll_exists, 2);
+    CHECK_ARGS(2);
     try {
         database_info db_info(argv[0]);
         std::string coll_name = unqlite_value_to_string(argv[1], nullptr);
@@ -215,13 +217,13 @@ int UnQLiteVM::sntd_coll_exists(unqlite_context *pCtx, int argc, unqlite_value *
         int ret = unqlite_result_bool(pCtx, b);
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
-    } CATCH_AND_ABORT(sntd_coll_exists);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntd_coll_open(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS(sntd_coll_exists, 2);
+    CHECK_ARGS(2);
     try {
         database_info db_info(argv[0]);
         std::string coll_name = unqlite_value_to_string(argv[1], nullptr);
@@ -243,13 +245,13 @@ int UnQLiteVM::sntd_coll_open(unqlite_context *pCtx, int argc, unqlite_value **a
         }
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
-    } CATCH_AND_ABORT(sntd_coll_exists);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntd_coll_drop(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    CHECK_ARGS(sntd_coll_drop, 2);
+    CHECK_ARGS(2);
     try {
         database_info db_info(argv[0]);
         std::string coll_name = unqlite_value_to_string(argv[1], nullptr);
@@ -267,13 +269,46 @@ int UnQLiteVM::sntd_coll_drop(unqlite_context *pCtx, int argc, unqlite_value **a
         if(ret != UNQLITE_OK)
             throw Exception("Could not set result in unqlite context");
 
-    } CATCH_AND_ABORT(sntd_coll_drop);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntd_execute(unqlite_context *pCtx, int argc, unqlite_value **argv) {
-
-    // TODO
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
+    CHECK_ARGS2(2, 3);
+    try {
+        database_info db_info(argv[0]);
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        std::string code;
+        if(unqlite_value_is_callable(argv[1])) {
+            std::string function_name = unqlite_value_to_string(argv[1], nullptr);
+            code = vm->extract_function_code(function_name.c_str());
+            if(code.empty()) {
+                throw Exception("Could not find source code for function "s+function_name);
+            }
+            code += "\n"s + function_name + "();\n";
+        } else if(unqlite_value_is_string(argv[1])) {
+            code = unqlite_value_to_string(argv[1], nullptr);
+        } else {
+            throw Exception("Invalid 2nd argument type (expected function or string)");
+        }
+        std::unordered_set<std::string> vars;
+        if(argc == 3) {
+            std::vector<std::string> variables = UnQLiteValue(argv[2], nullptr, nullptr, true);
+            for(auto& v : variables) { 
+                vars.insert(v);
+            }
+        }
+        std::unordered_map<std::string,std::string> result;
+        db.execute(code, vars, &result);
+        unqlite_value* result_dict = unqlite_context_new_scalar(pCtx);
+        for(auto it = result.begin(); it != result.end(); it++) {
+            unqlite_value* v = unqlite_context_new_scalar(pCtx);
+            unqlite_value_string(v, it->second.c_str(), -1);
+            unqlite_array_add_strkey_elem(result_dict, it->first.c_str(), v);
+        }
+        unqlite_result_value(pCtx, result_dict);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
@@ -284,57 +319,60 @@ int UnQLiteVM::sntc_store(unqlite_context *pCtx, int argc, unqlite_value **argv)
 }
 
 int UnQLiteVM::sntc_fetch(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
 
     // TODO
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_filter(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
 
     // TODO
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_update(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
 
 }
 
 int UnQLiteVM::sntc_all(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
 
     // TODO
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_last_record_id(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
-
 }
 
 int UnQLiteVM::sntc_size(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     // TODO
     return UNQLITE_OK;
-
 }
 
 int UnQLiteVM::sntc_erase(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
-
 }
 
 int UnQLiteVM::sntr_wait(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
-
 }
 
 int UnQLiteVM::sntr_test(unqlite_context *pCtx, int argc, unqlite_value **argv) {
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
     // TODO
     return UNQLITE_OK;
-
 }
 
 }

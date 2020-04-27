@@ -1,0 +1,13 @@
+$rc = TRUE;
+print "Executing test on address ", $addr, "\n";
+// Create a database
+print "Executing snta_db_create test\n";
+$rc = snta_db_create($addr, 0, "dbFromJx9", "blabla", { path : "dbFromJx9" });
+if($rc != TRUE) {
+  print "snta_db_create failed\n";
+  print db_errlog();
+  $rc = FALSE;
+  return;
+} else {
+  print "snta_db_create was successful\n";
+}

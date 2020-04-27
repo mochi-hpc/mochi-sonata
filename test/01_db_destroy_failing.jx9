@@ -1,0 +1,12 @@
+$rc = TRUE;
+print "Executing test on address ", $addr, "\n";
+print "Executing snta_db_destroy test\n";
+$rc = snta_db_destroy($addr, 0, "blabla");
+if($rc != TRUE) {
+  print "snta_db_destroy failed\n";
+  print db_errlog();
+  $rc = FALSE;
+  return;
+} else {
+  print "snta_db_destroy was successful\n";
+}

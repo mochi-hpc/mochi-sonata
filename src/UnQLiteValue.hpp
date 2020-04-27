@@ -727,6 +727,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](unsigned, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }
@@ -737,6 +738,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](const std::string&, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }
@@ -747,6 +749,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](const std::string&, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }
