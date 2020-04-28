@@ -5,7 +5,6 @@ print "Executing snta_db_create test\n";
 $rc = snta_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($rc != TRUE) {
   print "snta_db_create failed\n";
-  print db_errlog();
   $rc = FALSE;
   return;
 } else {
@@ -17,7 +16,6 @@ print "Executing snta_db_detach test\n";
 $rc = snta_db_detach($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
   print "snta_db_detach failed\n";
-  print db_errlog();
   $rc = FALSE;
   return;
 } else {
@@ -29,7 +27,6 @@ print "Executing snta_db_attach test\n";
 $rc = snta_db_attach($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($rc != TRUE) {
   print "snta_db_attach failed\n";
-  print db_errlog();
   $rc = FALSE;
   return;
 } else {
@@ -40,7 +37,6 @@ if($rc != TRUE) {
 print "Executing snta_db_destroy test\n";
 $rc = snta_db_destroy($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print db_errlog();
   print "snta_db_destroy failed\n";
   $rc = FALSE;
   return;

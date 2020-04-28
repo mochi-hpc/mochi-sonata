@@ -215,7 +215,7 @@ int UnQLiteVM::sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value *
         int ret;
         if(b) {
             result = unqlite_context_new_array(pCtx);
-            unqlite_array_add_strkey_elem(result, "database_info", argv[0]);
+            unqlite_array_add_strkey_elem(result, "database", argv[0]);
             unqlite_array_add_strkey_elem(result, "collection_name", argv[1]);
         } else {
             result = unqlite_context_new_scalar(pCtx);
@@ -260,7 +260,7 @@ int UnQLiteVM::sntd_coll_open(unqlite_context *pCtx, int argc, unqlite_value **a
         int ret;
         if(b) {
             result = unqlite_context_new_array(pCtx);
-            unqlite_array_add_strkey_elem(result, "database_info", argv[0]);
+            unqlite_array_add_strkey_elem(result, "database", argv[0]);
             unqlite_array_add_strkey_elem(result, "collection_name", argv[1]);
             ret = unqlite_result_value(pCtx, result);
         } else {
