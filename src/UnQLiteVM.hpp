@@ -122,9 +122,10 @@ class UnQLiteVM {
         if(ret != UNQLITE_OK) parse_and_throw_error();
     }
 
-    std::string extract_function_code(const char* function_name) {
+    std::string extract_function_code(const char* function_name, bool include_fun_decl=true) {
         const char* tmp = m_code;
         const char* function_beginning = nullptr;
+        const char* function_body_beginning = nullptr;
         size_t fun_name_len = strlen(function_name);
         while((tmp = strstr(tmp, "function")) != NULL) {
             function_beginning = tmp;
@@ -152,8 +153,10 @@ class UnQLiteVM {
             }
             if(isalnum(*(tmp+fun_name_len)) || *(tmp+fun_name_len) == '_')
                 continue; // the function name is longer than we are looking for
+            // of we know we passed the function's name
             // find the '{' character
             while(*tmp != '{') tmp += 1;
+            function_body_beginning = tmp+1;
             unsigned b = 1; // track opened {
             do {
                 tmp += 1;
@@ -162,8 +165,13 @@ class UnQLiteVM {
                 if(*tmp == '\0') break;
             } while(b != 0);
             if(*tmp == '\0') return std::string();
+            const char* function_body_end = tmp;
             const char* function_end = tmp+1;
-            return std::string(function_beginning, (size_t)(function_end-function_beginning));
+            if(include_fun_decl) {
+                return std::string(function_beginning, (size_t)(function_end-function_beginning));
+            } else {
+                return std::string(function_body_beginning, (size_t)(function_body_end-function_body_beginning));
+            }
         }
         return std::string();
     }

@@ -13,12 +13,12 @@ namespace sonata {
 typedef std::function<void(unqlite_context*, bool)> RequestCompletionFn;
 
 #define LOG_ERROR()\
-    unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_WARNING,\
+    unqlite_context_output_format(pCtx,\
         "%s threw an exception: %s", unqlite_result_null(pCtx), ex.what());
 
 #define CHECK_ARGS(__num__) do {\
     if(argc != __num__) {\
-        unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
+        unqlite_context_output_format(pCtx,\
             "%s: unexpected number of aruments (%d, expected %d)",\
            unqlite_function_name(pCtx), argc, __num__);\
         unqlite_result_null(pCtx);\
@@ -27,7 +27,7 @@ typedef std::function<void(unqlite_context*, bool)> RequestCompletionFn;
 
 #define CHECK_ARGS2(__num1__, __num2__) do {\
     if(argc != (__num1__) && argc != (__num2__)) {\
-        unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
+        unqlite_context_output_format(pCtx,\
             "%s: unexpected number of aruments (%d, expected %d or %d)",\
             unqlite_function_name(pCtx), argc, (__num1__), (__num2__));\
         unqlite_result_null(pCtx);\
@@ -36,7 +36,7 @@ typedef std::function<void(unqlite_context*, bool)> RequestCompletionFn;
 
 #define CATCH_AND_ABORT()\
     catch(const Exception& ex) {\
-        unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_ERR,\
+        unqlite_context_output_format(pCtx,\
             "%s threw an exception: %s", unqlite_function_name(pCtx), ex.what());\
         unqlite_result_null(pCtx);\
         return UNQLITE_OK;\
@@ -304,29 +304,31 @@ int UnQLiteVM::sntd_execute(unqlite_context *pCtx, int argc, unqlite_value **arg
     try {
         database_info db_info(argv[0]);
         Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        // getting the code
         std::string code;
         if(unqlite_value_is_callable(argv[1])) {
             std::string function_name = unqlite_value_to_string(argv[1], nullptr);
-            code = vm->extract_function_code(function_name.c_str());
+            code = vm->extract_function_code(function_name.c_str(), false);
             if(code.empty()) {
                 throw Exception("Could not find source code for function "s+function_name);
             }
-            code += "\n"s + function_name + "();\n";
         } else if(unqlite_value_is_string(argv[1])) {
             code = unqlite_value_to_string(argv[1], nullptr);
         } else {
             throw Exception("Invalid 2nd argument type (expected function or string)");
         }
+        // listing variables that should be returned
         std::unordered_set<std::string> vars;
         if(argc == 3) {
             std::vector<std::string> variables = UnQLiteValue(argv[2], nullptr, nullptr, true);
-            for(auto& v : variables) { 
+            for(auto& v : variables) {
                 vars.insert(v);
             }
         }
+        // executing
         std::unordered_map<std::string,std::string> result;
         db.execute(code, vars, &result);
-        unqlite_value* result_dict = unqlite_context_new_scalar(pCtx);
+        unqlite_value* result_dict = unqlite_context_new_array(pCtx);
         for(auto it = result.begin(); it != result.end(); it++) {
             unqlite_value* v = unqlite_context_new_scalar(pCtx);
             unqlite_value_string(v, it->second.c_str(), -1);
