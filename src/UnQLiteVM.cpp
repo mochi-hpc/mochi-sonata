@@ -3,10 +3,14 @@
  * 
  * See COPYRIGHT in top-level directory.
  */
+#include <functional>
 #include "UnQLiteVM.hpp"
 #include "UnQLiteBackend.hpp"
+#include "sonata/AsyncRequest.hpp"
 
 namespace sonata {
+
+typedef std::function<void(unqlite_context*, bool)> RequestCompletionFn;
 
 #define LOG_ERROR()\
     unqlite_context_throw_error_format(pCtx, UNQLITE_CTX_WARNING,\
@@ -37,6 +41,16 @@ namespace sonata {
         unqlite_result_null(pCtx);\
         return UNQLITE_OK;\
     }
+
+template<typename ResultType>
+void test_or_wait_completion(unqlite_context* pCtx, bool wait, AsyncRequest* req, ResultType* result) {
+    // TODO
+    if(wait) {
+        delete result;
+    } else {
+
+    }
+}
 
 struct database_info {
 
@@ -314,64 +328,203 @@ int UnQLiteVM::sntd_execute(unqlite_context *pCtx, int argc, unqlite_value **arg
 
 int UnQLiteVM::sntc_store(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS2(2, 3);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+    
+        if(unqlite_value_is_empty(argv[1])
+        || unqlite_value_is_resource(argv[1])
+        || unqlite_value_is_callable(argv[1])) {
+            throw Exception("Unsupported record type");
+        }
+
+        const char* document = unqlite_value_to_string(argv[1], nullptr);
+        uint64_t id = coll.store(document);
+
+        unqlite_result_int64(pCtx, id);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_fetch(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
+    CHECK_ARGS2(2, 3);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+        
+        if(!unqlite_value_is_int(argv[1])) {
+            throw Exception("Invalid argument type, expected integer");
+        }
+        uint64_t id = unqlite_value_to_int64(argv[1]);
 
-    // TODO
+        Json::Value result;
+        coll.fetch(id, &result);
+        UnQLiteValue uql_result(result, pCtx);
+        unqlite_result_value(pCtx, uql_result.m_value);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_filter(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
+    CHECK_ARGS2(2, 3);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+        
+        std::string code;
+        if(unqlite_value_is_callable(argv[1])) {
+            std::string function_name = unqlite_value_to_string(argv[1], nullptr);
+            code = vm->extract_function_code(function_name.c_str());
+            if(code.empty()) {
+                throw Exception("Could not find source code for function "s+function_name);
+            }
+        } else if(unqlite_value_is_string(argv[1])) {
+            code = unqlite_value_to_string(argv[1], nullptr);
+        } else {
+            throw Exception("Invalid 2nd argument type (expected function or string)");
+        }
 
-    // TODO
+        Json::Value result;
+        coll.filter(code, &result);
+
+        UnQLiteValue uql_result(result, pCtx);
+        unqlite_result_value(pCtx, uql_result.m_value);
+
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_update(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS2(3, 4);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+   
+        if(!unqlite_value_is_int(argv[1])) {
+            throw Exception("Invalid argument type, expected integer");
+        }
+        uint64_t id = unqlite_value_to_int64(argv[1]);
+        
+        if(unqlite_value_is_empty(argv[2])
+        || unqlite_value_is_resource(argv[2])
+        || unqlite_value_is_callable(argv[2])) {
+            throw Exception("Unsupported record type");
+        }
+        const char* new_document = unqlite_value_to_string(argv[2], nullptr);
+        coll.update(id, new_document);
+        unqlite_result_bool(pCtx, true);
+
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 
 }
 
 int UnQLiteVM::sntc_all(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-
-    // TODO
+    CHECK_ARGS2(1, 2);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+        
+        Json::Value result;
+        coll.all(&result);
+        UnQLiteValue uql_result(result, pCtx);
+        unqlite_result_value(pCtx, uql_result.m_value);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_last_record_id(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS(1);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+        uint64_t last_record = coll.last_record_id();
+        unqlite_result_int64(pCtx, last_record);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_size(unqlite_context *pCtx, int argc, unqlite_value **argv) {
-    // TODO
+    UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
+    CHECK_ARGS(1);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+        size_t size = coll.size();
+        unqlite_result_int64(pCtx, size);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntc_erase(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS2(2,3);
+    try {
+        collection_info coll_info(argv[0]);
+        database_info& db_info = coll_info.db_info;
+        Database db = vm->m_backend->m_client.open(db_info.address, db_info.provider_id, db_info.db_name, false);
+        Collection coll = db.open(coll_info.coll_name, false);
+
+        if(!unqlite_value_is_int(argv[1])) {
+            throw Exception("Invalid argument type, expected integer");
+        }
+        uint64_t id = unqlite_value_to_int64(argv[1]);
+
+        Json::Value result;
+        coll.erase(id);
+        unqlite_result_bool(pCtx, true);
+
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntr_wait(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS(1);
+    try {
+        if(!unqlite_value_is_resource(argv[0])) {
+            throw Exception("Invalid argument (not an asynchronous request object)");
+        }
+        void* ptr = unqlite_value_to_resource(argv[0]);
+        auto completion_fn = reinterpret_cast<RequestCompletionFn*>(ptr);
+        (*completion_fn)(pCtx, true);
+        delete completion_fn; // XXX we should use placement new/delete to allocate in the context
+        unqlite_context_release_value(pCtx, argv[0]);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
 int UnQLiteVM::sntr_test(unqlite_context *pCtx, int argc, unqlite_value **argv) {
     UnQLiteVM* vm = reinterpret_cast<UnQLiteVM*>(unqlite_context_user_data(pCtx));
-    // TODO
+    CHECK_ARGS(1);
+    try {
+        if(!unqlite_value_is_resource(argv[0])) {
+            throw Exception("Invalid argument (not an asynchronous request object)");
+        }
+        void* ptr = unqlite_value_to_resource(argv[0]);
+        auto completion_fn = reinterpret_cast<RequestCompletionFn*>(ptr);
+        (*completion_fn)(pCtx, false);
+    } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }
 
