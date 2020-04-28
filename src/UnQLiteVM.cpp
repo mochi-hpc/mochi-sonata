@@ -211,9 +211,20 @@ int UnQLiteVM::sntd_coll_create(unqlite_context *pCtx, int argc, unqlite_value *
         } catch(...) {
             b = false;
         }
-        int ret = unqlite_result_bool(pCtx, b);
-        if(ret != UNQLITE_OK)
+        unqlite_value* result;
+        int ret;
+        if(b) {
+            result = unqlite_context_new_array(pCtx);
+            unqlite_array_add_strkey_elem(result, "database_info", argv[0]);
+            unqlite_array_add_strkey_elem(result, "collection_name", argv[1]);
+        } else {
+            result = unqlite_context_new_scalar(pCtx);
+            unqlite_value_null(result);
+        }
+        ret = unqlite_result_value(pCtx, result);
+        if(ret != UNQLITE_OK) {
             throw Exception("Could not set result in unqlite context");
+        }
     } CATCH_AND_ABORT();
     return UNQLITE_OK;
 }

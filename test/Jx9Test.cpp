@@ -63,6 +63,7 @@ class Jx9Test : public CppUnit::TestFixture
 
         for(const auto& jx9_file : m_jx9_files) {
 
+            std::cerr << "JX9 TEST from " << jx9_file << std::endl;
             sonata::Admin admin(*engine);
             admin.createDatabase(addr, 0, "mydb", "unqlite", db_config);
 
@@ -81,7 +82,7 @@ class Jx9Test : public CppUnit::TestFixture
             CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                     "this call to execute should not throw.",
                     mydb.execute(code, vars, &results));
-
+            std::cout << results["__output__"];
             if(jx9_file.find("failing") == std::string::npos) {
                 CPPUNIT_ASSERT_EQUAL_MESSAGE(
                         "rc should be true.",
@@ -91,7 +92,6 @@ class Jx9Test : public CppUnit::TestFixture
                         "rc should be false.",
                         std::string("false"), results["rc"]);
             }
-            std::cout << results["__output__"];
 
             admin.destroyDatabase(addr, 0, "mydb");
         }        
