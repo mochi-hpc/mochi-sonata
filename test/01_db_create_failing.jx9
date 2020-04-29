@@ -1,12 +1,12 @@
 $rc = TRUE;
 print "Executing test on address ", $addr, "\n";
 // Create a database
-print "Executing snta_db_create test\n";
-$rc = snta_db_create($addr, 0, "dbFromJx9", "blabla", { path : "dbFromJx9" });
+print "Executing sonata_db_create test\n";
+$rc = sonata_db_create($addr, 0, "dbFromJx9", "blabla", { path : "dbFromJx9" });
 if($rc != TRUE) {
-  print "snta_db_create failed\n";
+  print "sonata_db_create failed\n";
   $rc = FALSE;
   return;
 } else {
-  print "snta_db_create was successful\n";
+  print "sonata_db_create was successful\n";
 }

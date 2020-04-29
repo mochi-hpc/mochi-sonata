@@ -1,9 +1,9 @@
 $rc = TRUE;
 print "Executing test on address ", $addr, "\n";
 
-$ret = snta_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
+$ret = sonata_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($ret != TRUE) {
-  print "snta_db_create failed\n";
+  print "sonata_db_create failed\n";
   $rc = FALSE;
   return;
 }
@@ -13,100 +13,100 @@ $db = { database_name : "dbFromJx9",
         provider_id : 0 };
 
 print "Creating mycollection... ";
-$coll_info = sntd_coll_create($db, "mycollection");
+$coll_info = sonata_coll_create($db, "mycollection");
 if($coll_info == NULL) {
-  print "snta_db_create failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_db_create failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Creating mycollection again (should fail)... ";
-$coll_info = sntd_coll_create($db, "mycollection");
+$coll_info = sonata_coll_create($db, "mycollection");
 if($coll_info != NULL) {
-  print "snta_db_create was successful when it should have failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_db_create was successful when it should have failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Checking if mycollection exists... ";
-$exists = sntd_coll_exists($db, "mycollection");
+$exists = sonata_coll_exists($db, "mycollection");
 if($exists != TRUE) {
-  print "sntd_coll_exists failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_exists failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Checking if blabla exists (should fail)... ";
-$exists = sntd_coll_exists($db, "blabla");
+$exists = sonata_coll_exists($db, "blabla");
 if($exists == TRUE) {
-  print "sntd_coll_exists was successful when it should have failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_exists was successful when it should have failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Opening mycollection... ";
-$coll_info = sntd_coll_open($db, "mycollection");
+$coll_info = sonata_coll_open($db, "mycollection");
 if($coll_info == NULL) {
-  print "sntd_coll_open failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_open failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Opening blabla (should fail)... ";
-$coll_info = sntd_coll_open($db, "blabla");
+$coll_info = sonata_coll_open($db, "blabla");
 if($coll_info != NULL) {
-  print "sntd_coll_open was successful when it should have failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_open was successful when it should have failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Dropping mycollection... ";
-$ret = sntd_coll_drop($db, "mycollection");
+$ret = sonata_coll_drop($db, "mycollection");
 if($ret != TRUE) {
-  print "sntd_coll_drop failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_drop failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Checking if mycollection exists (should return FALSE)... ";
-$exists = sntd_coll_exists($db, "mycollection");
+$exists = sonata_coll_exists($db, "mycollection");
 if($exists != FALSE) {
-  print "sntd_coll_exists returned TRUE for a collection that was erased\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_exists returned TRUE for a collection that was erased\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Dropping blabla (should fail)... ";
-$ret = sntd_coll_drop($db, "blabla");
+$ret = sonata_coll_drop($db, "blabla");
 if($ret == TRUE) {
-  print "sntd_coll_drop returned TRUE for a collection that did not exist\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_coll_drop returned TRUE for a collection that did not exist\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Destroying database dbFromJx9\n";
-$rc = snta_db_destroy($addr, 0, "dbFromJx9");
+$rc = sonata_db_destroy($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print "snta_db_destroy failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_db_destroy failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }

@@ -85,28 +85,28 @@ class UnQLiteVM {
         int ret;
         ret = unqlite_create_constant(m_vm, "__SCRIPT__", get_script, static_cast<void*>(this));
         // Admin functions
-        ret = unqlite_create_function(m_vm, "snta_db_create",      snta_db_create,      static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "snta_db_attach",      snta_db_attach,      static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "snta_db_detach",      snta_db_detach,      static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "snta_db_destroy",     snta_db_destroy,     static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_db_create",      snta_db_create,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_db_attach",      snta_db_attach,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_db_detach",      snta_db_detach,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_db_destroy",     snta_db_destroy,     static_cast<void*>(this));
         // Database functions
-        ret = unqlite_create_function(m_vm, "sntd_coll_create",    sntd_coll_create,    static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntd_coll_exists",    sntd_coll_exists,    static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntd_coll_open",      sntd_coll_open,      static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntd_coll_drop",      sntd_coll_drop,      static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntd_execute",        sntd_execute,        static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_coll_create",    sntd_coll_create,    static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_coll_exists",    sntd_coll_exists,    static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_coll_open",      sntd_coll_open,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_coll_drop",      sntd_coll_drop,      static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_execute",        sntd_execute,        static_cast<void*>(this));
         // Collection functions
-        ret = unqlite_create_function(m_vm, "sntc_store",          sntc_store,          static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_fetch",          sntc_fetch,          static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_filter",         sntc_filter,         static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_update",         sntc_update,         static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_all",            sntc_all,            static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_last_record_id", sntc_last_record_id, static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_size",           sntc_size,           static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntc_erase",          sntc_erase,          static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_store",          sntc_store,          static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_fetch",          sntc_fetch,          static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_filter",         sntc_filter,         static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_update",         sntc_update,         static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_all",            sntc_all,            static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_last_record_id", sntc_last_record_id, static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_size",           sntc_size,           static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_erase",          sntc_erase,          static_cast<void*>(this));
         // Wait functions
-        ret = unqlite_create_function(m_vm, "sntr_wait",           sntr_wait,           static_cast<void*>(this));
-        ret = unqlite_create_function(m_vm, "sntr_test",           sntr_test,           static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_wait",           sntr_wait,           static_cast<void*>(this));
+        ret = unqlite_create_function(m_vm, "sonata_test",           sntr_test,           static_cast<void*>(this));
     }
 
     private:

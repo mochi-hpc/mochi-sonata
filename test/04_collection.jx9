@@ -1,9 +1,9 @@
 $rc = TRUE;
 print "Executing test on address ", $addr, "\n";
 
-$ret = snta_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
+$ret = sonata_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($ret != TRUE) {
-  print "snta_db_create failed\n";
+  print "sonata_db_create failed\n";
   $rc = FALSE;
   return;
 }
@@ -13,7 +13,7 @@ $db = { database_name : "dbFromJx9",
         provider_id : 0 };
 
 // Create a collection
-$coll = sntd_coll_create($db, "mycollection");
+$coll = sonata_coll_create($db, "mycollection");
 
 $records = [
   { name : "John Lennon",     year : 1940 },
@@ -22,55 +22,55 @@ $records = [
   { name : "Peter Best",      year : 1941 } 
 ];
 
-print "Testing sntc_store... ";
+print "Testing sonata_store... ";
 for($i = 0; $i < 4 ; $i++) {
-  $id = sntc_store($coll, $records[$i]);
+  $id = sonata_store($coll, $records[$i]);
   if($id == NULL) {
-    print "sntd_store failed\n";
-    snta_db_destroy($addr, 0, "dbFromJx9");
+    print "sonata_store failed\n";
+    sonata_db_destroy($addr, 0, "dbFromJx9");
     $rc = FALSE;
     return;
   }
 }
 print "OK\n";
 
-print "Testing sntc_fetch... ";
+print "Testing sonata_fetch... ";
 for($i = 0; $i < 4 ; $i++) {
-  $r = sntc_fetch($coll, $i);
+  $r = sonata_fetch($coll, $i);
   if($r == NULL) {
-    print "sntc_fetch failed\n";
-    snta_db_destroy($addr, 0, "dbFromJx9");
+    print "sonata_fetch failed\n";
+    sonata_db_destroy($addr, 0, "dbFromJx9");
     $rc = FALSE;
     return;
   }
   if($r.name != $records[$i].name) {
     print "record field not matching\n";
-    snta_db_destroy($addr, 0, "dbFromJx9");
+    sonata_db_destroy($addr, 0, "dbFromJx9");
     $rc = FALSE;
     return;
   }
 }
 print "OK\n";
 
-print "Testing sntc_all... ";
-$r = sntc_all($coll);
+print "Testing sonata_all... ";
+$r = sonata_all($coll);
 if($r == NULL) {
-  print "sntc_all failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_all failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 for($i = 0; $i < 4 ; $i++) {
   if($r[$i].name != $records[$i].name) {
      print "record field not matching\n";
-     snta_db_destroy($addr, 0, "dbFromJx9");
+     sonata_db_destroy($addr, 0, "dbFromJx9");
      $rc = FALSE;
      return;
   }
 }
 print "OK\n";
 
-print "Testing sntc_filter... ";
+print "Testing sonata_filter... ";
 function myfilter($member) {
    if($member.year > 1941) {
       return TRUE;
@@ -78,79 +78,79 @@ function myfilter($member) {
       return FALSE;
    }
 }
-$filtered = sntc_filter($coll, myfilter);
+$filtered = sonata_filter($coll, myfilter);
 if($filtered == NULL) {
-  print "sntc_filter failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_filter failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 if(count($filtered) != 2) {
   print "unexpected number of returned records\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
-print "Testing sntc_size... ";
-$size = sntc_size($coll);
+print "Testing sonata_size... ";
+$size = sonata_size($coll);
 if($size != 4) {
-  print "sntc_size failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_size failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
-print "Testing sntc_last_record_id... ";
-$id = sntc_last_record_id($coll);
+print "Testing sonata_last_record_id... ";
+$id = sonata_last_record_id($coll);
 if($id != 3) {
-  print "sntc_last_record_id failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_last_record_id failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
-print "Testing sntc_update... ";
-$ret = sntc_update($coll, 3, { "name" : "Ringo Starr", "year" : 1940 });
+print "Testing sonata_update... ";
+$ret = sonata_update($coll, 3, { "name" : "Ringo Starr", "year" : 1940 });
 if($r == NULL) {
-  print "sntc_update failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_update failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
-$new_record = sntc_fetch($coll, 3);
+$new_record = sonata_fetch($coll, 3);
 if($new_record.name != "Ringo Starr") {
   print "recod not matching after update\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
-print "Testing sntc_erase... ";
-$ret = sntc_erase($coll, 0);
+print "Testing sonata_erase... ";
+$ret = sonata_erase($coll, 0);
 if($ret == NULL) {
-  print "sntc_erase failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_erase failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
-$record0 = sntc_fetch($coll, 0);
+$record0 = sonata_fetch($coll, 0);
 if($record0 != NULL) {
-  print "sntc_fetch returned a result when it shouldn't have\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_fetch returned a result when it shouldn't have\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Destroying database dbFromJx9\n";
-$rc = snta_db_destroy($addr, 0, "dbFromJx9");
+$rc = sonata_db_destroy($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print "snta_db_destroy failed\n";
+  print "sonata_db_destroy failed\n";
   $rc = FALSE;
   return;
 }

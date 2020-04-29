@@ -1,9 +1,9 @@
 $rc = TRUE;
 print "Executing test on address ", $addr, "\n";
 
-$ret = snta_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
+$ret = sonata_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($ret != TRUE) {
-  print "snta_db_create failed\n";
+  print "sonata_db_create failed\n";
   $rc = FALSE;
   return;
 }
@@ -19,10 +19,10 @@ function myfunction() {
   print "blabla";
 }
 
-$results = sntd_execute($db, myfunction, ["a","__output__"]);
+$results = sonata_execute($db, myfunction, ["a","__output__"]);
 if($results == NULL) {
-  print "sntd_execute failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_execute failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
@@ -30,19 +30,19 @@ print "OK\n";
 
 $fcode = "\$a = 42; print \"blabla\";";
 
-$results = sntd_execute($db, $fcode, ["a","__output__"]);
+$results = sonata_execute($db, $fcode, ["a","__output__"]);
 if($results == NULL) {
-  print "sntd_execute failed\n";
-  snta_db_destroy($addr, 0, "dbFromJx9");
+  print "sonata_execute failed\n";
+  sonata_db_destroy($addr, 0, "dbFromJx9");
   $rc = FALSE;
   return;
 }
 print "OK\n";
 
 print "Destroying database dbFromJx9\n";
-$rc = snta_db_destroy($addr, 0, "dbFromJx9");
+$rc = sonata_db_destroy($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print "snta_db_destroy failed\n";
+  print "sonata_db_destroy failed\n";
   $rc = FALSE;
   return;
 }

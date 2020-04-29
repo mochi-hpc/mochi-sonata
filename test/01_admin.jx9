@@ -1,45 +1,45 @@
 $rc = TRUE;
 print "Executing test on address ", $addr, "\n";
 // Create a database
-print "Executing snta_db_create test\n";
-$rc = snta_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
+print "Executing sonata_db_create test\n";
+$rc = sonata_db_create($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($rc != TRUE) {
-  print "snta_db_create failed\n";
+  print "sonata_db_create failed\n";
   $rc = FALSE;
   return;
 } else {
-  print "snta_db_create was successful\n";
+  print "sonata_db_create was successful\n";
 }
 
 // Detach the database
-print "Executing snta_db_detach test\n";
-$rc = snta_db_detach($addr, 0, "dbFromJx9");
+print "Executing sonata_db_detach test\n";
+$rc = sonata_db_detach($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print "snta_db_detach failed\n";
+  print "sonata_db_detach failed\n";
   $rc = FALSE;
   return;
 } else {
-  print "snta_db_detach was successful\n";
+  print "sonata_db_detach was successful\n";
 }
 
 // Attach the database
-print "Executing snta_db_attach test\n";
-$rc = snta_db_attach($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
+print "Executing sonata_db_attach test\n";
+$rc = sonata_db_attach($addr, 0, "dbFromJx9", "unqlite", { path : "dbFromJx9" });
 if($rc != TRUE) {
-  print "snta_db_attach failed\n";
+  print "sonata_db_attach failed\n";
   $rc = FALSE;
   return;
 } else {
-  print "snta_db_attach was successful\n";
+  print "sonata_db_attach was successful\n";
 }
 
 // Destroy the database
-print "Executing snta_db_destroy test\n";
-$rc = snta_db_destroy($addr, 0, "dbFromJx9");
+print "Executing sonata_db_destroy test\n";
+$rc = sonata_db_destroy($addr, 0, "dbFromJx9");
 if($rc != TRUE) {
-  print "snta_db_destroy failed\n";
+  print "sonata_db_destroy failed\n";
   $rc = FALSE;
   return;
 } else {
-  print "snta_db_destroy was successful\n";
+  print "sonata_db_destroy was successful\n";
 }
