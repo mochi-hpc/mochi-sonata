@@ -7,6 +7,6 @@ Name: sonata-server
 Description: Mochi-based structured document service
 Version: @SONATA_VERSION@
 
-Requires: thallium
+Requires: thallium sonata-client sonata-admin
 Libs: -L${libdir} @PRIVATE_SERVER_LIBS@
 Cflags: -I${includedir}

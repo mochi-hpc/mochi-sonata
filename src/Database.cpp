@@ -50,9 +50,12 @@ Collection Database::create(const std::string& collectionName) const {
     }
 }
 
-Collection Database::open(const std::string& collectionName) const {
+Collection Database::open(const std::string& collectionName, bool check) const {
     if(not self) throw Exception("Invalid sonata::Database object");
-    RequestResult<bool> result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
+    RequestResult<bool> result;
+    result.success() = true;
+    if(check)
+        result = self->m_client->m_open_collection.on(self->m_ph)(self->m_name, collectionName);
     if(result.success()) {
         auto coll_impl = std::make_shared<CollectionImpl>(self, collectionName);
         return Collection(coll_impl);

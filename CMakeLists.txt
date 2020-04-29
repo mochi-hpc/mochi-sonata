@@ -8,9 +8,10 @@
 #      -DCMAKE_PREFIX_PATH='/dir1;/dir2;/dir3'
 #
 
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.12)
 project (sonata C CXX)
 enable_testing ()
+set (CMAKE_CXX_STANDARD 14)
 
 option(ENABLE_TESTS     "Build tests. May require CppUnit_ROOT" OFF)
 option(ENABLE_EXAMPLES  "Build examples" OFF)

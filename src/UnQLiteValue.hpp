@@ -33,17 +33,19 @@ class UnQLiteValue {
     template<typename T>
     struct type {};
 
-    unqlite_value* m_value = nullptr;
-    unqlite_vm*    m_vm    = nullptr;
-    unqlite_context* m_ctx = nullptr;
+    unqlite_value*   m_value = nullptr;
+    unqlite_vm*      m_vm    = nullptr;
+    unqlite_context* m_ctx   = nullptr;
+    bool             m_ref   = false;
 
-    UnQLiteValue(unqlite_value* val, unqlite_vm* vm, unqlite_context* ctx)
+    public:
+
+    UnQLiteValue(unqlite_value* val, unqlite_vm* vm, unqlite_context* ctx, bool is_ref = false)
     : m_value(val)
     , m_vm(vm)
     , m_ctx(ctx)
+    , m_ref(is_ref)
     {}
-
-    public:
 
     struct Null {};
 
@@ -433,6 +435,7 @@ class UnQLiteValue {
     }
 
     ~UnQLiteValue() {
+        if(m_ref) return;
         if(m_vm && m_value) {
             unqlite_vm_release_value(m_vm, m_value);
         }
@@ -523,46 +526,12 @@ class UnQLiteValue {
 
     template<typename Stream>
     Stream& printToStream(Stream& os) const {
-        if(is<int64_t>()) {
-            os << as<int64_t>();
-        } else if(is<double>()) {
-            os << as<double>();
-        } else if(is<bool>()) {
-            bool b = as<bool>();
-            if(b) os << "true";
-            else os << "false";
-        } else if(is<UnQLiteValue::Null>()) {
-            os << "null";
-        } else if(is<std::string>()) {
-            os << "\"" << as<std::string>() << "\"";
-        } else if(unqlite_value_is_json_array(m_value)
-                && !unqlite_value_is_json_object(m_value)) {
-            os << "[ ";
-            size_t size = unqlite_array_count(m_value);
-            size_t i = 0;
-            const_cast<UnQLiteValue*>(this)->foreach([&os, size, &i](unsigned index, const UnQLiteValue& val) {
-                    val.printToStream(os);
-                    if(i < size-1)
-                        os << ", ";
-                    i += 1;
-            });
-            os << "]";
-        } else if(unqlite_value_is_json_object(m_value)) {
-            os << "{ ";
-            size_t size = unqlite_array_count(m_value);
-            size_t i = 0;
-            const_cast<UnQLiteValue*>(this)->foreach([&os, size, &i](const std::string& key, const UnQLiteValue& val) {
-                    os << "\"" << key << "\" : ";
-                    val.printToStream(os);
-                    if(i < size-1)
-                        os << ", ";
-                    i += 1;
-            });
-            os << "}";
-        } else if(unqlite_value_is_resource) {
-            os << "\"resource@" << std::hex
-                << (intptr_t)unqlite_value_to_resource(m_value) << "\"";
+        if(is<std::string>()) {
+            os << "\"" << unqlite_value_to_string(m_value, nullptr) << "\"";
+        } else {
+            os << unqlite_value_to_string(m_value, nullptr);
         }
+
         return os;
     }
 
@@ -587,18 +556,16 @@ class UnQLiteValue {
     
     void foreach(const std::function<void(unsigned, const UnQLiteValue&)>& f) {
         foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](unsigned i, unqlite_value* elem) {
-            UnQLiteValue val(elem, vm, ctx);
+            UnQLiteValue val(elem, vm, ctx, true);
             f(i, val);
-            val.m_value = nullptr;
             return UNQLITE_OK;
         });
     }
 
     void foreach(const std::function<void(const std::string&, const UnQLiteValue&)>& f) {
         foreach(m_value, [vm=m_vm, ctx=m_ctx, &f](const std::string& key, unqlite_value* elem) {
-            UnQLiteValue val(elem, vm, ctx);
+            UnQLiteValue val(elem, vm, ctx, true);
             f(key, val);
-            val.m_value = nullptr;
             return UNQLITE_OK;
         });
     }
@@ -761,6 +728,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](unsigned, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }
@@ -771,6 +739,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](const std::string&, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }
@@ -781,6 +750,7 @@ class UnQLiteValue {
         if(!b) return false;
         foreach(value, [&b](const std::string&, unqlite_value *pValue) {
             b = b && checkType(pValue, type<T>());
+            return UNQLITE_OK;
         });
         return b;
     }

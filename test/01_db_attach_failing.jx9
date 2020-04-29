@@ -1,0 +1,11 @@
+$rc = TRUE;
+print "Executing test on address ", $addr, "\n";
+print "Executing sonata_db_attach test\n";
+$rc = sonata_db_attach($addr, 0, "dbFromJx9", "blabla", { path : "dbFromJx9" });
+if($rc != TRUE) {
+  print "sonata_db_attach failed\n";
+  $rc = FALSE;
+  return;
+} else {
+  print "sonata_db_attach was successful\n";
+}

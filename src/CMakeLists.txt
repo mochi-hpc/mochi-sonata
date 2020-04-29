@@ -43,7 +43,7 @@ target_link_libraries (sonata-admin thallium margo jsoncpp spdlog)
 target_include_directories (sonata-admin PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-server ${sonata-server-src})
-target_link_libraries (sonata-server thallium margo jsoncpp spdlog)
+target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
 # local include's BEFORE, in case old incompatable .h files in prefix/include

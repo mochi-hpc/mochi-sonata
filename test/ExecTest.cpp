@@ -37,7 +37,6 @@ class ExecTest : public CppUnit::TestFixture
         std::string addr = engine->self();
         
         sonata::Database mydb = client.open(addr, 0, "mydb");
-        
         std::string code = 
             "$zCol = 'users';"
             "if( db_exists($zCol) ){"

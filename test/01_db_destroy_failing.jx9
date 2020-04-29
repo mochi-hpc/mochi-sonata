@@ -1,0 +1,11 @@
+$rc = TRUE;
+print "Executing test on address ", $addr, "\n";
+print "Executing sonata_db_destroy test\n";
+$rc = sonata_db_destroy($addr, 0, "blabla");
+if($rc != TRUE) {
+  print "sonata_db_destroy failed\n";
+  $rc = FALSE;
+  return;
+} else {
+  print "sonata_db_destroy was successful\n";
+}
