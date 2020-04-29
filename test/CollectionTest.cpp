@@ -174,6 +174,16 @@ class CollectionTest : public CppUnit::TestFixture,
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "result should have 0 records.",
                 0, (int)results.size());
+
+        // Filter into a Json result
+        code = "function($rec) { return $rec.papers > 35; }";
+        Json::Value json_result;
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "it should be possible to filter from an empty collection.",
+                coll.filter(code, &json_result));
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "result should have 2 records.",
+                2, (int)json_result.size());
     }
 
     void testUpdate() {
@@ -206,6 +216,22 @@ class CollectionTest : public CppUnit::TestFixture,
                 "update should throw for a record that does not exist.",
                 coll.update(records_str.size(), new_content),
                 sonata::Exception);
+
+        // Update with a Json record
+        Json::Value new_content_json;
+        new_content_json["name"] = "Bob";
+        new_content_json["city"] = "London";
+        new_content_json["papers"] = 4;
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "update should not throw.",
+                coll.update(0, new_content_json));
+
+        // Check the new content
+        Json::Value val2;
+        coll.fetch(0, &val2);
+        CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                "fetch should give the updated value.",
+                val2["name"].asString(), std::string("Bob"));
     }
 
     void testAll() {
