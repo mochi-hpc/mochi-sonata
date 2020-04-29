@@ -126,6 +126,19 @@ class Backend {
             const std::string& record) = 0;
 
     /**
+     * @brief Stores a record into the collection.
+     *
+     * @param coll_name Name of the collection.
+     * @param record Record to store.
+     *
+     * @return a RequestResult<uint64_t> instance
+     * containing the record id if successful.
+     */
+    virtual RequestResult<uint64_t> storeJson(
+            const std::string& coll_name,
+            const Json::Value& record) = 0;
+
+    /**
      * @brief Fetches a particular record by its id.
      *
      * @param coll_name Name of the collection.
@@ -139,7 +152,20 @@ class Backend {
             uint64_t record_id) = 0;
 
     /**
-     * @brief Returns an array of records matching a give
+     * @brief Fetches a particular record by its id.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_id Record id.
+     *
+     * @return a RequestResult<Json::Value> instance.
+     * containing the content of the record if successful.
+     */
+    virtual RequestResult<Json::Value> fetchJson(
+            const std::string& coll_name,
+            uint64_t record_id) = 0;
+
+    /**
+     * @brief Returns an array of records matching a given
      * Jx9 filter. The filter should be expressed as a string
      * containing a function. For example:
      *
@@ -152,6 +178,23 @@ class Backend {
      * instance containing the result of the request.
      */
     virtual RequestResult<std::vector<std::string>> filter(
+            const std::string& coll_name,
+            const std::string& filter_code) = 0;
+
+    /**
+     * @brief Returns an array of records matching a given
+     * Jx9 filter. The filter should be expressed as a string
+     * containing a function. For example:
+     *
+     * "function($user) { return $user.age > 30; }"
+     *
+     * @param coll_name Name of the collection.
+     * @param filter_code Code of the Jx9 function.
+     *
+     * @return a RequestResult<Json::Value>
+     * instance containing the result of the request.
+     */
+    virtual RequestResult<Json::Value> filterJson(
             const std::string& coll_name,
             const std::string& filter_code) = 0;
 
@@ -171,6 +214,21 @@ class Backend {
             const std::string& new_content) = 0;
 
     /**
+     * @brief Updates an existing record with the new content.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_id Record to update.
+     * @param new_content New content of the record.
+     *
+     * @return a RequestResult<bool> instance indicating
+     * whether the update was successful.
+     */
+    virtual RequestResult<bool> updateJson(
+            const std::string& coll_name,
+            uint64_t record_id,
+            const Json::Value& new_content) = 0;
+
+    /**
      * @brief Returns all the records in the collection.
      *
      * @param coll_name Name of the collection.
@@ -179,6 +237,17 @@ class Backend {
      * containing all the records as strings, if successful.
      */
     virtual RequestResult<std::vector<std::string>> all(
+            const std::string& coll_name) = 0;
+
+    /**
+     * @brief Returns all the records in the collection.
+     *
+     * @param coll_name Name of the collection.
+     *
+     * @return a RequestResult<Json::Value> instance
+     * containing all the records as strings, if successful.
+     */
+    virtual RequestResult<Json::Value> allJson(
             const std::string& coll_name) = 0;
 
     /**

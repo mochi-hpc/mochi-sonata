@@ -182,6 +182,45 @@ class UnQLiteBackend : public Backend {
         return result;
     }
 
+    virtual RequestResult<uint64_t> storeJson(
+            const std::string& coll_name,
+            const Json::Value& record) override {
+        std::ostringstream ss;
+        ss << "$input = " << record.toStyledString() << ";"
+        <<
+        "if(!db_exists($collection)) {"
+            "$ret = false;"
+            "$err = \"Collection does not exist\";"
+        "} else {"
+            "$ret = db_store($collection,$input);"
+            "if(!$ret) {"
+                "$err = db_errlog();"
+            "} else {"
+                "$id = $input.__id;"
+            "}"
+        "}";
+        RequestResult<uint64_t> result;
+        try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
+            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm.get<uint64_t>("id");
+            }
+            unqlite_commit(m_db);
+        } catch(const Exception& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
     virtual RequestResult<std::string> fetch(
             const std::string& coll_name,
             uint64_t record_id) override {
@@ -214,6 +253,44 @@ class UnQLiteBackend : public Backend {
                 std::ostringstream ss;
                 vm["output"].printToStream(ss);
                 result.value() = ss.str();
+            }
+        } catch(const Exception& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
+    virtual RequestResult<Json::Value> fetchJson(
+            const std::string& coll_name,
+            uint64_t record_id) override {
+        constexpr static const char* script =
+        "if(!db_exists($collection)) {"
+            "$ret = false;"
+            "$err = \"Collection does not exist\";"
+        "} else {"
+            "$output = db_fetch_by_id($collection,$id);"
+            "if($output == NULL) {"
+                "$ret = false;"
+                "$err = \"Record does not exist\";"
+            "} else {"
+                "$ret = true;"
+            "}"
+        "}";
+        RequestResult<Json::Value> result;
+        try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("collection", coll_name);
+            vm.set("id", record_id);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm["output"];
             }
         } catch(const Exception& e) {
             result.success() = false;
@@ -275,12 +352,95 @@ class UnQLiteBackend : public Backend {
         return result;
     }
 
+    virtual RequestResult<Json::Value> filterJson(
+            const std::string& coll_name,
+            const std::string& filter_code) override {
+        std::string script = "$filter_cb = "s
+            + filter_code + ";"
+        "if(!db_exists($collection)) {"
+            "$ret = false;"
+            "$err = \"Collection does not exist\";"
+        "} else {"
+            "if(0 == db_total_records($collection)) {"
+                "$ret = TRUE;"
+                "$data = [];"
+            "} else {"
+                "$ret = db_fetch_all($collection, $filter_cb);"
+                "if($ret == FALSE) {"
+                    "$ret = TRUE;"
+                    "$data = [];"
+                "} else {"
+                    "$data = $ret;"
+                    "$ret = TRUE;"
+                "}"
+            "}"
+        "}";
+        RequestResult<Json::Value> result;
+        try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
+            UnQLiteVM vm(m_db, script.c_str(), this);
+            vm.registerSonataFunctions();
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm["data"];
+            }
+            unqlite_commit(m_db);
+        } catch(const Exception& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
     virtual RequestResult<bool> update(
             const std::string& coll_name,
             uint64_t record_id,
             const std::string& new_content) override {
         std::ostringstream ss;
         ss << "$input = " << new_content << ";"
+        <<
+        "if(!db_exists($collection)) {"
+            "$ret = false;"
+            "$err = \"Collection does not exist\";"
+        "} else {"
+            "$ret = db_update_record($collection,$record_id,$input);"
+            "if(!$ret) {"
+                "$err = db_errlog();"
+            "}"
+        "}";
+        RequestResult<bool> result;
+        try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
+            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            vm.set("collection", coll_name);
+            vm.set("record_id", record_id);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            }
+            unqlite_commit(m_db);
+        } catch(const Exception& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
+    virtual RequestResult<bool> updateJson(
+            const std::string& coll_name,
+            uint64_t record_id,
+            const Json::Value& new_content) override {
+        std::ostringstream ss;
+        ss << "$input = " << new_content.toStyledString() << ";"
         <<
         "if(!db_exists($collection)) {"
             "$ret = false;"
@@ -352,6 +512,47 @@ class UnQLiteBackend : public Backend {
                         array.push_back(ss.str());
                     });
                 result.value() = std::move(array);
+            }
+        } catch(const Exception& e) {
+            result.success() = false;
+            result.error() = e.what();
+        }
+        return result;
+    }
+
+    virtual RequestResult<Json::Value> allJson(
+            const std::string& coll_name) override {
+        constexpr static const char* script =
+        "if(!db_exists($collection)) {"
+            "$ret = false;"
+            "$err = \"Collection does not exist\";"
+        "} else {"
+            "if(0 == db_total_records($collection)) {"
+                "$ret = TRUE;"
+                "$data = [];"
+            "} else {"
+                "$ret = db_fetch_all($collection);"
+                "if($ret == FALSE) {"
+                    "$err = db_errlog();"
+                "} else {"
+                    "$data = $ret;"
+                    "$ret = TRUE;"
+                "}"
+            "}"
+        "}";
+        RequestResult<Json::Value> result;
+        try {
+            std::unique_lock<tl::mutex> lock;
+            if(!m_unqlite_is_threadsafe)
+                lock = std::unique_lock<tl::mutex>(m_mutex);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("collection", coll_name);
+            vm.execute();
+            result.success() = vm.get<bool>("ret");
+            if(!result.success()) {
+                result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm["data"];
             }
         } catch(const Exception& e) {
             result.success() = false;

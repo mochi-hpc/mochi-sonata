@@ -1,10 +1,10 @@
 spack:
   specs:
-  - mochi-thallium
   - cppunit
   - cmake
   - jsoncpp
   - tclap
   - spdlog
   - mpi
+  - mochi-thallium@master+cereal
   concretization: together

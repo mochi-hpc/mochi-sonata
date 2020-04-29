@@ -7,9 +7,14 @@
 #define __SONATA_JSON_VALUE_SERIALIZE_HPP
 
 #include <json/json.h>
+#include <thallium/serialization/stl/tuple.hpp>
+#include <thallium/serialization/stl/vector.hpp>
+#include <thallium/serialization/stl/string.hpp>
+
+namespace Json { // needed for template deduction to work
 
 template<typename A>
-void save(A& ar, const Json::Value& val) {
+void save(A& ar, Json::Value const& val) {
     ar & (char)val.type();
     switch(val.type()) {
         case Json::nullValue:
@@ -22,7 +27,7 @@ void save(A& ar, const Json::Value& val) {
             break;
         case Json::realValue:
             ar & val.asDouble();
-            break
+            break;
         case Json::stringValue:
             ar & val.asString();
             break; 
@@ -37,7 +42,7 @@ void save(A& ar, const Json::Value& val) {
             break;
         case Json::objectValue:
             ar & val.size();
-            for(auto it = val.begin(); i != val.end(); it++) {
+            for(auto it = val.begin(); it != val.end(); it++) {
                 ar & it.name();
                 ar & *it;
             }
@@ -73,7 +78,7 @@ void load(A& ar, Json::Value& val) {
                 ar & v;
                 val = v;
             }
-            break
+            break;
         case Json::stringValue:
             {
                 std::string v;
@@ -113,6 +118,8 @@ void load(A& ar, Json::Value& val) {
             }
             break;
     }
+}
+
 }
 
 #endif
