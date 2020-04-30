@@ -83,6 +83,51 @@ void Collection::store(const std::string& record, uint64_t* id, AsyncRequest* re
         AsyncRequest(std::move(async_request_impl)).wait();
 }
 
+void Collection::store_multi(const Json::Value& records, uint64_t* ids, AsyncRequest* req) const {
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    if(records.type() != Json::arrayValue) {
+        throw Exception("JSON object is not of Array type");
+    }
+    auto& rpc = self->m_database->m_client->m_coll_store_multi_json;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, records);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [ids](AsyncRequestImpl& async_request_impl) {
+        RequestResult<std::vector<uint64_t>> result = async_request_impl.m_async_response.wait();
+        if(result.success()) {
+            if(ids) memcpy(ids, result.value().data(), result.value().size()*sizeof(*ids));
+        } else {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
+void Collection::store_multi(const std::vector<std::string>& records, uint64_t* ids, AsyncRequest* req) const {
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    auto& rpc = self->m_database->m_client->m_coll_store_multi;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, records);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [ids](AsyncRequestImpl& async_request_impl) {
+        RequestResult<std::vector<uint64_t>> result = async_request_impl.m_async_response.wait();
+        if(result.success()) {
+            if(ids) memcpy(ids, result.value().data(), result.value().size()*sizeof(*ids));
+        } else {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
 void Collection::fetch(uint64_t id, std::string* out, AsyncRequest* req) const {
     if(not out) return;
     if(not self) throw Exception("Invalid sonata::Collection object");
@@ -112,6 +157,53 @@ void Collection::fetch(uint64_t id, Json::Value* out, AsyncRequest* req) const {
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
     auto async_response = rpc.on(ph).async(db_name, self->m_name, id);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [out, self=self](AsyncRequestImpl& async_request_impl) {
+        RequestResult<Json::Value> result = async_request_impl.m_async_response.wait();
+        if(result.success()) {
+            *out = std::move(result.value());
+        } else {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
+void Collection::fetch_multi(const uint64_t* ids, size_t count,
+        std::vector<std::string>* out, AsyncRequest* req) const {
+    if(not out) return;
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    auto& rpc = self->m_database->m_client->m_coll_fetch_multi;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    std::vector<uint64_t> ids_vec(ids, ids+count);
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, ids_vec);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [out](AsyncRequestImpl& async_request_impl) {
+        RequestResult<std::vector<std::string>> result = async_request_impl.m_async_response.wait();
+        if(result.success()) {
+            *out = std::move(result.value());
+        } else {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
+void Collection::fetch_multi(const uint64_t* ids, size_t count, Json::Value* out, AsyncRequest* req) const {
+    if(not out) return;
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    auto& rpc = self->m_database->m_client->m_coll_fetch_multi_json;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    std::vector<uint64_t> ids_vec(ids, ids+count);
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, ids_vec);
     auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
     async_request_impl->m_wait_callback = [out, self=self](AsyncRequestImpl& async_request_impl) {
         RequestResult<Json::Value> result = async_request_impl.m_async_response.wait();
@@ -207,6 +299,49 @@ void Collection::update(uint64_t id, const Json::Value& record, AsyncRequest* re
         AsyncRequest(std::move(async_request_impl)).wait();
 }
 
+void Collection::update_multi(const uint64_t* ids, const std::vector<std::string>& records, AsyncRequest* req) const {
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    auto& rpc = self->m_database->m_client->m_coll_update_multi;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    std::vector<uint64_t> ids_vec(ids, ids+records.size());
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, ids_vec, records);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [](AsyncRequestImpl& async_request_impl) {
+        RequestResult<bool> result = async_request_impl.m_async_response.wait();
+        if(!result.success()) {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
+void Collection::update_multi(const uint64_t* ids, const Json::Value& records, AsyncRequest* req) const {
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    if(records.type() != Json::arrayValue) {
+        throw Exception("JSON object is not of Array type");
+    }
+    auto& rpc = self->m_database->m_client->m_coll_update_multi_json;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    std::vector<uint64_t> ids_vec(ids, ids+records.size());
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, ids_vec, records);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [](AsyncRequestImpl& async_request_impl) {
+        RequestResult<bool> result = async_request_impl.m_async_response.wait();
+        if(!result.success()) {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
 void Collection::all(std::vector<std::string>* out, AsyncRequest* req) const {
     if(not out) return;
     if(not self) throw Exception("Invalid sonata::Collection object");
@@ -278,6 +413,26 @@ void Collection::erase(uint64_t id, AsyncRequest* req) const {
     auto& ph  = self->m_database->m_ph;
     auto& db_name = self->m_database->m_name;
     auto async_response = rpc.on(ph).async(db_name, self->m_name, id);
+    auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
+    async_request_impl->m_wait_callback = [](AsyncRequestImpl& async_request_impl) {
+        RequestResult<bool> result = async_request_impl.m_async_response.wait();
+        if(!result.success()) {
+            throw Exception(result.error());
+        }
+    };
+    if(req)
+        *req = AsyncRequest(std::move(async_request_impl));
+    else
+        AsyncRequest(std::move(async_request_impl)).wait();
+}
+
+void Collection::erase_multi(const uint64_t* ids, size_t count, AsyncRequest* req) const {
+    if(not self) throw Exception("Invalid sonata::Collection object");
+    auto& rpc = self->m_database->m_client->m_coll_erase_multi;
+    auto& ph  = self->m_database->m_ph;
+    auto& db_name = self->m_database->m_name;
+    std::vector<uint64_t> ids_vec(ids, ids+count);
+    auto async_response = rpc.on(ph).async(db_name, self->m_name, ids_vec);
     auto async_request_impl = std::make_shared<AsyncRequestImpl>(std::move(async_response));
     async_request_impl->m_wait_callback = [](AsyncRequestImpl& async_request_impl) {
         RequestResult<bool> result = async_request_impl.m_async_response.wait();
