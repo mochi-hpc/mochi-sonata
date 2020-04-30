@@ -88,7 +88,10 @@ static int ABTMutexTryEnter(SyMutex *arg)
 {
     auto pMutex = reinterpret_cast<ABTSyMutex*>(arg);
     int ret = ABT_mutex_trylock(pMutex->sMutex);
-    return ret;
+    if(ABT_ERR_MUTEX_LOCKED == ret) {
+        ABT_thread_yield();
+    }
+    return ret == ABT_SUCCESS ? SXRET_OK : SXERR_BUSY;
 }
 
 static void ABTMutexLeave(SyMutex *arg)

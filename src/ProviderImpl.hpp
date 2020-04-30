@@ -46,45 +46,59 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     tl::remote_procedure m_drop_collection;
     tl::remote_procedure m_coll_store;
     tl::remote_procedure m_coll_store_json;
+    tl::remote_procedure m_coll_store_multi;
+    tl::remote_procedure m_coll_store_multi_json;
     tl::remote_procedure m_coll_fetch;
     tl::remote_procedure m_coll_fetch_json;
+    tl::remote_procedure m_coll_fetch_multi;
+    tl::remote_procedure m_coll_fetch_multi_json;
     tl::remote_procedure m_coll_filter;
     tl::remote_procedure m_coll_filter_json;
     tl::remote_procedure m_coll_update;
     tl::remote_procedure m_coll_update_json;
+    tl::remote_procedure m_coll_update_multi;
+    tl::remote_procedure m_coll_update_multi_json;
     tl::remote_procedure m_coll_all;
     tl::remote_procedure m_coll_all_json;
     tl::remote_procedure m_coll_last_id;
     tl::remote_procedure m_coll_size;
     tl::remote_procedure m_coll_erase;
+    tl::remote_procedure m_coll_erase_multi;
     // Backends
     std::unordered_map<std::string, std::unique_ptr<Backend>> m_backends;
 
     ProviderImpl(tl::engine& engine, uint16_t provider_id, const tl::pool& pool)
     : tl::provider<ProviderImpl>(engine, provider_id)
     , m_pool(pool)
-    , m_create_database(   define("sonata_create_database",   &ProviderImpl::createDatabase,   pool))
-    , m_attach_database(   define("sonata_attach_database",   &ProviderImpl::attachDatabase,   pool))
-    , m_detach_database(   define("sonata_detach_database",   &ProviderImpl::detachDatabase,   pool))
-    , m_destroy_database(  define("sonata_destroy_database",  &ProviderImpl::destroyDatabase,  pool))
-    , m_exec_on_database(  define("sonata_exec_on_database",  &ProviderImpl::execOnDatabase,   pool))
-    , m_open_database(     define("sonata_open_database",     &ProviderImpl::openDatabase,     pool))
-    , m_create_collection( define("sonata_create_collection", &ProviderImpl::createCollection, pool))
-    , m_open_collection(   define("sonata_open_collection",   &ProviderImpl::openCollection,   pool))
-    , m_drop_collection(   define("sonata_drop_collection",   &ProviderImpl::dropCollection,   pool))
-    , m_coll_store(        define("sonata_store",             &ProviderImpl::store,            pool))
-    , m_coll_store_json(   define("sonata_store_json",        &ProviderImpl::storeJson,        pool))
-    , m_coll_fetch(        define("sonata_fetch",             &ProviderImpl::fetch,            pool))
-    , m_coll_fetch_json(   define("sonata_fetch_json",        &ProviderImpl::fetchJson,        pool))
-    , m_coll_filter(       define("sonata_filter",            &ProviderImpl::filter,           pool))
-    , m_coll_filter_json(  define("sonata_filter_json",       &ProviderImpl::filterJson,       pool))
-    , m_coll_update(       define("sonata_update",            &ProviderImpl::update,           pool))
-    , m_coll_update_json(  define("sonata_update_json",       &ProviderImpl::updateJson,       pool))
-    , m_coll_all(          define("sonata_all",               &ProviderImpl::all,              pool))
-    , m_coll_all_json(     define("sonata_all_json",          &ProviderImpl::allJson,          pool))
-    , m_coll_last_id(      define("sonata_last_id",           &ProviderImpl::lastID,           pool))
-    , m_coll_size(         define("sonata_size",              &ProviderImpl::size,             pool))
-    , m_coll_erase(        define("sonata_erase",             &ProviderImpl::erase,            pool))
+    , m_create_database(       define("sonata_create_database",   &ProviderImpl::createDatabase,   pool))
+    , m_attach_database(       define("sonata_attach_database",   &ProviderImpl::attachDatabase,   pool))
+    , m_detach_database(       define("sonata_detach_database",   &ProviderImpl::detachDatabase,   pool))
+    , m_destroy_database(      define("sonata_destroy_database",  &ProviderImpl::destroyDatabase,  pool))
+    , m_exec_on_database(      define("sonata_exec_on_database",  &ProviderImpl::execOnDatabase,   pool))
+    , m_open_database(         define("sonata_open_database",     &ProviderImpl::openDatabase,     pool))
+    , m_create_collection(     define("sonata_create_collection", &ProviderImpl::createCollection, pool))
+    , m_open_collection(       define("sonata_open_collection",   &ProviderImpl::openCollection,   pool))
+    , m_drop_collection(       define("sonata_drop_collection",   &ProviderImpl::dropCollection,   pool))
+    , m_coll_store(            define("sonata_store",             &ProviderImpl::store,            pool))
+    , m_coll_store_json(       define("sonata_store_json",        &ProviderImpl::storeJson,        pool))
+    , m_coll_store_multi(      define("sonata_store_multi",       &ProviderImpl::storeMulti,       pool))
+    , m_coll_store_multi_json( define("sonata_store_multi_json",  &ProviderImpl::storeMultiJson,   pool))
+    , m_coll_fetch(            define("sonata_fetch",             &ProviderImpl::fetch,            pool))
+    , m_coll_fetch_json(       define("sonata_fetch_json",        &ProviderImpl::fetchJson,        pool))
+    , m_coll_fetch_multi(      define("sonata_fetch_multi",       &ProviderImpl::fetchMulti,       pool))
+    , m_coll_fetch_multi_json( define("sonata_fetch_multi_json",  &ProviderImpl::fetchMultiJson,   pool))
+    , m_coll_filter(           define("sonata_filter",            &ProviderImpl::filter,           pool))
+    , m_coll_filter_json(      define("sonata_filter_json",       &ProviderImpl::filterJson,       pool))
+    , m_coll_update(           define("sonata_update",            &ProviderImpl::update,           pool))
+    , m_coll_update_json(      define("sonata_update_json",       &ProviderImpl::updateJson,       pool))
+    , m_coll_update_multi(     define("sonata_update_multi",      &ProviderImpl::updateMulti,      pool))
+    , m_coll_update_multi_json(define("sonata_update_multi_json", &ProviderImpl::updateMultiJson,  pool))
+    , m_coll_all(              define("sonata_all",               &ProviderImpl::all,              pool))
+    , m_coll_all_json(         define("sonata_all_json",          &ProviderImpl::allJson,          pool))
+    , m_coll_last_id(          define("sonata_last_id",           &ProviderImpl::lastID,           pool))
+    , m_coll_size(             define("sonata_size",              &ProviderImpl::size,             pool))
+    , m_coll_erase(            define("sonata_erase",             &ProviderImpl::erase,            pool))
+    , m_coll_erase_multi(      define("sonata_erase_multi",       &ProviderImpl::eraseMulti,       pool))
     {
         spdlog::trace("[provider:{0}] Registered provider with id {0}", id());
     }
@@ -102,17 +116,24 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         m_drop_collection.deregister();
         m_coll_store.deregister();
         m_coll_store_json.deregister();
+        m_coll_store_multi.deregister();
+        m_coll_store_multi_json.deregister();
         m_coll_fetch.deregister();
         m_coll_fetch_json.deregister();
+        m_coll_fetch_multi.deregister();
+        m_coll_fetch_multi_json.deregister();
         m_coll_filter.deregister();
         m_coll_filter_json.deregister();
         m_coll_update.deregister();
         m_coll_update_json.deregister();
+        m_coll_update_multi.deregister();
+        m_coll_update_multi_json.deregister();
         m_coll_all.deregister();
         m_coll_all_json.deregister();
         m_coll_last_id.deregister();
         m_coll_size.deregister();
         m_coll_erase.deregister();
+        m_coll_erase_multi.deregister();
         spdlog::trace("[provider:{}]    => done!", id());
     }
 
@@ -454,6 +475,48 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}] Record successfully stored (id = {})", id(), result.value());
     }
 
+    void storeMulti(const tl::request& req,
+                    const std::string& db_name,
+                    const std::string& coll_name,
+                    const std::vector<std::string>& records) {
+        spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
+        spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<std::vector<uint64_t>> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->storeMulti(coll_name, records);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Record successfully stored", id());
+    }
+
+    void storeMultiJson(const tl::request& req,
+                        const std::string& db_name,
+                        const std::string& coll_name,
+                        const Json::Value& records) {
+        spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
+        spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<std::vector<uint64_t>> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->storeMultiJson(coll_name, records);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Record successfully stored", id());
+    }
+
     void fetch(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
@@ -496,6 +559,48 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         result = it->second->fetchJson(coll_name, record_id);
         req.respond(result);
         spdlog::trace("[provider:{}] Record {} successfully fetched", id(), record_id);
+    }
+
+    void fetchMulti(const tl::request& req,
+                    const std::string& db_name,
+                    const std::string& coll_name,
+                    const std::vector<uint64_t>& record_ids) {
+        spdlog::trace("[provider:{}] Received fetch_multi request", id());
+        spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<std::vector<std::string>> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->fetchMulti(coll_name, record_ids);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Records successfully fetched", id());
+    }
+
+    void fetchMultiJson(const tl::request& req,
+                        const std::string& db_name,
+                        const std::string& coll_name,
+                        const std::vector<uint64_t>& record_ids) {
+        spdlog::trace("[provider:{}] Received fetch_multi request", id());
+        spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<Json::Value> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->fetchMultiJson(coll_name, record_ids);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Records successfully fetched", id());
     }
 
     void filter(const tl::request& req,
@@ -584,6 +689,50 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         result = it->second->updateJson(coll_name, record_id, new_content);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to record {}", id(), record_id);
+    }
+
+    void updateMulti(const tl::request& req,
+                     const std::string& db_name,
+                     const std::string& coll_name,
+                     const std::vector<uint64_t>& record_ids,
+                     const std::vector<std::string>& new_contents) {
+        spdlog::trace("[provider:{}] Received update request", id());
+        spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<bool> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->updateMulti(coll_name, record_ids, new_contents);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Update successfully applied to records", id());
+    }
+
+    void updateMultiJson(const tl::request& req,
+                         const std::string& db_name,
+                         const std::string& coll_name,
+                         const std::vector<uint64_t>& record_ids,
+                         const Json::Value& new_content) {
+        spdlog::trace("[provider:{}] Received update request", id());
+        spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<bool> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->updateMultiJson(coll_name, record_ids, new_content);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Update successfully applied to records", id());
     }
 
     void all(const tl::request& req,
@@ -686,6 +835,27 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         result = it->second->erase(coll_name, record_id);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully erased record {}", id(), record_id);
+    }
+
+    void eraseMulti(const tl::request& req,
+                    const std::string& db_name,
+                    const std::string& coll_name,
+                    const std::vector<uint64_t>& record_ids) {
+        spdlog::trace("[provider:{}] Received erase request", id());
+        spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
+        spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+        RequestResult<bool> result;
+        auto it = m_backends.find(db_name);
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->eraseMulti(coll_name, record_ids);
+        req.respond(result);
+        spdlog::trace("[provider:{}] Successfully erased records", id());
     }
 };
 

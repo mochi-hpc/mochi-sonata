@@ -139,6 +139,33 @@ class Backend {
             const Json::Value& record) = 0;
 
     /**
+     * @brief Stores multiple records into the collection.
+     * The records should be valid JSON objects.
+     *
+     * @param coll_name Name of the collection.
+     * @param records Records to store.
+     *
+     * @return a RequestResult<std::vector<uint64_t>> instance
+     * containing the record ids if successful.
+     */
+    virtual RequestResult<std::vector<uint64_t>> storeMulti(
+            const std::string& coll_name,
+            const std::vector<std::string>& records) = 0;
+
+    /**
+     * @brief Stores multiple records into the collection.
+     *
+     * @param coll_name Name of the collection.
+     * @param records Records to store.
+     *
+     * @return a RequestResult<std::vector<uint64_t>> instance
+     * containing the record id if successful.
+     */
+    virtual RequestResult<std::vector<uint64_t>> storeMultiJson(
+            const std::string& coll_name,
+            const Json::Value& records) = 0;
+
+    /**
      * @brief Fetches a particular record by its id.
      *
      * @param coll_name Name of the collection.
@@ -163,6 +190,32 @@ class Backend {
     virtual RequestResult<Json::Value> fetchJson(
             const std::string& coll_name,
             uint64_t record_id) = 0;
+
+    /**
+     * @brief Fetches multiple records by their id.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_ids Record ids.
+     *
+     * @return a RequestResult<std::vector<std::string>> instance.
+     * containing the content of the record if successful.
+     */
+    virtual RequestResult<std::vector<std::string>> fetchMulti(
+            const std::string& coll_name,
+            const std::vector<uint64_t>& record_ids) = 0;
+
+    /**
+     * @brief Fetches multiple records by their id.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_ids Record ids.
+     *
+     * @return a RequestResult<Json::Value> instance.
+     * containing the content of the record if successful.
+     */
+    virtual RequestResult<Json::Value> fetchMultiJson(
+            const std::string& coll_name,
+            const std::vector<uint64_t>& record_ids) = 0;
 
     /**
      * @brief Returns an array of records matching a given
@@ -229,6 +282,36 @@ class Backend {
             const Json::Value& new_content) = 0;
 
     /**
+     * @brief Updates existing records with the new contents.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_ids Records to update.
+     * @param new_contents New content of the records.
+     *
+     * @return a RequestResult<bool> instance indicating
+     * whether the update was successful.
+     */
+    virtual RequestResult<bool> updateMulti(
+            const std::string& coll_name,
+            const std::vector<uint64_t>& record_ids,
+            const std::vector<std::string>& new_contents) = 0;
+
+    /**
+     * @brief Updates existing records with the new content.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_ids Records to update.
+     * @param new_contents New content of the records.
+     *
+     * @return a RequestResult<bool> instance indicating
+     * whether the update was successful.
+     */
+    virtual RequestResult<bool> updateMultiJson(
+            const std::string& coll_name,
+            const std::vector<uint64_t>& record_ids,
+            const Json::Value& new_contents) = 0;
+
+    /**
      * @brief Returns all the records in the collection.
      *
      * @param coll_name Name of the collection.
@@ -283,6 +366,18 @@ class Backend {
     virtual RequestResult<bool> erase(
             const std::string& coll_name,
             uint64_t record_id) = 0;
+
+    /**
+     * @brief Erases multiple records from the collection.
+     *
+     * @param coll_name Name of the collection.
+     * @param record_ids Records to erase.
+     *
+     * @return a RequestResult<bool> instance.
+     */
+    virtual RequestResult<bool> eraseMulti(
+            const std::string& coll_name,
+            const std::vector<uint64_t>& record_ids) = 0;
 
     /**
      * @brief Destroys the underlying database resources.
