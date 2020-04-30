@@ -38,11 +38,12 @@ class CollectionTestBase {
             records_json.push_back(json[i]);
             records_str.push_back(json[i].toStyledString());
         }
+        records_json_all = json;
     }
 
     std::vector<std::string> records_str;
     std::vector<Json::Value> records_json;
-
+    Json::Value records_json_all;
 };
 
 #endif
