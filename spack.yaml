@@ -6,5 +6,5 @@ spack:
   - tclap
   - spdlog
   - mpi
-  - mochi-thallium@master+cereal
+  - mochi-thallium+cereal
   concretization: together
