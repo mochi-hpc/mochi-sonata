@@ -1,6 +1,7 @@
 {
-    "protocol" : "tcp",
-    "seed" : 0,
+    "protocol" : "ofi+tcp",
+    "seed" : 1234,
+    "log" : "info",
     "server" : {
         "use-progress-thread" : false,
         "rpc-thread-count" : 0
@@ -10,8 +11,27 @@
     },
     "benchmarks" : [
         {
+            "type" : "fetch-multi",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 16 ],
+                "val-size" : [ 1, 16 ]
+            },
+            "num-operations" : 1000,
+            "use-json" : false,
+            "batch-size" : 5
+        },
+        {
             "type" : "store",
-            "repetitions" : 10,
+            "repetitions" : 3,
             "collection" : {
                 "type" : "unqlite",
                 "path" : "mydb",
@@ -19,15 +39,16 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 1000,
+                "num" : 100,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]
-            }
+            },
+            "use-json" : true
         },
         {
-            "type" : "fetch",
-            "repetitions" : 10,
+            "type" : "update-multi",
+            "repetitions" : 3,
             "collection" : {
                 "type" : "unqlite",
                 "path" : "mydb",
@@ -35,16 +56,18 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 1000,
+                "num" : 100,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]
             },
-            "num-operations" : 1000
+            "num-operations" : 1000,
+            "batch-size" : 10,
+            "use-json" : false 
         },
         {
-            "type" : "filter",
-            "repetitions" : 10,
+            "type" : "erase-multi",
+            "repetitions" : 3,
             "collection" : {
                 "type" : "unqlite",
                 "path" : "mydb",
@@ -52,33 +75,16 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 1000,
+                "num" : 100,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]
             },
-            "filter-selectivity" : 0.5
-        },
-        {
-            "type" : "update",
-            "repetitions" : 10,
-            "collection" : {
-                "type" : "unqlite",
-                "path" : "mydb",
-                "database-name" : "mydb",
-                "collection-name" : "mycollection"
-            },
-            "records" : {
-                "num" : 1000,
-                "fields" : 16,
-                "key-size" : [ 1, 64 ],
-                "val-size" : [ 1, 64 ]
-            },
-            "num-operations" : 1000
+            "batch-size" : 10
         },
         {
             "type" : "all",
-            "repetitions" : 10,
+            "repetitions" : 3,
             "collection" : {
                 "type" : "unqlite",
                 "path" : "mydb",
@@ -86,15 +92,16 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 1000,
+                "num" : 100,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]
-            }
+            },
+            "use-json" : true
         },
         {
-            "type" : "erase",
-            "repetitions" : 10,
+            "type" : "store-multi",
+            "repetitions" : 3,
             "collection" : {
                 "type" : "unqlite",
                 "path" : "mydb",
@@ -102,7 +109,96 @@
                 "collection-name" : "mycollection"
             },
             "records" : {
-                "num" : 1000,
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "batch-size" : 20,
+            "use-json" : true
+        },
+        {
+            "type" : "fetch",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "num-operations" : 1000,
+            "use-json" : true
+        },
+        {
+            "type" : "filter",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "filter-selectivity" : 0.5,
+            "use-json" : true
+        },
+        {
+            "type" : "update",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "num-operations" : 1000,
+            "use-json" : true
+        },
+        {
+            "type" : "all",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
+                "fields" : 16,
+                "key-size" : [ 1, 64 ],
+                "val-size" : [ 1, 64 ]
+            },
+            "use-json" : true
+        },
+        {
+            "type" : "erase",
+            "repetitions" : 3,
+            "collection" : {
+                "type" : "unqlite",
+                "path" : "mydb",
+                "database-name" : "mydb",
+                "collection-name" : "mycollection"
+            },
+            "records" : {
+                "num" : 100,
                 "fields" : 16,
                 "key-size" : [ 1, 64 ],
                 "val-size" : [ 1, 64 ]

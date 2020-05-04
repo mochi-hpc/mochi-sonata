@@ -185,9 +185,7 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<uint64_t> storeJson(
             const std::string& coll_name,
             const Json::Value& record) override {
-        std::ostringstream ss;
-        ss << "$input = " << record.toStyledString() << ";"
-        <<
+        constexpr static const char* script =
         "if(!db_exists($collection)) {"
             "$ret = false;"
             "$err = \"Collection does not exist\";"
@@ -204,7 +202,8 @@ class UnQLiteBackend : public Backend {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
                 lock = std::unique_lock<tl::mutex>(m_mutex);
-            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("input", record);
             vm.set("collection", coll_name);
             vm.execute();
             result.success() = vm.get<bool>("ret");
@@ -274,14 +273,7 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<std::vector<uint64_t>> storeMultiJson(
             const std::string& coll_name,
             const Json::Value& records) override {
-        std::ostringstream ss;
-        ss << "$input = [";
-        for(unsigned i=0; i < records.size(); i++) {
-            ss << records[i].toStyledString();
-            if(i != records.size()-1) ss << ",";
-        }
-        ss << "];"
-        <<
+        constexpr static const char* script =
         "if(!db_exists($collection)) {"
             "$ret = false;"
             "$err = \"Collection does not exist\";"
@@ -305,7 +297,8 @@ class UnQLiteBackend : public Backend {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
                 lock = std::unique_lock<tl::mutex>(m_mutex);
-            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("input", records);
             vm.set("collection", coll_name);
             vm.execute();
             result.success() = vm.get<bool>("ret");
@@ -633,9 +626,7 @@ class UnQLiteBackend : public Backend {
             const std::string& coll_name,
             uint64_t record_id,
             const Json::Value& new_content) override {
-        std::ostringstream ss;
-        ss << "$input = " << new_content.toStyledString() << ";"
-        <<
+        constexpr static const char* script =
         "if(!db_exists($collection)) {"
             "$ret = false;"
             "$err = \"Collection does not exist\";"
@@ -650,7 +641,8 @@ class UnQLiteBackend : public Backend {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
                 lock = std::unique_lock<tl::mutex>(m_mutex);
-            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("input", new_content);
             vm.set("collection", coll_name);
             vm.set("record_id", record_id);
             vm.execute();
@@ -718,14 +710,7 @@ class UnQLiteBackend : public Backend {
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids,
             const Json::Value& new_contents) override {
-        std::ostringstream ss;
-        ss << "$input = [";
-        for(unsigned i=0; i < new_contents.size(); i++) {
-            ss << new_contents[i];
-            if(i != new_contents.size()-1) ss << ",";
-        }
-        ss << "];"
-        <<
+        constexpr static const char* script =
         "if(!db_exists($collection)) {"
             "$ret = false;"
             "$err = \"Collection does not exist\";"
@@ -746,7 +731,8 @@ class UnQLiteBackend : public Backend {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
                 lock = std::unique_lock<tl::mutex>(m_mutex);
-            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            UnQLiteVM vm(m_db, script, this);
+            vm.set("input", new_contents);
             vm.set("collection", coll_name);
             vm.set("record_ids", record_ids);
             vm.execute();

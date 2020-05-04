@@ -14,6 +14,7 @@
 #include <thallium/serialization/stl/unordered_map.hpp>
 #include <thallium/serialization/stl/string.hpp>
 #include <thallium/serialization/stl/pair.hpp>
+#include <thallium/serialization/stl/vector.hpp>
 
 #include <json/json.h>
 #include <spdlog/spdlog.h>

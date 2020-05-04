@@ -8,6 +8,7 @@
 #include <map>
 #include <functional>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <mpi.h>
 #include <sonata/Provider.hpp>
 #include <sonata/Client.hpp>
@@ -279,6 +280,180 @@ class StoreBenchmark : public AbstractBenchmark {
 REGISTER_BENCHMARK("store", StoreBenchmark);
 
 /**
+ * StoreMultiBenchmark executes a series of store_multi operations and measures their duration.
+ */
+class StoreMultiBenchmark : public StoreBenchmark {
+
+    protected:
+
+    size_t                                m_batch_size;
+    std::vector<std::vector<std::string>> m_batches;
+    std::vector<Json::Value>              m_batches_json;
+
+    public:
+
+    template<typename ... T>
+    StoreMultiBenchmark(Json::Value& config, T&& ... args)
+    : StoreBenchmark(config, std::forward<T>(args)...)
+    , m_batch_size(config.get("batch-size",1).asUInt64())
+    {}
+
+    virtual void setup() override {
+        StoreBenchmark::setup();
+        if(!m_use_json) {
+            m_batches.resize(m_record_info.num/m_batch_size);
+            for(unsigned i=0; i < m_records.size(); i++) {
+                m_batches[i/m_batch_size].emplace_back(std::move(m_records[i]));
+            }
+            m_records.clear();
+        } else {
+            m_batches_json.resize(m_record_info.num/m_batch_size);
+            for(unsigned i=0; i < m_records_json.size(); i++) {
+                m_batches_json[i/m_batch_size].append(std::move(m_records_json[i]));
+            }
+            m_records_json.clear();
+        }
+    }
+
+    virtual void execute() override {
+        if(!m_use_json) {
+            for(auto& records : m_batches) {
+                m_collection.store_multi(records, nullptr);
+            }
+        } else {
+            for(auto& records : m_batches_json) {
+                m_collection.store_multi(records, nullptr);
+            }
+        }
+    }
+
+    virtual void teardown() override {
+        m_batches.clear();
+        m_batches_json.clear();
+        StoreBenchmark::teardown();
+    }
+};
+REGISTER_BENCHMARK("store-multi", StoreMultiBenchmark);
+
+/**
+ * IngestBenchmark stores records taken from one or multiple files.
+ */
+class IngestBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    CollectionInfo  m_collection_info;
+    snt::Collection m_collection;
+    bool            m_use_json = false;
+    size_t          m_batch_size;
+    std::vector<std::string> m_input_files;
+    std::vector<std::string> m_object_path;
+    std::vector<std::vector<std::string>> m_records;
+    std::vector<Json::Value>              m_records_json;
+
+    public:
+
+    template<typename ... T>
+    IngestBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...)
+    , m_collection_info(config["collection"])
+    , m_use_json(config.get("use-json", false).asBool())
+    , m_batch_size(config.get("batch-size", 1).asUInt64())
+    {
+        auto input_files_json = config.get("files", Json::Value());
+        if(input_files_json.isString()) {
+            m_input_files.push_back(input_files_json.asString());
+        } else if(input_files_json.isArray()) {
+            for(size_t i=0; i < input_files_json.size(); i++) {
+                m_input_files.push_back(input_files_json[(Json::ArrayIndex)i].asString());
+            }
+        }
+        std::string obj = config.get("object-path", "").asString();
+        std::stringstream ss(obj);
+        std::string token;
+        while(std::getline(ss, token, '.')) {
+            m_object_path.push_back(token);
+        }
+    }
+
+    virtual void setup() override {
+        spdlog::trace("Setting up IngestBenchmark...");
+        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        for(auto& f : m_input_files) {
+            std::ifstream file(f);
+            if(!file.good()) throw std::runtime_error("Could not open file "s + f);
+            Json::Value root;
+            file >> root;
+            Json::Value obj = root;
+            size_t current_batch_size = 0;
+            if(m_use_json) m_records_json.emplace_back();
+            else m_records.emplace_back();
+            for(auto& token : m_object_path) {
+                if(obj.isMember(token))
+                    obj = obj[token];
+                else throw std::runtime_error("Could not find field \""s + token + "\"");
+            }
+            if(!obj.isArray()) {
+                if(m_use_json)
+                    m_records_json.back().append(obj);
+                else
+                    m_records.back().push_back(obj.toStyledString());
+                current_batch_size += 1;
+            } else {
+                for(size_t i=0; i < obj.size(); i++) {
+                    if(m_use_json)
+                        m_records_json.back().append(obj[(Json::ArrayIndex)i]);
+                    else
+                        m_records.back().push_back(obj[(Json::ArrayIndex)i].toStyledString());
+                    current_batch_size += 1;
+                    if(current_batch_size == m_batch_size) {
+                        current_batch_size = 0;
+                        if(m_use_json)
+                            m_records_json.emplace_back();
+                        else
+                            m_records.emplace_back();
+                    }
+                }
+            }
+            if(current_batch_size == m_batch_size) {
+                current_batch_size = 0;
+                if(m_use_json)
+                    m_records_json.emplace_back();
+                else
+                    m_records.emplace_back();
+            }
+        }
+        if(m_use_json) {
+            spdlog::trace("{} batches of records will be ingested", m_records_json.size());
+        } else {
+            spdlog::trace("{} batches of records will be ingested", m_records.size());
+        }
+    }
+
+    virtual void execute() override {
+        spdlog::trace("Executing IngestBechmark...");
+        if(m_use_json) {
+            for(size_t i=0; i < m_records_json.size(); i++) {
+                m_collection.store_multi(m_records_json[i], nullptr);
+            }
+        } else {
+            for(size_t i=0; i < m_records.size(); i++)
+                m_collection.store_multi(m_records[i], nullptr);
+        }
+        spdlog::trace("IngestBenchmark executed");
+    }
+
+    virtual void teardown() override {
+        spdlog::trace("Tearing down IngestBenchmark...");
+        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        m_records.clear();
+        m_records_json.clear();
+        spdlog::trace("Done tearing down IngestBenchmark");
+    }
+};
+REGISTER_BENCHMARK("ingest", IngestBenchmark);
+
+/**
  * FetchBenchmark executes a series of fetch operations and measures their duration.
  */
 class FetchBenchmark : public AbstractBenchmark {
@@ -333,6 +508,45 @@ class FetchBenchmark : public AbstractBenchmark {
     }
 };
 REGISTER_BENCHMARK("fetch", FetchBenchmark);
+
+/**
+ * FetchMultiBenchmark executes a series of fetch-multi operations and measures their duration.
+ */
+class FetchMultiBenchmark : public FetchBenchmark {
+
+    protected:
+
+    size_t m_batch_size;
+
+    public:
+
+    template<typename ... T>
+    FetchMultiBenchmark(Json::Value& config, T&& ... args)
+    : FetchBenchmark(config, std::forward<T>(args)...)
+    , m_batch_size(config.get("batch-size",1).asUInt64())
+    {}
+
+    virtual void execute() override {
+        std::vector<uint64_t> ids(m_batch_size);
+        for(size_t i = 0; i < m_num_fetch; i++) {
+            std::cerr << "Will fetch: " ;
+            for(size_t j = 0; j < ids.size(); j++) { 
+                uint64_t id = rand() % m_record_info.num;
+                ids[j] = id;
+                std::cerr << id << ", ";
+            }
+            std::cerr << std::endl;
+            if(!m_use_json) {
+                std::vector<std::string> r;
+                m_collection.fetch_multi(ids.data(), ids.size(), &r);
+            } else {
+                Json::Value r;
+                m_collection.fetch_multi(ids.data(), ids.size(), &r);
+            }
+        }
+    }
+};
+REGISTER_BENCHMARK("fetch-multi", FetchMultiBenchmark);
 
 /**
  * FilterBenchmark executes a series of filter operations and measures their duration.
@@ -407,6 +621,7 @@ class UpdateBenchmark : public AbstractBenchmark {
     size_t          m_num_updates = 0;
     std::vector<std::string> m_new_records;
     std::vector<Json::Value> m_new_records_json;
+    std::vector<uint64_t> m_ids_to_update;
 
     public:
 
@@ -445,11 +660,16 @@ class UpdateBenchmark : public AbstractBenchmark {
                 m_new_records_json.push_back(std::move(r));
             }
         }
+
+        for(size_t i=0; i < m_num_updates; i++) {
+            uint64_t id = rand() % m_record_info.num;
+            m_ids_to_update.push_back(id);
+        }
     }
 
     virtual void execute() override {
         for(size_t i = 0; i < m_num_updates; i++) {
-            uint64_t id = rand() % m_record_info.num;
+            uint64_t id = m_ids_to_update[i];
             if(!m_use_json) {
                 m_collection.update(id, m_new_records[i]);
             } else {
@@ -464,6 +684,73 @@ class UpdateBenchmark : public AbstractBenchmark {
 };
 REGISTER_BENCHMARK("update", UpdateBenchmark);
 
+/**
+ * UpdateMultiBenchmark executes a series of update operations and measures their duration.
+ */
+class UpdateMultiBenchmark : public UpdateBenchmark {
+
+    protected:
+
+    size_t m_batch_size;
+    std::vector<std::vector<std::string>> m_new_records_batches;
+    std::vector<Json::Value> m_new_records_batches_json;
+
+    public:
+
+    template<typename ... T>
+    UpdateMultiBenchmark(Json::Value& config, T&& ... args)
+    : UpdateBenchmark(config, std::forward<T>(args)...)
+    , m_batch_size(config.get("batch-size", 1).asUInt64())
+    {}
+
+    virtual void setup() override {
+        UpdateBenchmark::setup();
+        size_t remaining = m_num_updates;
+        size_t i = 0;
+        while(remaining != 0) {
+            size_t batch_size = std::min(m_batch_size, remaining);
+            if(!m_use_json) {
+                m_new_records_batches.emplace_back();
+            } else {
+                m_new_records_batches_json.emplace_back();
+            }
+            for(size_t j = 0; j < batch_size; j++) {
+                if(!m_use_json) {
+                    m_new_records_batches.back().push_back(std::move(m_new_records[i+j]));
+                } else {
+                    m_new_records_batches_json.back().append(std::move(m_new_records_json[i+j]));
+                }
+            }
+            remaining -= batch_size;
+            i += batch_size;
+        }
+        m_new_records.clear();
+        m_new_records_json.clear();
+    }
+
+    virtual void execute() override {
+        if(m_use_json) {
+            size_t offset_id = 0;
+            for(size_t i = 0; i < m_new_records_batches_json.size(); i++) {
+                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches_json[i]);
+                offset_id += m_new_records_batches_json[i].size();
+            }
+        } else {
+            size_t offset_id = 0;
+            for(size_t i = 0; i < m_new_records_batches.size(); i++) {
+                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches[i]);
+                offset_id += m_new_records_batches[i].size();
+            }
+        }
+    }
+
+    virtual void teardown() override {
+        m_new_records_batches.clear();
+        m_new_records_batches_json.clear();
+        UpdateBenchmark::teardown();
+    }
+};
+REGISTER_BENCHMARK("update-multi", UpdateMultiBenchmark);
 /**
  * AllBenchmark executes a series of "all" operations and measures their duration.
  */
@@ -558,6 +845,36 @@ class EraseBenchmark : public AbstractBenchmark {
 };
 REGISTER_BENCHMARK("erase", EraseBenchmark);
 
+/**
+ * EraseMultiBenchmark executes a series of "erase-multi" operations and measures their duration.
+ */
+class EraseMultiBenchmark : public EraseBenchmark {
+
+    protected:
+
+    size_t m_batch_size;
+
+    public:
+
+    template<typename ... T>
+    EraseMultiBenchmark(Json::Value& config, T&& ... args)
+    : EraseBenchmark(config, std::forward<T>(args)...)
+    , m_batch_size(config.get("batch-size",1).asUInt64())
+    {}
+
+    virtual void execute() override {
+        size_t remaining = m_erase_order.size();
+        size_t i = 0;
+        while(remaining != 0) {
+            size_t batch_size = std::min(remaining, m_batch_size);
+            m_collection.erase_multi(&m_erase_order[i], batch_size);
+            remaining -= batch_size;
+            i += batch_size;
+        }
+    }
+};
+REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
+
 
 
 static void run_server(MPI_Comm comm, Json::Value& config);
@@ -610,6 +927,8 @@ int main(int argc, char** argv) {
 
 static void run_server(MPI_Comm comm, Json::Value& config) {
     // initialize Thallium 
+    std::string loglevel = config.get("log","info").asString();
+    spdlog::set_level(spdlog::level::from_str(loglevel));
     std::string protocol = config["protocol"].asString();
     bool use_progress_thread = false;
     int  rpc_thread_count = 0;
@@ -635,6 +954,8 @@ static void run_server(MPI_Comm comm, Json::Value& config) {
 }
 
 static void run_client(MPI_Comm comm, Json::Value& config) {
+    std::string loglevel = config.get("log","info").asString();
+    spdlog::set_level(spdlog::level::from_str(loglevel));
     // get info from communicator
     int rank, num_clients;
     MPI_Comm_rank(comm, &rank);
