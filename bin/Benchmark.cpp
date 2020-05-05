@@ -350,6 +350,7 @@ class IngestBenchmark : public AbstractBenchmark {
     std::vector<std::string> m_object_path;
     std::vector<std::vector<std::string>> m_records;
     std::vector<Json::Value>              m_records_json;
+    Json::Value& m_config;
 
     public:
 
@@ -359,6 +360,7 @@ class IngestBenchmark : public AbstractBenchmark {
     , m_collection_info(config["collection"])
     , m_use_json(config.get("use-json", false).asBool())
     , m_batch_size(config.get("batch-size", 1).asUInt64())
+    , m_config(config)
     {
         auto input_files_json = config.get("files", Json::Value());
         if(input_files_json.isString()) {
@@ -379,6 +381,7 @@ class IngestBenchmark : public AbstractBenchmark {
     virtual void setup() override {
         spdlog::trace("Setting up IngestBenchmark...");
         m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        size_t num_objects = 0;
         for(auto& f : m_input_files) {
             std::ifstream file(f);
             if(!file.good()) throw std::runtime_error("Could not open file "s + f);
@@ -399,6 +402,7 @@ class IngestBenchmark : public AbstractBenchmark {
                 else
                     m_records.back().push_back(obj.toStyledString());
                 current_batch_size += 1;
+                num_objects += 1;
             } else {
                 for(size_t i=0; i < obj.size(); i++) {
                     if(m_use_json)
@@ -414,6 +418,7 @@ class IngestBenchmark : public AbstractBenchmark {
                             m_records.emplace_back();
                     }
                 }
+                num_objects += obj.size();
             }
             if(current_batch_size == m_batch_size) {
                 current_batch_size = 0;
@@ -428,6 +433,7 @@ class IngestBenchmark : public AbstractBenchmark {
         } else {
             spdlog::trace("{} batches of records will be ingested", m_records.size());
         }
+        m_config["num-records"] = num_objects;
     }
 
     virtual void execute() override {
