@@ -236,17 +236,17 @@ class UnQLiteBackend : public Backend {
             "$err = \"Collection does not exist\";"
         "} else {"
             "$ids = [];"
-            "while(!db_begin()) {}"
+  //          "while(!db_begin()) {}"
             "foreach($input as $x) {"
                 "$ret = db_store($collection,$x);"
                 "if(!$ret) {"
-                    "db_rollback();"
+ //                   "db_rollback();"
                     "$err = db_errlog();"
                 "} else {"
                     "array_push($ids,$x.__id);"
                 "}"
             "}"
-            "if($ret) { db_commit(); }"
+ //           "if($ret) { db_commit(); }"
         "}";
         RequestResult<std::vector<uint64_t>> result;
         try {
@@ -279,18 +279,18 @@ class UnQLiteBackend : public Backend {
             "$err = \"Collection does not exist\";"
         "} else {"
             "$ids = [];"
-            "while(!db_begin()) {}"
+//            "while(!db_begin()) {}"
             "foreach($input as $x) {"
                 "$ret = db_store($collection,$x);"
                 "if(!$ret) {"
-                    "db_rollback();"
+//                    "db_rollback();"
                     "$err = db_errlog();"
                     "break;"
                 "} else {"
                     "array_push($ids,$x.__id);"
                 "}"
             "}"
-            "if($ret) { db_commit(); }"
+//            "if($ret) { db_commit(); }"
         "}";
         RequestResult<std::vector<uint64_t>> result;
         try {
