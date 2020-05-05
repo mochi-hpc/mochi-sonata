@@ -174,7 +174,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
-            unqlite_commit(m_db);
+            //unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -212,7 +212,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
-            unqlite_commit(m_db);
+            //unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -262,7 +262,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<std::vector<uint64_t>>("ids");
             }
-            unqlite_commit(m_db);
+            //unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -307,7 +307,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<std::vector<uint64_t>>("ids");
             }
-            unqlite_commit(m_db);
+            //unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
