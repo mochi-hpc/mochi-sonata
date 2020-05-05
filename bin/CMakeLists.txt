@@ -4,6 +4,8 @@ if (${ENABLE_DAEMON})
     target_include_directories (sonata-daemon BEFORE PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
     target_link_libraries (sonata-daemon sonata-server jsoncpp)
+    install (TARGETS sonata-daemon
+             DESTINATION "bin")
 endif (${ENABLE_DAEMON})
 
 if (${ENABLE_BENCHMARK})
@@ -12,4 +14,6 @@ if (${ENABLE_BENCHMARK})
     target_include_directories (sonata-benchmark BEFORE PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
     target_link_libraries(sonata-benchmark sonata-server sonata-client sonata-admin jsoncpp)
+    install (TARGETS sonata-benchmark
+             DESTINATION "bin")
 endif (${ENABLE_BENCHMARK})
