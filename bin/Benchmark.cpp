@@ -301,13 +301,19 @@ class StoreMultiBenchmark : public StoreBenchmark {
     virtual void setup() override {
         StoreBenchmark::setup();
         if(!m_use_json) {
-            m_batches.resize(m_record_info.num/m_batch_size);
+            if(m_record_info.num % m_batch_size == 0)
+                m_batches.resize(m_record_info.num/m_batch_size);
+            else
+                m_batches.resize(1 + m_record_info.num/m_batch_size);
             for(unsigned i=0; i < m_records.size(); i++) {
                 m_batches[i/m_batch_size].emplace_back(std::move(m_records[i]));
             }
             m_records.clear();
         } else {
-            m_batches_json.resize(m_record_info.num/m_batch_size);
+            if(m_record_info.num % m_batch_size == 0)
+                m_batches_json.resize(m_record_info.num/m_batch_size);
+            else
+                m_batches_json.resize(1 + m_record_info.num/m_batch_size);
             for(unsigned i=0; i < m_records_json.size(); i++) {
                 m_batches_json[i/m_batch_size].append(std::move(m_records_json[i]));
             }
