@@ -129,7 +129,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                     "coll.store should not throw.",
                     coll.store(r));
         }
-
+        mydb.commit();
         // Update record 0 and 2 with new content
         std::vector<std::string> new_contents = {
             "{ \"name\" : \"Georges\", \"city\" : \"Lyon\", \"papers\" : 89 }",
@@ -140,23 +140,47 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         ids_to_update[1] = records_str.size() + 1;
 
         // Update records include one that does not exist
-        CPPUNIT_ASSERT_THROW_MESSAGE(
-                "update should throw for a record that does not exist.",
-                coll.update_multi(ids_to_update.data(), new_contents),
-                sonata::Exception);
-        // Check the content of record 0, it should not have changed
+        std::vector<bool> updated;
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
+                "update should not throw for a record that does not exist.",
+                coll.update_multi(ids_to_update.data(), new_contents, &updated));
+        CPPUNIT_ASSERT_MESSAGE(
+                "vector of bool should be of size 2.",
+                updated.size() == 2);
+
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 0 should have been updated.",
+                updated[0]);
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 1 should not have been updated.",
+                !updated[1]);
+
+        mydb.commit();
+        // Check the content of record 0, it should have changed
         Json::Value val;
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "record 0 should not have changed.",
-                val["name"].asString(), records_json[0]["name"].asString());
+                val["name"].asString(), std::string("Georges"));
 
+        mydb.commit();
         // Do a correct update of 2 records
         ids_to_update[1]  = 2;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "update should not throw.",
-                coll.update_multi(ids_to_update.data(), new_contents));
+                coll.update_multi(ids_to_update.data(), new_contents, &updated));
+        CPPUNIT_ASSERT_MESSAGE(
+                "vector of bool should be of size 2.",
+                updated.size() == 2);
 
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 0 should have been updated.",
+                updated[0]);
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 1 should have been updated.",
+                updated[1]);
+
+        mydb.commit();
         // Check the new content
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
@@ -180,6 +204,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                     "coll.store should not throw.",
                     coll.store(r));
         }
+        mydb.commit();
 
         // Update record 0 and 2 with new content
         Json::Value new_contents;
@@ -193,24 +218,47 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         std::vector<uint64_t> ids_to_update = { 0, 2 };
         ids_to_update[1] = records_str.size() + 1;
 
+        std::vector<bool> updated;
+
         // Update records include one that does not exist
-        CPPUNIT_ASSERT_THROW_MESSAGE(
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "update should throw for a record that does not exist.",
-                coll.update_multi(ids_to_update.data(), new_contents),
-                sonata::Exception);
-        // Check the content of record 0, it should not have changed
+                coll.update_multi(ids_to_update.data(), new_contents, &updated));
+        CPPUNIT_ASSERT_MESSAGE(
+                "vector of bool should be of size 2.",
+                updated.size() == 2);
+
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 0 should have been updated.",
+                updated[0]);
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 1 should not have been updated.",
+                !updated[1]);
+
+        // Check the content of record 0, it should have changed
         Json::Value val;
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "record 0 should not have changed.",
-                val["name"].asString(), records_json[0]["name"].asString());
+                val["name"].asString(), std::string("Georges"));
 
         // Do a correct update of 2 records
         ids_to_update[1]  = 2;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "update should not throw.",
-                coll.update_multi(ids_to_update.data(), new_contents));
+                coll.update_multi(ids_to_update.data(), new_contents, &updated));
+        CPPUNIT_ASSERT_MESSAGE(
+                "vector of bool should be of size 2.",
+                updated.size() == 2);
 
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 0 should have been updated.",
+                updated[0]);
+        CPPUNIT_ASSERT_MESSAGE(
+                "record 1 should have been updated.",
+                updated[1]);
+
+        mydb.commit();
         // Check the new content
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(

@@ -91,7 +91,7 @@ class CollectionTest : public CppUnit::TestFixture,
         for(const auto& r : records_str) {
             CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                     "coll.store should not throw.",
-                    coll.store(r, &ids[i], &requests[i]));
+                    coll.store(r, &ids[i], false, &requests[i]));
             i += 1;
         }
         for(size_t j = 0; j < i; j++) {

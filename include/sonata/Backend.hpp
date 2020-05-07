@@ -79,7 +79,8 @@ class Backend {
      */
     virtual RequestResult<std::unordered_map<std::string,std::string>>
         execute(const std::string& code,
-                const std::unordered_set<std::string>& vars) = 0;
+                const std::unordered_set<std::string>& vars,
+                bool commit) = 0;
 
     /**
      * @brief Creates a new collection in the database.
@@ -117,26 +118,38 @@ class Backend {
      *
      * @param coll_name Name of the collection.
      * @param record Record to store.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<uint64_t> instance
      * containing the record id if successful.
      */
     virtual RequestResult<uint64_t> store(
             const std::string& coll_name,
-            const std::string& record) = 0;
+            const std::string& record,
+            bool commit) = 0;
 
     /**
      * @brief Stores a record into the collection.
      *
      * @param coll_name Name of the collection.
      * @param record Record to store.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<uint64_t> instance
      * containing the record id if successful.
      */
     virtual RequestResult<uint64_t> storeJson(
             const std::string& coll_name,
-            const Json::Value& record) = 0;
+            const Json::Value& record,
+            bool commit) = 0;
+
+    /**
+     * @brief Commits changes made to the database.
+     *
+     * @return a RequestResult<bool> instance
+     * containing true if succesful.
+     */
+    virtual RequestResult<bool> commit() = 0;
 
     /**
      * @brief Stores multiple records into the collection.
@@ -144,26 +157,30 @@ class Backend {
      *
      * @param coll_name Name of the collection.
      * @param records Records to store.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<std::vector<uint64_t>> instance
      * containing the record ids if successful.
      */
     virtual RequestResult<std::vector<uint64_t>> storeMulti(
             const std::string& coll_name,
-            const std::vector<std::string>& records) = 0;
+            const std::vector<std::string>& records,
+            bool commit) = 0;
 
     /**
      * @brief Stores multiple records into the collection.
      *
      * @param coll_name Name of the collection.
      * @param records Records to store.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<std::vector<uint64_t>> instance
      * containing the record id if successful.
      */
     virtual RequestResult<std::vector<uint64_t>> storeMultiJson(
             const std::string& coll_name,
-            const Json::Value& records) = 0;
+            const Json::Value& records,
+            bool commit) = 0;
 
     /**
      * @brief Fetches a particular record by its id.
@@ -257,6 +274,7 @@ class Backend {
      * @param coll_name Name of the collection.
      * @param record_id Record to update.
      * @param new_content New content of the record.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<bool> instance indicating
      * whether the update was successful.
@@ -264,7 +282,8 @@ class Backend {
     virtual RequestResult<bool> update(
             const std::string& coll_name,
             uint64_t record_id,
-            const std::string& new_content) = 0;
+            const std::string& new_content,
+            bool commit) = 0;
 
     /**
      * @brief Updates an existing record with the new content.
@@ -272,6 +291,7 @@ class Backend {
      * @param coll_name Name of the collection.
      * @param record_id Record to update.
      * @param new_content New content of the record.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<bool> instance indicating
      * whether the update was successful.
@@ -279,7 +299,8 @@ class Backend {
     virtual RequestResult<bool> updateJson(
             const std::string& coll_name,
             uint64_t record_id,
-            const Json::Value& new_content) = 0;
+            const Json::Value& new_content,
+            bool commit) = 0;
 
     /**
      * @brief Updates existing records with the new contents.
@@ -287,14 +308,16 @@ class Backend {
      * @param coll_name Name of the collection.
      * @param record_ids Records to update.
      * @param new_contents New content of the records.
+     * @param commit Whether to commit changes to storage.
      *
-     * @return a RequestResult<bool> instance indicating
-     * whether the update was successful.
+     * @return a RequestResult<std::vector<bool>> instance indicating
+     * whether each record update was successful.
      */
-    virtual RequestResult<bool> updateMulti(
+    virtual RequestResult<std::vector<bool>> updateMulti(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids,
-            const std::vector<std::string>& new_contents) = 0;
+            const std::vector<std::string>& new_contents,
+            bool commit) = 0;
 
     /**
      * @brief Updates existing records with the new content.
@@ -302,14 +325,16 @@ class Backend {
      * @param coll_name Name of the collection.
      * @param record_ids Records to update.
      * @param new_contents New content of the records.
+     * @param commit Whether to commit changes to storage.
      *
-     * @return a RequestResult<bool> instance indicating
-     * whether the update was successful.
+     * @return a RequestResult<std::vector<bool>> instance indicating
+     * whether each record update was successful.
      */
-    virtual RequestResult<bool> updateMultiJson(
+    virtual RequestResult<std::vector<bool>> updateMultiJson(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids,
-            const Json::Value& new_contents) = 0;
+            const Json::Value& new_contents,
+            bool commit) = 0;
 
     /**
      * @brief Returns all the records in the collection.
@@ -360,24 +385,28 @@ class Backend {
      *
      * @param coll_name Name of the collection.
      * @param record_id Record to erase.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<bool> instance.
      */
     virtual RequestResult<bool> erase(
             const std::string& coll_name,
-            uint64_t record_id) = 0;
+            uint64_t record_id,
+            bool commit) = 0;
 
     /**
      * @brief Erases multiple records from the collection.
      *
      * @param coll_name Name of the collection.
      * @param record_ids Records to erase.
+     * @param commit Whether to commit changes to storage.
      *
      * @return a RequestResult<bool> instance.
      */
     virtual RequestResult<bool> eraseMulti(
             const std::string& coll_name,
-            const std::vector<uint64_t>& record_ids) = 0;
+            const std::vector<uint64_t>& record_ids,
+            bool commit) = 0;
 
     /**
      * @brief Destroys the underlying database resources.

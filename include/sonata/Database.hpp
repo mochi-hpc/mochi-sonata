@@ -114,10 +114,12 @@ class Database {
      * @param code Code to send to execute on the database.
      * @param vars Set of variables to extract after execution.
      * @param result Resuling map from variable names to their content.
+     * @param commit Whether to commit changes to storage.
      */
     void execute(const std::string& code,
                  const std::unordered_set<std::string>& vars,
-                 std::unordered_map<std::string,std::string>* result) const;
+                 std::unordered_map<std::string,std::string>* result,
+                 bool commit = false) const;
 
     /**
      * @brief Sends a code to execute on the database. The output
@@ -128,10 +130,16 @@ class Database {
      * @param vars Set of variables to extract after execution.
      * @param result Resuling JSON object containing a mapping from
      *        variable names to their content.
+     * @param commit Whether to commit changes to storage.
      */
     void execute(const std::string& code,
                  const std::unordered_set<std::string>& vars,
-                 Json::Value* result) const;
+                 Json::Value* result, bool commit = false) const;
+
+    /**
+     * @brief Commit any changes made to the database.
+     */
+    void commit() const;
 
     /**
      * @brief Checks if the Database instance is valid.

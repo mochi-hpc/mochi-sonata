@@ -41,6 +41,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     tl::remote_procedure m_destroy_database;
     // Client RPC
     tl::remote_procedure m_exec_on_database;
+    tl::remote_procedure m_commit;
     tl::remote_procedure m_open_database;
     tl::remote_procedure m_create_collection;
     tl::remote_procedure m_open_collection;
@@ -76,6 +77,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     , m_detach_database(       define("sonata_detach_database",   &ProviderImpl::detachDatabase,   pool))
     , m_destroy_database(      define("sonata_destroy_database",  &ProviderImpl::destroyDatabase,  pool))
     , m_exec_on_database(      define("sonata_exec_on_database",  &ProviderImpl::execOnDatabase,   pool))
+    , m_commit(                define("sonata_commit",            &ProviderImpl::commit,           pool))
     , m_open_database(         define("sonata_open_database",     &ProviderImpl::openDatabase,     pool))
     , m_create_collection(     define("sonata_create_collection", &ProviderImpl::createCollection, pool))
     , m_open_collection(       define("sonata_open_collection",   &ProviderImpl::openCollection,   pool))
@@ -112,6 +114,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         m_destroy_database.deregister();
         m_exec_on_database.deregister();
         m_open_database.deregister();
+        m_commit.deregister();
         m_create_collection.deregister();
         m_open_collection.deregister();
         m_drop_collection.deregister();
@@ -342,7 +345,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void execOnDatabase(const tl::request& req,
                         const std::string& db_name,
                         const std::string& code,
-                        const std::unordered_set<std::string>& vars) {
+                        const std::unordered_set<std::string>& vars,
+                        bool commit) {
         spdlog::trace("provider:{}] Received execOnDatabase request for database {}", id(), db_name);
         auto it = m_backends.find(db_name);
         RequestResult<std::unordered_map<std::string,std::string>> result;
@@ -353,9 +357,26 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->execute(code, vars);
+        result = it->second->execute(code, vars, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Code successfully executed on database {}", id(), db_name);
+    }
+
+    void commit(const tl::request& req,
+                const std::string& db_name) {
+        spdlog::trace("provider:{}] Received commit request for database {}", id(), db_name);
+        auto it = m_backends.find(db_name);
+        RequestResult<bool> result;
+        if(it == m_backends.end()) {
+            result.success() = false;
+            result.error() = "Database "s + db_name + " not found";
+            req.respond(result);
+            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+            return;
+        }
+        result = it->second->commit();
+        req.respond(result);
+        spdlog::trace("[provider:{}] Commit successfully executed on database {}", id(), db_name);
     }
 
     void openDatabase(const tl::request& req,
@@ -437,7 +458,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void store(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
-               const std::string& record) {
+               const std::string& record,
+               bool commit) {
         spdlog::trace("[provider:{}] Received store request", id(), db_name);
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -450,7 +472,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->store(coll_name, record);
+        result = it->second->store(coll_name, record, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored (id = {})", id(), result.value());
     }
@@ -458,7 +480,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void storeJson(const tl::request& req,
                    const std::string& db_name,
                    const std::string& coll_name,
-                   const Json::Value& record) {
+                   const Json::Value& record,
+                   bool commit) {
         spdlog::trace("[provider:{}] Received store request", id(), db_name);
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -471,7 +494,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->storeJson(coll_name, record);
+        result = it->second->storeJson(coll_name, record, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored (id = {})", id(), result.value());
     }
@@ -479,7 +502,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void storeMulti(const tl::request& req,
                     const std::string& db_name,
                     const std::string& coll_name,
-                    const std::vector<std::string>& records) {
+                    const std::vector<std::string>& records,
+                    bool commit) {
         spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -492,7 +516,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->storeMulti(coll_name, records);
+        result = it->second->storeMulti(coll_name, records, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored", id());
     }
@@ -500,7 +524,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void storeMultiJson(const tl::request& req,
                         const std::string& db_name,
                         const std::string& coll_name,
-                        const Json::Value& records) {
+                        const Json::Value& records,
+                        bool commit) {
         spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -513,7 +538,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->storeMultiJson(coll_name, records);
+        result = it->second->storeMultiJson(coll_name, records, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored", id());
     }
@@ -650,7 +675,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                 const std::string& db_name,
                 const std::string& coll_name,
                 uint64_t record_id,
-                const std::string& new_content) {
+                const std::string& new_content,
+                bool commit) {
         spdlog::trace("[provider:{}] Received update request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -664,7 +690,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->update(coll_name, record_id, new_content);
+        result = it->second->update(coll_name, record_id, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to record {}", id(), record_id);
     }
@@ -673,7 +699,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                     const std::string& db_name,
                     const std::string& coll_name,
                     uint64_t record_id,
-                    const Json::Value& new_content) {
+                    const Json::Value& new_content,
+                    bool commit) {
         spdlog::trace("[provider:{}] Received update request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -687,7 +714,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->updateJson(coll_name, record_id, new_content);
+        result = it->second->updateJson(coll_name, record_id, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to record {}", id(), record_id);
     }
@@ -696,11 +723,12 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                      const std::string& db_name,
                      const std::string& coll_name,
                      const std::vector<uint64_t>& record_ids,
-                     const std::vector<std::string>& new_contents) {
+                     const std::vector<std::string>& new_contents,
+                     bool commit) {
         spdlog::trace("[provider:{}] Received update request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-        RequestResult<bool> result;
+        RequestResult<std::vector<bool>> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
             result.success() = false;
@@ -709,7 +737,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->updateMulti(coll_name, record_ids, new_contents);
+        result = it->second->updateMulti(coll_name, record_ids, new_contents, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to records", id());
     }
@@ -718,11 +746,12 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                          const std::string& db_name,
                          const std::string& coll_name,
                          const std::vector<uint64_t>& record_ids,
-                         const Json::Value& new_content) {
+                         const Json::Value& new_content,
+                         bool commit) {
         spdlog::trace("[provider:{}] Received update request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-        RequestResult<bool> result;
+        RequestResult<std::vector<bool>> result;
         auto it = m_backends.find(db_name);
         if(it == m_backends.end()) {
             result.success() = false;
@@ -731,7 +760,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->updateMultiJson(coll_name, record_ids, new_content);
+        result = it->second->updateMultiJson(coll_name, record_ids, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to records", id());
     }
@@ -819,7 +848,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void erase(const tl::request& req,
                const std::string& db_name,
                const std::string& coll_name,
-               uint64_t record_id) {
+               uint64_t record_id,
+               bool commit) {
         spdlog::trace("[provider:{}] Received erase request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -833,7 +863,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->erase(coll_name, record_id);
+        result = it->second->erase(coll_name, record_id, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully erased record {}", id(), record_id);
     }
@@ -841,7 +871,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void eraseMulti(const tl::request& req,
                     const std::string& db_name,
                     const std::string& coll_name,
-                    const std::vector<uint64_t>& record_ids) {
+                    const std::vector<uint64_t>& record_ids,
+                    bool commit) {
         spdlog::trace("[provider:{}] Received erase request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -854,7 +885,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             spdlog::error("[provider:{}] Database {} not found", id(), db_name);
             return;
         }
-        result = it->second->eraseMulti(coll_name, record_ids);
+        result = it->second->eraseMulti(coll_name, record_ids, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully erased records", id());
     }

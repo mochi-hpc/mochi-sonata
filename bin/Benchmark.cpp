@@ -744,13 +744,13 @@ class UpdateMultiBenchmark : public UpdateBenchmark {
         if(m_use_json) {
             size_t offset_id = 0;
             for(size_t i = 0; i < m_new_records_batches_json.size(); i++) {
-                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches_json[i]);
+                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches_json[i], nullptr);
                 offset_id += m_new_records_batches_json[i].size();
             }
         } else {
             size_t offset_id = 0;
             for(size_t i = 0; i < m_new_records_batches.size(); i++) {
-                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches[i]);
+                m_collection.update_multi(&m_ids_to_update[offset_id], m_new_records_batches[i], nullptr);
                 offset_id += m_new_records_batches[i].size();
             }
         }

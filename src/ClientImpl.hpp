@@ -25,6 +25,7 @@ class ClientImpl {
     tl::remote_procedure m_open_collection;
     tl::remote_procedure m_drop_collection;
     tl::remote_procedure m_execute_on_database;
+    tl::remote_procedure m_commit;
     tl::remote_procedure m_coll_store;
     tl::remote_procedure m_coll_store_json;
     tl::remote_procedure m_coll_store_multi;
@@ -53,6 +54,7 @@ class ClientImpl {
     , m_open_collection(       engine.define("sonata_open_collection")   )
     , m_drop_collection(       engine.define("sonata_drop_collection")   )
     , m_execute_on_database(   engine.define("sonata_exec_on_database")  )
+    , m_commit(                engine.define("sonata_commit")            )
     , m_coll_store(            engine.define("sonata_store")             )
     , m_coll_store_json(       engine.define("sonata_store_json")        )
     , m_coll_store_multi(      engine.define("sonata_store_multi")       )

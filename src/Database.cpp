@@ -81,10 +81,11 @@ bool Database::exists(const std::string& collectionName) const {
 
 void Database::execute(const std::string& code,
                        const std::unordered_set<std::string>& vars,
-                       std::unordered_map<std::string,std::string>* out) const {
+                       std::unordered_map<std::string,std::string>* out,
+                       bool commit) const {
     if(not self) throw Exception("Invalid sonata::Database object");
     RequestResult<std::unordered_map<std::string,std::string>> result
-        = self->m_client->m_execute_on_database.on(self->m_ph)(self->m_name, code, vars);
+        = self->m_client->m_execute_on_database.on(self->m_ph)(self->m_name, code, vars, commit);
     if(not result.success()) {
         throw Exception(result.error());
     }
@@ -94,12 +95,13 @@ void Database::execute(const std::string& code,
 
 void Database::execute(const std::string& code,
                        const std::unordered_set<std::string>& vars,
-                       Json::Value* result) const {
+                       Json::Value* result,
+                       bool commit) const {
     if(not self) throw Exception("Invalid sonata::Database object");
     std::unordered_map<std::string,std::string> ret;
     if(result) {
         std::unordered_map<std::string,std::string> ret;
-        execute(code, vars, &ret);
+        execute(code, vars, &ret, commit);
         Json::Value tmp_result;
         for(auto& p : ret) {
             Json::Value tmp;
@@ -118,6 +120,14 @@ void Database::execute(const std::string& code,
         *result = std::move(tmp_result);
     } else {
         execute(code, vars, static_cast<std::unordered_map<std::string,std::string>*>(nullptr));
+    }
+}
+
+void Database::commit() const {
+    if(not self) throw Exception("Invalid sonata::Database object");
+    RequestResult<bool> result = self->m_client->m_commit.on(self->m_ph)(self->m_name);
+    if(not result.success()) {
+        throw Exception(result.error());
     }
 }
 

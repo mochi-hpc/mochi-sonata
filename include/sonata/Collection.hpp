@@ -76,12 +76,13 @@ class Collection {
      * @brief Stores a document into the collection.
      *
      * @param record A valid JSON-formated document.
+     * @param commit Whether to commit the change to storage.
      *
      * @return the record id of the stored document.
      */
-    inline uint64_t store(const std::string& record) const {
+    inline uint64_t store(const std::string& record, bool commit=false) const {
         uint64_t record_id;
-        store(record, &record_id);
+        store(record, &record_id, commit);
         return record_id;
     }
 
@@ -89,12 +90,13 @@ class Collection {
      * @brief Stores a document into the collection.
      *
      * @param record A JSON object.
+     * @param commit Whether to commit the change to storage.
      *
      * @return the record id of the stored document.
      */
-    inline uint64_t store(const Json::Value& record) const {
+    inline uint64_t store(const Json::Value& record, bool commit=false) const {
         uint64_t record_id;
-        store(record, &record_id);
+        store(record, &record_id, commit);
         return record_id;
     }
 
@@ -102,12 +104,13 @@ class Collection {
      * @brief Stores a document into the collection.
      *
      * @param record A valid JSON-formated document.
+     * @param commit Whether to commit the change to storage.
      *
      * @return the record id of the stored document.
      */
-    inline uint64_t store(const char* record) const {
+    inline uint64_t store(const char* record, bool commit=false) const {
         uint64_t record_id;
-        store(record, &record_id);
+        store(record, &record_id, commit);
         return record_id;
     }
 
@@ -118,12 +121,15 @@ class Collection {
      *
      * @param record A valid JSON-formated document.
      * @param id Pointer to a record id set when the request completes.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      *
      * @return the record id of the stored document.
      */
-    void store(const std::string& record, 
-               uint64_t* id, AsyncRequest* req = nullptr) const;
+    void store(const std::string& record,
+               uint64_t* id,
+               bool commit = false,
+               AsyncRequest* req = nullptr) const;
 
     /**
      * @brief Asynchronously stores a document into the collection.
@@ -132,12 +138,15 @@ class Collection {
      *
      * @param record A JSON document.
      * @param id Pointer to a record id set when the request completes.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      *
      * @return the record id of the stored document.
      */
     void store(const Json::Value& record,
-               uint64_t* id, AsyncRequest* req = nullptr) const;
+               uint64_t* id,
+               bool commit = false,
+               AsyncRequest* req = nullptr) const;
 
     /**
      * @brief Asynchronously stores a document into the collection.
@@ -151,8 +160,10 @@ class Collection {
      * @return the record id of the stored document.
      */
     void store(const char* record,
-               uint64_t* id, AsyncRequest* req = nullptr) const {
-        store(std::string(record), id, req);
+               uint64_t* id,
+               bool commit = false,
+               AsyncRequest* req = nullptr) const {
+        store(std::string(record), id, commit, req);
     }
 
     /**
@@ -165,10 +176,12 @@ class Collection {
      *
      * @param records Vector of records to store.
      * @param ids Resulting ids.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void store_multi(const std::vector<std::string>& records,
-                     uint64_t* ids, AsyncRequest* req = nullptr) const;
+                     uint64_t* ids, bool commit = false,
+                     AsyncRequest* req = nullptr) const;
     
     /**
      * @brief Stores multiple records in the collection. The provided
@@ -180,10 +193,12 @@ class Collection {
      *
      * @param records JSON array of records to store.
      * @param ids Resulting ids.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void store_multi(const Json::Value& records,
-                     uint64_t* ids, AsyncRequest* req = nullptr) const;
+                     uint64_t* ids, bool commit = false,
+                     AsyncRequest* req = nullptr) const;
 
     /**
      * @brief Stores multiple records in the collection. Each null-terminated
@@ -196,16 +211,18 @@ class Collection {
      * @param records Vector of records to store.
      * @param count Number of records to store.
      * @param ids Resulting ids.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void store_multi(const char* const* records, size_t count,
-                     uint64_t* ids, AsyncRequest* req = nullptr) const {
+                     uint64_t* ids, bool commit = false,
+                     AsyncRequest* req = nullptr) const {
         std::vector<std::string> vec;
         vec.reserve(count);
         for(size_t i = 0; i < count; i++) {
             vec.emplace_back(records[i]);
         }
-        store_multi(vec, ids, req);
+        store_multi(vec, ids, commit, req);
     }
 
     /**
@@ -302,10 +319,12 @@ class Collection {
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
                 const Json::Value& record,
+                bool commit = false,
                 AsyncRequest* req = nullptr) const;
 
     /**
@@ -314,10 +333,12 @@ class Collection {
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
                 const std::string& record,
+                bool commit = false,
                 AsyncRequest* req = nullptr) const;
 
     /**
@@ -326,10 +347,12 @@ class Collection {
      *
      * @param id Record id of the document to update.
      * @param record New document.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update(uint64_t id,
                 const char* record,
+                bool commit = false,
                 AsyncRequest* req = nullptr) const {
         return update(id, std::string(record));
     }
@@ -341,10 +364,15 @@ class Collection {
      *
      * @param ids Record ids of the documents to update.
      * @param records New documents.
+     * @param updated Pointer to a vector that will contain whether
+     *                each record was updated.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update_multi(const uint64_t* id,
                       const Json::Value& record,
+                      std::vector<bool>* updated,
+                      bool commit = false,
                       AsyncRequest* req = nullptr) const;
 
     /**
@@ -353,10 +381,15 @@ class Collection {
      *
      * @param ids Record ids of the documents to update.
      * @param record New document.
+     * @param updated Pointer to a vector that will contain whether
+     *                each record was updated.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update_multi(const uint64_t* ids,
                       const std::vector<std::string>& records,
+                      std::vector<bool>* updated,
+                      bool commit = false,
                       AsyncRequest* req = nullptr) const;
 
     /**
@@ -366,18 +399,23 @@ class Collection {
      * @param ids Record ids of the documents to update.
      * @param records New documents (as C array of null-terminated strings).
      * @param count Number of documents to update.
+     * @param updated Pointer to a vector that will contain whether
+     *                each record was updated.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
     void update_multi(uint64_t* ids,
                 const char* const* records,
                 size_t count,
+                std::vector<bool>* updated,
+                bool commit = false,
                 AsyncRequest* req = nullptr) const {
         std::vector<std::string> vec;
         vec.reserve(count);
         for(size_t i = 0; i < count; i++) {
             vec.emplace_back(records[i]);
         }
-        return update_multi(ids, vec, req);
+        return update_multi(ids, vec, updated, commit, req);
     }
 
     /**
@@ -423,18 +461,22 @@ class Collection {
      * If req is null, this function becomes synchronous.
      *
      * @param id Record id of the document to erase.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
-    void erase(uint64_t id, AsyncRequest* req = nullptr) const;
+    void erase(uint64_t id, bool commit = false,
+            AsyncRequest* req = nullptr) const;
 
     /**
      * @brief Asynchronously erases multiple documents from the collection.
      * If req is null, this function becomes synchronous.
      *
      * @param ids Record ids of the documents to erase.
+     * @param commit Whether to commit the changes to storage.
      * @param req Pointer to a request to wait on.
      */
-    void erase_multi(const uint64_t* ids, size_t size, AsyncRequest* req = nullptr) const;
+    void erase_multi(const uint64_t* ids, size_t size,
+            bool commit = false, AsyncRequest* req = nullptr) const;
 
     private:
 

@@ -56,16 +56,17 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> createCollection(
             const std::string& coll_name) override {
-        constexpr static const char* script = 
-        "if(db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection already exists\";"
-        "} else {"
-            "$ret = db_create($collection);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(db_exists($collection)) {
+            $ret = false;
+            $err = "Collection already exists";
+        } else {
+            $ret = db_create($collection);
+            if(!$ret) {
+                $err = db_errlog();
+            }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -88,12 +89,13 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> openCollection(
             const std::string& coll_name) override {
-        constexpr static const char* script = 
-        "if(db_exists($collection)) {"
-            "$ret = true;"
-        "} else {"
-            "$ret = false;"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(db_exists($collection)) {
+            $ret = true;
+        } else {
+            $ret = false;
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -113,16 +115,17 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> dropCollection(
             const std::string& coll_name) override {
-        constexpr static const char* script = 
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = db_drop_collection($collection);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9( 
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = db_drop_collection($collection);
+            if(!$ret) {
+                $err = db_errlog();
+            }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -145,21 +148,23 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<uint64_t> store(
             const std::string& coll_name,
-            const std::string& record) override {
+            const std::string& record,
+            bool commit) override {
         std::ostringstream ss;
         ss << "$input = " << record << ";"
-        <<
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = db_store($collection,$input);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "} else {"
-                "$id = $input.__id;"
-            "}"
-        "}";
+        << R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = db_store($collection,$input);
+            if(!$ret) {
+                $err = db_errlog();
+            } else {
+                $id = $input.__id;
+            }
+        }
+        )jx9";
         RequestResult<uint64_t> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -174,7 +179,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
-            //unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -184,19 +189,21 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<uint64_t> storeJson(
             const std::string& coll_name,
-            const Json::Value& record) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = db_store($collection,$input);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "} else {"
-                "$id = $input.__id;"
-            "}"
-        "}";
+            const Json::Value& record,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = db_store($collection,$input);
+            if(!$ret) {
+                $err = db_errlog();
+            } else {
+                $id = $input.__id;
+            }
+        }
+        )jx9";
         RequestResult<uint64_t> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -212,7 +219,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<uint64_t>("id");
             }
-            //unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -222,7 +229,8 @@ class UnQLiteBackend : public Backend {
     
     virtual RequestResult<std::vector<uint64_t>> storeMulti(
             const std::string& coll_name,
-            const std::vector<std::string>& records) override {
+            const std::vector<std::string>& records,
+            bool commit) override {
         std::ostringstream ss;
         ss << "$input = [";
         for(unsigned i=0; i < records.size(); i++) {
@@ -230,24 +238,22 @@ class UnQLiteBackend : public Backend {
             if(i != records.size()-1) ss << ",";
         }
         ss << "];"
-        <<
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ids = [];"
-  //          "while(!db_begin()) {}"
-            "foreach($input as $x) {"
-                "$ret = db_store($collection,$x);"
-                "if(!$ret) {"
- //                   "db_rollback();"
-                    "$err = db_errlog();"
-                "} else {"
-                    "array_push($ids,$x.__id);"
-                "}"
-            "}"
- //           "if($ret) { db_commit(); }"
-        "}";
+        << R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ids = [];
+            $ret = db_store($collection,$input);
+            if($ret) {
+                foreach($input as $x) {
+                    array_push($ids,$x.__id);
+                }
+            } else {
+                $err = "Some records could not be stored";
+            }
+        }
+        )jx9";
         RequestResult<std::vector<uint64_t>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -262,36 +268,44 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<std::vector<uint64_t>>("ids");
             }
-            //unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
         }
         return result;
     }
+    
+    virtual RequestResult<bool> commit() override {
+        RequestResult<bool> result;
+        result.success() = true;
+        std::unique_lock<tl::mutex> lock;
+        if(!m_unqlite_is_threadsafe)
+            lock = std::unique_lock<tl::mutex>(m_mutex);
+        unqlite_commit(m_db);
+        return result;
+    }
 
     virtual RequestResult<std::vector<uint64_t>> storeMultiJson(
             const std::string& coll_name,
-            const Json::Value& records) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ids = [];"
-//            "while(!db_begin()) {}"
-            "foreach($input as $x) {"
-                "$ret = db_store($collection,$x);"
-                "if(!$ret) {"
-//                    "db_rollback();"
-                    "$err = db_errlog();"
-                    "break;"
-                "} else {"
-                    "array_push($ids,$x.__id);"
-                "}"
-            "}"
-//            "if($ret) { db_commit(); }"
-        "}";
+            const Json::Value& records,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ids = [];
+            $ret = db_store($collection,$input);
+            if($ret) {
+                foreach($input as $x) {
+                    array_push($ids,$x.__id);
+                }
+            } else {
+                $err = "Some records could not be stored";
+            }
+        }
+        )jx9";
         RequestResult<std::vector<uint64_t>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -307,7 +321,7 @@ class UnQLiteBackend : public Backend {
             } else {
                 result.value() = vm.get<std::vector<uint64_t>>("ids");
             }
-            //unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -318,19 +332,20 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<std::string> fetch(
             const std::string& coll_name,
             uint64_t record_id) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$output = db_fetch_by_id($collection,$id);"
-            "if($output == NULL) {"
-                "$ret = false;"
-                "$err = \"Record does not exist\";"
-            "} else {"
-                "$ret = true;"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $output = db_fetch_by_id($collection,$id);
+            if($output == NULL) {
+                $ret = false;
+                $err = "Record does not exist";
+            } else {
+                $ret = true;
+            }
+        }
+        )jx9";
         RequestResult<std::string> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -358,19 +373,20 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<Json::Value> fetchJson(
             const std::string& coll_name,
             uint64_t record_id) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$output = db_fetch_by_id($collection,$id);"
-            "if($output == NULL) {"
-                "$ret = false;"
-                "$err = \"Record does not exist\";"
-            "} else {"
-                "$ret = true;"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $output = db_fetch_by_id($collection,$id);
+            if($output == NULL) {
+                $ret = false;
+                $err = "Record does not exist";
+            } else {
+                $ret = true;
+            }
+        }
+        )jx9";
         RequestResult<Json::Value> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -396,25 +412,26 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<std::vector<std::string>> fetchMulti(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$output = [];"
-            "$ret = false;"
-            "foreach($ids as $id) {"
-                "$x = db_fetch_by_id($collection,$id);"
-                "if($x == NULL) {"
-                    "$ret = false;"
-                    "$err = \"Record does not exist\";"
-                    "break;"
-                "} else {"
-                    "$ret = true;"
-                    "array_push($output, $x);"
-                "}"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $output = [];
+            $ret = false;
+            foreach($ids as $id) {
+                $x = db_fetch_by_id($collection,$id);
+                if($x == NULL) {
+                    $ret = false;
+                    $err = "Record does not exist";
+                    break;
+                } else {
+                    $ret = true;
+                    array_push($output, $x);
+                }
+            }
+        }
+        )jx9";
         RequestResult<std::vector<std::string>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -445,25 +462,26 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<Json::Value> fetchMultiJson(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$output = [];"
-            "$ret = false;"
-            "foreach($ids as $id) {"
-                "$x = db_fetch_by_id($collection,$id);"
-                "if($x == NULL) {"
-                    "$ret = false;"
-                    "$err = \"Record does not exist\";"
-                    "break;"
-                "} else {"
-                    "$ret = true;"
-                    "array_push($output, $x);"
-                "}"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $output = [];
+            $ret = false;
+            foreach($ids as $id) {
+                $x = db_fetch_by_id($collection,$id);
+                if($x == NULL) {
+                    $ret = false;
+                    $err = "Record does not exist";
+                    break;
+                } else {
+                    $ret = true;
+                    array_push($output, $x);
+                }
+            }
+        }
+        )jx9";
         RequestResult<Json::Value> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -489,26 +507,29 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<std::vector<std::string>> filter(
             const std::string& coll_name,
             const std::string& filter_code) override {
-        std::string script = "$filter_cb = "s
-            + filter_code + ";"
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "if(0 == db_total_records($collection)) {"
-                "$ret = TRUE;"
-                "$data = [];"
-            "} else {"
-                "$ret = db_fetch_all($collection, $filter_cb);"
-                "if($ret == FALSE) {"
-                    "$ret = TRUE;"
-                    "$data = [];"
-                "} else {"
-                    "$data = $ret;"
-                    "$ret = TRUE;"
-                "}"
-            "}"
-        "}";
+        const std::string script =
+        "$filter_cb = "s
+            + filter_code + ";" +
+        R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            if(0 == db_total_records($collection)) {
+                $ret = TRUE;
+                $data = [];
+            } else {
+                $ret = db_fetch_all($collection, $filter_cb);
+                if($ret == FALSE) {
+                    $ret = TRUE;
+                    $data = [];
+                } else {
+                    $data = $ret;
+                    $ret = TRUE;
+                }
+            }
+        }
+        )jx9";
         RequestResult<std::vector<std::string>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -542,26 +563,29 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<Json::Value> filterJson(
             const std::string& coll_name,
             const std::string& filter_code) override {
-        std::string script = "$filter_cb = "s
+        const std::string script =
+        "$filter_cb = "s
             + filter_code + ";"
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "if(0 == db_total_records($collection)) {"
-                "$ret = TRUE;"
-                "$data = [];"
-            "} else {"
-                "$ret = db_fetch_all($collection, $filter_cb);"
-                "if($ret == FALSE) {"
-                    "$ret = TRUE;"
-                    "$data = [];"
-                "} else {"
-                    "$data = $ret;"
-                    "$ret = TRUE;"
-                "}"
-            "}"
-        "}";
+        R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            if(0 == db_total_records($collection)) {
+                $ret = TRUE;
+                $data = [];
+            } else {
+                $ret = db_fetch_all($collection, $filter_cb);
+                if($ret == FALSE) {
+                    $ret = TRUE;
+                    $data = [];
+                } else {
+                    $data = $ret;
+                    $ret = TRUE;
+                }
+            }
+        }
+        )jx9";
         RequestResult<Json::Value> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -588,25 +612,27 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<bool> update(
             const std::string& coll_name,
             uint64_t record_id,
-            const std::string& new_content) override {
-        std::ostringstream ss;
-        ss << "$input = " << new_content << ";"
-        <<
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = db_update_record($collection,$record_id,$input);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "}"
-        "}";
+            const std::string& new_content,
+            bool commit) override {
+        const std::string script =
+        "$input = "s + new_content + ";"
+        + R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = db_update_record($collection,$record_id,$input);
+            if(!$ret) {
+                $err = db_errlog();
+            }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
                 lock = std::unique_lock<tl::mutex>(m_mutex);
-            UnQLiteVM vm(m_db, ss.str().c_str(), this);
+            UnQLiteVM vm(m_db, script.c_str(), this);
             vm.set("collection", coll_name);
             vm.set("record_id", record_id);
             vm.execute();
@@ -614,7 +640,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -625,17 +651,19 @@ class UnQLiteBackend : public Backend {
     virtual RequestResult<bool> updateJson(
             const std::string& coll_name,
             uint64_t record_id,
-            const Json::Value& new_content) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = db_update_record($collection,$record_id,$input);"
-            "if(!$ret) {"
-                "$err = db_errlog();"
-            "}"
-        "}";
+            const Json::Value& new_content,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = db_update_record($collection,$record_id,$input);
+            if(!$ret) {
+                $err = db_errlog();
+            }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -650,7 +678,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -658,10 +686,11 @@ class UnQLiteBackend : public Backend {
         return result;
     }
 
-    virtual RequestResult<bool> updateMulti(
+    virtual RequestResult<std::vector<bool>> updateMulti(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids,
-            const std::vector<std::string>& new_contents) override {
+            const std::vector<std::string>& new_contents,
+            bool commit) override {
         std::ostringstream ss;
         ss << "$input = [";
         for(unsigned i=0; i < new_contents.size(); i++) {
@@ -669,23 +698,27 @@ class UnQLiteBackend : public Backend {
             if(i != new_contents.size()-1) ss << ",";
         }
         ss << "];"
-        <<
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "while(!db_begin()) {}"
-            "$ret = true;"
-            "for($i = 0; $i < count($record_ids); $i++) {"
-                "$ret = db_update_record($collection, $record_ids[$i], $input[$i]);"
-                "if(!$ret) {"
-                    "$err = db_errlog();"
-                    "db_rollback();"
-                "}"
-            "}"
-            "if($ret) { db_commit(); }"
-        "}";
-        RequestResult<bool> result;
+        << R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            //while(!db_begin()) {}
+            $ret = true;
+            $result = [];
+            for($i = 0; $i < count($record_ids); $i++) {
+                $ret = db_update_record($collection, $record_ids[$i], $input[$i]);
+                array_push($result, $ret);
+              //  if(!$ret) {
+              //      $err = db_errlog();
+              //      db_rollback();
+              //  }
+            }
+            $ret = true;
+            //if($ret) { db_commit(); }
+        }
+        )jx9";
+        RequestResult<std::vector<bool>> result;
         try {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
@@ -697,8 +730,10 @@ class UnQLiteBackend : public Backend {
             result.success() = vm.get<bool>("ret");
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm.get<std::vector<bool>>("result");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -706,27 +741,32 @@ class UnQLiteBackend : public Backend {
         return result;
     }
 
-    virtual RequestResult<bool> updateMultiJson(
+    virtual RequestResult<std::vector<bool>> updateMultiJson(
             const std::string& coll_name,
             const std::vector<uint64_t>& record_ids,
-            const Json::Value& new_contents) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "while(!db_begin()) {}"
-            "$ret = true;"
-            "for($i = 0; $i < count($record_ids); $i++) {"
-                "$ret = db_update_record($collection, $record_ids[$i], $input[$i]);"
-                "if(!$ret) {"
-                    "$err = db_errlog();"
-                    "db_rollback();"
-                "}"
-            "}"
-            "if($ret) { db_commit(); }"
-        "}";
-        RequestResult<bool> result;
+            const Json::Value& new_contents,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            //while(!db_begin()) {}
+            $result = [];
+            $ret = true;
+            for($i = 0; $i < count($record_ids); $i++) {
+                $ret = db_update_record($collection, $record_ids[$i], $input[$i]);
+              //  if(!$ret) {
+              //      $err = db_errlog();
+              //      db_rollback();
+              //  }
+                array_push($result, $ret);
+            }
+            $ret = true;
+            //if($ret) { db_commit(); }
+        }
+        )jx9";
+        RequestResult<std::vector<bool>> result;
         try {
             std::unique_lock<tl::mutex> lock;
             if(!m_unqlite_is_threadsafe)
@@ -739,8 +779,10 @@ class UnQLiteBackend : public Backend {
             result.success() = vm.get<bool>("ret");
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
+            } else {
+                result.value() = vm.get<std::vector<bool>>("result");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -750,24 +792,25 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<std::vector<std::string>> all(
             const std::string& coll_name) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "if(0 == db_total_records($collection)) {"
-                "$ret = TRUE;"
-                "$data = [];"
-            "} else {"
-                "$ret = db_fetch_all($collection);"
-                "if($ret == FALSE) {"
-                    "$err = db_errlog();"
-                "} else {"
-                    "$data = $ret;"
-                    "$ret = TRUE;"
-                "}"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            if(0 == db_total_records($collection)) {
+                $ret = TRUE;
+                $data = [];
+            } else {
+                $ret = db_fetch_all($collection);
+                if($ret == FALSE) {
+                    $err = db_errlog();
+                } else {
+                    $data = $ret;
+                    $ret = TRUE;
+                }
+            }
+        }
+        )jx9";
         RequestResult<std::vector<std::string>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -798,24 +841,25 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<Json::Value> allJson(
             const std::string& coll_name) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "if(0 == db_total_records($collection)) {"
-                "$ret = TRUE;"
-                "$data = [];"
-            "} else {"
-                "$ret = db_fetch_all($collection);"
-                "if($ret == FALSE) {"
-                    "$err = db_errlog();"
-                "} else {"
-                    "$data = $ret;"
-                    "$ret = TRUE;"
-                "}"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            if(0 == db_total_records($collection)) {
+                $ret = TRUE;
+                $data = [];
+            } else {
+                $ret = db_fetch_all($collection);
+                if($ret == FALSE) {
+                    $err = db_errlog();
+                } else {
+                    $data = $ret;
+                    $ret = TRUE;
+                }
+            }
+        }
+        )jx9";
         RequestResult<Json::Value> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -839,19 +883,20 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<uint64_t> lastID(
             const std::string& coll_name) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$id = db_last_record_id($collection);"
-            "if($id == FALSE) {"
-                "$ret = false;"
-                "$err = db_errlog();"
-            "} else {"
-                "$ret = true;"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $id = db_last_record_id($collection);
+            if($id == FALSE) {
+                $ret = false;
+                $err = db_errlog();
+            } else {
+                $ret = true;
+            }
+        }
+        )jx9";
         RequestResult<uint64_t> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -875,19 +920,20 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<size_t> size(
             const std::string& coll_name) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$size = db_total_records($collection);"
-            "if($size == FALSE) {"
-                "$ret = false;"
-                "$err = db_errlog();"
-            "} else {"
-                "$ret = true;"
-            "}"
-        "}";
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $size = db_total_records($collection);
+            if($size == FALSE) {
+                $ret = false;
+                $err = db_errlog();
+            } else {
+                $ret = true;
+            }
+        }
+        )jx9";
         RequestResult<size_t> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -911,20 +957,22 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> erase(
             const std::string& coll_name,
-            uint64_t record_id) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$rc = db_drop_record($collection, $id);"
-            "if($rc) {"
-                "$ret = true;"
-            "} else {"
-                "$ret = false;"
-                "$err = \"Failed to erase record \";"
-            "}"
-        "}";
+            uint64_t record_id,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $rc = db_drop_record($collection, $id);
+            if($rc) {
+                $ret = true;
+            } else {
+                $ret = false;
+                $err = "Failed to erase record";
+            }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -938,7 +986,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -948,27 +996,29 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> eraseMulti(
             const std::string& coll_name,
-            const std::vector<uint64_t>& record_ids) override {
-        constexpr static const char* script =
-        "if(!db_exists($collection)) {"
-            "$ret = false;"
-            "$err = \"Collection does not exist\";"
-        "} else {"
-            "$ret = true;"
-            "while(!db_begin()) {}"
-            "foreach($ids as $id) {"
-                "$rc = db_drop_record($collection, $id);"
-                "if($rc) {"
-                    "$ret = true;"
-                "} else {"
-                    "db_rollback();"
-                    "$ret = false;"
-                    "$err = \"Failed to erase record\";"
-                    "break;"
-                "}"
-            "}"
-            "if($ret) { db_commit(); }"
-        "}";
+            const std::vector<uint64_t>& record_ids,
+            bool commit) override {
+        constexpr static const char* script = R"jx9(
+        if(!db_exists($collection)) {
+            $ret = false;
+            $err = "Collection does not exist";
+        } else {
+            $ret = true;
+            //while(!db_begin()) {}
+            foreach($ids as $id) {
+                $rc = db_drop_record($collection, $id);
+                if($rc) {
+                    $ret = true;
+                } else {
+                    //db_rollback();
+                    $ret = false;
+                    //$err = "Failed to erase record";
+                    //break;
+                }
+            }
+            //if($ret) { db_commit(); }
+        }
+        )jx9";
         RequestResult<bool> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -982,7 +1032,7 @@ class UnQLiteBackend : public Backend {
             if(!result.success()) {
                 result.error() = vm.get<std::string>("err");
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
@@ -992,7 +1042,8 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<std::unordered_map<std::string,std::string>>
         execute(const std::string& code,
-                const std::unordered_set<std::string>& vars) override {
+                const std::unordered_set<std::string>& vars,
+                bool commit) override {
         RequestResult<std::unordered_map<std::string,std::string>> result;
         try {
             std::unique_lock<tl::mutex> lock;
@@ -1012,7 +1063,7 @@ class UnQLiteBackend : public Backend {
                     result.value().emplace("__output__", vm.output());
                 }
             }
-            unqlite_commit(m_db);
+            if(commit) unqlite_commit(m_db);
         } catch(const Exception& e) {
             result.success() = false;
             result.error() = e.what();
