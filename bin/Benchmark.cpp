@@ -890,7 +890,7 @@ REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
 
 
 static void run_server(MPI_Comm comm, Json::Value& config);
-static void run_client(MPI_Comm comm, Json::Value& config);
+static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id);
 
 /**
  * @brief Main function.
@@ -902,7 +902,7 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if(argc != 2) {
+    if(argc < 2) {
         if(rank == 0) {
             std::cerr << "Usage: " << argv[0] << " <config.json>" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, -1);
@@ -927,10 +927,13 @@ int main(int argc, char** argv) {
     MPI_Comm comm;
     MPI_Comm_split(MPI_COMM_WORLD, rank == 0 ? 0 : 1, rank, &comm);
 
+    int benchmark_id = -1;
+    if(argc >= 3)
+        benchmark_id = atoi(argv[2]);
     if(rank == 0) {
         run_server(comm, config);
     } else {
-        run_client(comm, config);
+        run_client(comm, config, benchmark_id);
     }
 
     MPI_Finalize();
@@ -965,7 +968,7 @@ static void run_server(MPI_Comm comm, Json::Value& config) {
     engine.wait_for_finalize();
 }
 
-static void run_client(MPI_Comm comm, Json::Value& config) {
+static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
     std::string loglevel = config.get("log","info").asString();
     spdlog::set_level(spdlog::level::from_str(loglevel));
     // get info from communicator
@@ -1003,7 +1006,12 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
         benchmarks.reserve(config["benchmarks"].size());
         repetitions.reserve(config["benchmarks"].size());
         types.reserve(config["benchmarks"].size());
+        int current_benchmark = 0;
         for(auto& bench_config : config["benchmarks"]) {
+
+            if(current_benchmark != benchmark_id
+            && benchmark_id >= 0) continue;
+
             std::string type = bench_config["type"].asString();
             types.push_back(type);
             benchmarks.push_back(AbstractBenchmark::create(type, bench_config, comm, server_addr_str, client, admin));
