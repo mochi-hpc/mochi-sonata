@@ -17,6 +17,7 @@
 namespace tl = thallium;
 
 tl::engine* engine = nullptr;
+std::string db_type = "unqlite";
 
 int main(int argc, char** argv) {
 
@@ -39,6 +40,9 @@ int main(int argc, char** argv) {
     } else {
         // Change the default outputter to output XML results into stderr
         runner.setOutputter(new CppUnit::XmlOutputter(&runner.result(), std::cerr));
+    }
+    if(argc >= 3) {
+        db_type = argv[2];
     }
 
     // Initialize the thallium server

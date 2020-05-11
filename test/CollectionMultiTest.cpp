@@ -9,6 +9,7 @@
 #include "CollectionTestBase.hpp"
 
 extern thallium::engine* engine;
+extern std::string db_type;
 
 class CollectionMultiTest : public CppUnit::TestFixture,
                        public CollectionTestBase
@@ -27,7 +28,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
     void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
-        admin.createDatabase(addr, 0, "mydb", "unqlite", db_config);
+        admin.createDatabase(addr, 0, "mydb", db_type, db_config);
 
         sonata::Client client(*engine);
         auto db = client.open(addr, 0, "mydb");
@@ -129,7 +130,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                     "coll.store should not throw.",
                     coll.store(r));
         }
-        mydb.commit();
+//        mydb.commit();
         // Update record 0 and 2 with new content
         std::vector<std::string> new_contents = {
             "{ \"name\" : \"Georges\", \"city\" : \"Lyon\", \"papers\" : 89 }",
@@ -155,7 +156,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "record 1 should not have been updated.",
                 !updated[1]);
 
-        mydb.commit();
+  //      mydb.commit();
         // Check the content of record 0, it should have changed
         Json::Value val;
         coll.fetch(0, &val);
@@ -163,7 +164,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "record 0 should not have changed.",
                 val["name"].asString(), std::string("Georges"));
 
-        mydb.commit();
+//        mydb.commit();
         // Do a correct update of 2 records
         ids_to_update[1]  = 2;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
@@ -180,7 +181,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "record 1 should have been updated.",
                 updated[1]);
 
-        mydb.commit();
+  //      mydb.commit();
         // Check the new content
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
@@ -204,7 +205,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                     "coll.store should not throw.",
                     coll.store(r));
         }
-        mydb.commit();
+    //    mydb.commit();
 
         // Update record 0 and 2 with new content
         Json::Value new_contents;
@@ -258,7 +259,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "record 1 should have been updated.",
                 updated[1]);
 
-        mydb.commit();
+      //  mydb.commit();
         // Check the new content
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(

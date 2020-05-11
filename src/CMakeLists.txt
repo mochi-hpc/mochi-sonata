@@ -8,6 +8,8 @@ set(sonata-client-src
 set(sonata-server-src
 	Provider.cpp
 	Backend.cpp
+	JsonCppBackend.cpp
+	NullBackend.cpp
 	UnQLiteBackend.cpp
 	UnQLiteVM.cpp
 	UnQLiteMutex.cpp

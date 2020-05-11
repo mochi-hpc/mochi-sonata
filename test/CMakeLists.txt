@@ -32,10 +32,21 @@ target_link_libraries(ExecTest sonata-test)
 add_executable(Jx9Test Jx9Test.cpp)
 target_link_libraries(Jx9Test sonata-test)
 
-add_test(NAME AdminTest COMMAND ./AdminTest AdminTest.xml)
-add_test(NAME ClientTest COMMAND ./ClientTest ClientTest.xml)
-add_test(NAME DatabaseTest COMMAND ./DatabaseTest DatabaseTest.xml)
-add_test(NAME CollectionTest COMMAND ./CollectionTest CollectionTest.xml)
-add_test(NAME CollectionMultiTest COMMAND ./CollectionMultiTest CollectionMultiTest.xml)
+add_test(NAME AdminTestUnQLite COMMAND ./AdminTest AdminTestUnQLite.xml unqlite)
+add_test(NAME AdminTestJsonCpp COMMAND ./AdminTest AdminTestJsonCpp.xml jsoncpp)
+
+add_test(NAME ClientTestUnQLite COMMAND ./ClientTest ClientTestUnQLite.xml unqlite)
+add_test(NAME ClientTestJsonCpp COMMAND ./ClientTest ClientTestJsonCpp.xml jsoncpp)
+
+add_test(NAME DatabaseTestUnQLite COMMAND ./DatabaseTest DatabaseTestUnQlite.xml unqlite)
+add_test(NAME DatabaseTestJsonCpp COMMAND ./DatabaseTest DatabaseTestJsonCpp.xml jsoncpp)
+
+add_test(NAME CollectionTestUnQLite COMMAND ./CollectionTest CollectionTestUnQLite.xml unqlite)
+add_test(NAME CollectionTestJsonCpp COMMAND ./CollectionTest CollectionTestJsonCpp.xml jsoncpp)
+
+add_test(NAME CollectionMultiTestUnQLite COMMAND ./CollectionMultiTest CollectionMultiTestUnQLite.xml unqlite)
+add_test(NAME CollectionMultiTestJsonCpp COMMAND ./CollectionMultiTest CollectionMultiTestJsonCpp.xml jsoncpp)
+
 add_test(NAME ExecTest COMMAND ./ExecTest ExecTest.xml)
+
 add_test(NAME Jx9Test COMMAND ./Jx9Test Jx9Test.xml)

@@ -418,17 +418,10 @@ class UnQLiteBackend : public Backend {
             $err = "Collection does not exist";
         } else {
             $output = [];
-            $ret = false;
+            $ret = true;
             foreach($ids as $id) {
                 $x = db_fetch_by_id($collection,$id);
-                if($x == NULL) {
-                    $ret = false;
-                    $err = "Record does not exist";
-                    break;
-                } else {
-                    $ret = true;
-                    array_push($output, $x);
-                }
+                array_push($output, $x);
             }
         }
         )jx9";
@@ -468,17 +461,10 @@ class UnQLiteBackend : public Backend {
             $err = "Collection does not exist";
         } else {
             $output = [];
-            $ret = false;
+            $ret = true;
             foreach($ids as $id) {
                 $x = db_fetch_by_id($collection,$id);
-                if($x == NULL) {
-                    $ret = false;
-                    $err = "Record does not exist";
-                    break;
-                } else {
-                    $ret = true;
-                    array_push($output, $x);
-                }
+                array_push($output, $x);
             }
         }
         )jx9";

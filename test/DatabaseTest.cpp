@@ -8,6 +8,7 @@
 #include <sonata/Admin.hpp>
 
 extern thallium::engine* engine;
+extern std::string db_type;
 
 class DatabaseTest : public CppUnit::TestFixture
 {
@@ -25,7 +26,7 @@ class DatabaseTest : public CppUnit::TestFixture
     void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
-        admin.createDatabase(addr, 0, "mydb", "unqlite", db_config);
+        admin.createDatabase(addr, 0, "mydb", db_type, db_config);
     }
 
     void tearDown() {

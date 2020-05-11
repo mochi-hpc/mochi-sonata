@@ -9,6 +9,7 @@
 #include "CollectionTestBase.hpp"
 
 extern thallium::engine* engine;
+extern std::string db_type;
 
 class CollectionTest : public CppUnit::TestFixture,
                        public CollectionTestBase
@@ -32,7 +33,7 @@ class CollectionTest : public CppUnit::TestFixture,
     void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
-        admin.createDatabase(addr, 0, "mydb", "unqlite", db_config);
+        admin.createDatabase(addr, 0, "mydb", db_type, db_config);
 
         sonata::Client client(*engine);
         auto db = client.open(addr, 0, "mydb");
@@ -136,6 +137,9 @@ class CollectionTest : public CppUnit::TestFixture,
     }
 
     void testFilter() {
+        if(db_type != "unqlite")
+            return;
+
         sonata::Client client(*engine);
         std::string addr = engine->self();
         sonata::Database mydb = client.open(addr, 0, "mydb");
