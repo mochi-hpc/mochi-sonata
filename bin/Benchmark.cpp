@@ -135,6 +135,11 @@ struct CollectionInfo {
     void eraseDatabaseAndCollection(snt::Client& client, snt::Admin& admin, const std::string& address) {
         admin.destroyDatabase(address, 0, database_name);
     }
+
+    snt::Collection getCollection(snt::Client& client, const std::string& address) {
+        snt::Database db = client.open(address, 0, database_name);
+        return db.open(collection_name);
+    }
 };
 
 template<typename T>
@@ -241,7 +246,18 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
+        }
+
         if(!m_use_json) {
             m_records.reserve(m_record_info.num);
             for(size_t i = 0; i < m_record_info.num; i++) {
@@ -272,7 +288,10 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
     }
@@ -386,7 +405,17 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void setup() override {
         spdlog::trace("Setting up IngestBenchmark...");
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
+        }
         size_t num_objects = 0;
         for(auto& f : m_input_files) {
             std::ifstream file(f);
@@ -457,7 +486,10 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void teardown() override {
         spdlog::trace("Tearing down IngestBenchmark...");
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
         spdlog::trace("Done tearing down IngestBenchmark");
@@ -494,11 +526,21 @@ class FetchBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-        for(size_t i = 0; i < m_record_info.num; i++) {
-            std::string r;
-            m_record_info.generateRandomRecordString(&r);
-            m_collection.store(r);
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_collection.store(r);
+            }
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
         }
     }
 
@@ -516,7 +558,10 @@ class FetchBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("fetch", FetchBenchmark);
@@ -541,7 +586,6 @@ class FetchMultiBenchmark : public FetchBenchmark {
     virtual void execute() override {
         std::vector<uint64_t> ids(m_batch_size);
         for(size_t i = 0; i < m_num_fetch; i++) {
-            std::cerr << "Will fetch: " ;
             for(size_t j = 0; j < ids.size(); j++) { 
                 uint64_t id = rand() % m_record_info.num;
                 ids[j] = id;
@@ -595,11 +639,21 @@ class FilterBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-        for(size_t i = 0; i < m_record_info.num; i++) {
-            std::string r;
-            m_record_info.generateRandomRecordString(&r);
-            m_collection.store(r);
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_collection.store(r);
+            }
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
         }
     }
 
@@ -614,7 +668,10 @@ class FilterBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("filter", FilterBenchmark);
@@ -651,13 +708,22 @@ class UpdateBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-        for(size_t i = 0; i < m_record_info.num; i++) {
-            std::string r;
-            m_record_info.generateRandomRecordString(&r);
-            m_collection.store(r);
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_collection.store(r);
+            }
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
         }
-
         if(m_use_json) m_new_records_json.reserve(m_num_updates);
         else m_new_records.reserve(m_num_updates);
 
@@ -691,7 +757,10 @@ class UpdateBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("update", UpdateBenchmark);
@@ -787,11 +856,21 @@ class AllBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-        for(size_t i = 0; i < m_record_info.num; i++) {
-            std::string r;
-            m_record_info.generateRandomRecordString(&r);
-            m_collection.store(r);
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_collection.store(r);
+            }
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
         }
     }
 
@@ -806,7 +885,10 @@ class AllBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("all", AllBenchmark);
@@ -833,26 +915,50 @@ class EraseBenchmark : public AbstractBenchmark {
     {}
 
     virtual void setup() override {
-        m_collection = m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        int size;
+        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_size(comm(), &size);
+        if(rank == 0) {
+            m_collection = 
+                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                std::string r;
+                m_record_info.generateRandomRecordString(&r);
+                m_collection.store(r);
+            }
+            MPI_Barrier(comm());
+        } else {
+            MPI_Barrier(comm());
+            m_collection =
+                m_collection_info.getCollection(client(), server_addr());
+        }
         m_erase_order.resize(0);
         m_erase_order.reserve(m_record_info.num);
-        for(size_t i = 0; i < m_record_info.num; i++) {
-            std::string r;
-            m_record_info.generateRandomRecordString(&r);
-            m_collection.store(r);
-            m_erase_order.push_back(i);
+        if(rank == 0) {
+            for(size_t i = 0; i < m_record_info.num; i++) {
+                m_erase_order.push_back(i);
+            }
+            std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
         }
-        std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
+        MPI_Bcast(m_erase_order.data(), m_record_info.num*sizeof(uint64_t), MPI_BYTE, 0, comm());
     }
 
     virtual void execute() override {
+        int rank;
+        int size;
+        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_size(comm(), &size);
         for(size_t i = 0; i < m_erase_order.size(); i++) {
-            m_collection.erase(m_erase_order[i]);
+            if(i % size == rank) m_collection.erase(m_erase_order[i]);
         }
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        int rank;
+        MPI_Comm_rank(comm(), &rank);
+        if(rank == 0)
+            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("erase", EraseBenchmark);
@@ -875,8 +981,13 @@ class EraseMultiBenchmark : public EraseBenchmark {
     {}
 
     virtual void execute() override {
-        size_t remaining = m_erase_order.size();
-        size_t i = 0;
+        int rank;
+        int size;
+        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_size(comm(), &size);
+        size_t chunk_size = m_erase_order.size()/size;
+        size_t remaining = chunk_size;
+        size_t i = rank * chunk_size;
         while(remaining != 0) {
             size_t batch_size = std::min(remaining, m_batch_size);
             m_collection.erase_multi(&m_erase_order[i], batch_size);
