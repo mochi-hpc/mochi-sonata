@@ -14,6 +14,7 @@ enable_testing ()
 set (CMAKE_CXX_STANDARD 14)
 
 add_definitions(-g)
+option(ENABLE_UNQLITE_THREADS "Enable thread-safe UnQLite" OFF)
 option(ENABLE_TESTS     "Build tests. May require CppUnit_ROOT" OFF)
 option(ENABLE_EXAMPLES  "Build examples" OFF)
 option(ENABLE_BENCHMARK "Build benchmark" OFF)

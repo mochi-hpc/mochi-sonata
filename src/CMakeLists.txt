@@ -19,7 +19,9 @@ set(sonata-admin-src
 	Admin.cpp
 )
 
-add_definitions("-DUNQLITE_ENABLE_THREADS")
+if(${ENABLE_UNQLITE_THREADS})
+  add_definitions("-DUNQLITE_ENABLE_THREADS")
+endif(${ENABLE_UNQLITE_THREADS})
 
 # load package helper for generating cmake CONFIG packages
 include (CMakePackageConfigHelpers)
