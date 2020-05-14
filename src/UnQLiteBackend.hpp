@@ -1061,7 +1061,9 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> destroy() override {
         RequestResult<bool> result;
-        std::cerr << "Closing and destroying database " << m_filename << std::endl;
+        int rank;
+        ABT_xstream_self_rank(&rank);
+        std::cerr << "Closing and destroying database " << m_filename << " from ES " << rank << std::endl;
         if(m_db) unqlite_close(m_db);
         m_db = nullptr;
         if(remove(m_filename.c_str()) != 0) {

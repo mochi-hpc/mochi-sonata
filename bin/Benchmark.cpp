@@ -375,7 +375,7 @@ class StoreMultiBenchmark : public StoreBenchmark {
     virtual void teardown() override {
         m_batches.clear();
         m_batches_json.clear();
-        m_database.commit();
+        //m_database.commit();
         StoreBenchmark::teardown();
     }
 };
