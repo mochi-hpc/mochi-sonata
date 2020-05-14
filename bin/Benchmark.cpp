@@ -133,9 +133,9 @@ struct CollectionInfo {
             snt::Admin& admin, const std::string& address) {
         int rank;
         MPI_Comm_rank(comm, &rank);
-        std::string db_config = "{ \"path\" : \""s + path + "\" }";
         if(shared_db) {
             if(rank == 0) {
+                std::string db_config = "{ \"path\" : \""s + path + "\" }";
                 admin.createDatabase(address, 0, database_name, type, db_config);
                 snt::Database db = client.open(address, 0, database_name);
                 snt::Collection coll = db.create(collection_name);
@@ -147,8 +147,10 @@ struct CollectionInfo {
                 return db.open(collection_name);
             }
         } else {
-            admin.createDatabase(address, 0, database_name+"."+std::to_string(rank), type, db_config);
-            snt::Database db = client.open(address, 0, database_name);
+            auto db_config = "{ \"path\" : \""s + path + "-" + std::to_string(rank) + "\" }";
+            auto db_name =  database_name+"."+std::to_string(rank);
+            admin.createDatabase(address, 0, db_name, type, db_config);
+            snt::Database db = client.open(address, 0, db_name);
             return  db.create(collection_name);
         }
     }
@@ -163,11 +165,6 @@ struct CollectionInfo {
         } else {
             admin.destroyDatabase(address, 0, database_name+"."+std::to_string(rank));
         }
-    }
-
-    snt::Collection getCollection(snt::Client& client, const std::string& address) {
-        snt::Database db = client.open(address, 0, database_name);
-        return db.open(collection_name);
     }
 };
 
