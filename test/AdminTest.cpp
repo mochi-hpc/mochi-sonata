@@ -61,10 +61,55 @@ class AdminTest : public CppUnit::TestFixture
                 admin.createDatabase(addr, 0, "db1", db_type, "{ \"path\" : \"mydb1\" }"));
         CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
                 admin.createDatabase(addr, 0, "db2", db_type, "{ \"path\" : \"mydb2\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db3", db_type, "{ \"path\" : \"mydb3\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db4", db_type, "{ \"path\" : \"mydb4\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db5", db_type, "{ \"path\" : \"mydb5\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db6", db_type, "{ \"path\" : \"mydb6\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db7", db_type, "{ \"path\" : \"mydb7\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db8", db_type, "{ \"path\" : \"mydb8\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db9", db_type, "{ \"path\" : \"mydb9\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db10", db_type, "{ \"path\" : \"mydb10\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db11", db_type, "{ \"path\" : \"mydb11\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db12", db_type, "{ \"path\" : \"mydb12\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db13", db_type, "{ \"path\" : \"mydb13\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db14", db_type, "{ \"path\" : \"mydb14\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db15", db_type, "{ \"path\" : \"mydb15\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db16", db_type, "{ \"path\" : \"mydb16\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db17", db_type, "{ \"path\" : \"mydb17\" }"));
 
         // Destroy the Databases
         admin.destroyDatabase(addr, 0, "db1");
         admin.destroyDatabase(addr, 0, "db2");
+        admin.destroyDatabase(addr, 0, "db3");
+        admin.destroyDatabase(addr, 0, "db4");
+        admin.destroyDatabase(addr, 0, "db5");
+        admin.destroyDatabase(addr, 0, "db6");
+        admin.destroyDatabase(addr, 0, "db7");
+        admin.destroyDatabase(addr, 0, "db8");
+        admin.destroyDatabase(addr, 0, "db9");
+        admin.destroyDatabase(addr, 0, "db10");
+        admin.destroyDatabase(addr, 0, "db11");
+        admin.destroyDatabase(addr, 0, "db12");
+        admin.destroyDatabase(addr, 0, "db13");
+        admin.destroyDatabase(addr, 0, "db14");
+        admin.destroyDatabase(addr, 0, "db15");
+        admin.destroyDatabase(addr, 0, "db16");
+        admin.destroyDatabase(addr, 0, "db17");
     }
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( AdminTest );

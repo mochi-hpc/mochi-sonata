@@ -157,13 +157,18 @@ struct CollectionInfo {
 
     void eraseDatabaseAndCollection(MPI_Comm comm, 
             snt::Client& client, snt::Admin& admin, const std::string& address) {
-        int rank;
+        int rank, size;
         MPI_Comm_rank(comm, &rank);
+        MPI_Comm_size(comm, &size);
         if(shared_db) {
             if(rank == 0)
                 admin.destroyDatabase(address, 0, database_name);
         } else {
-            admin.destroyDatabase(address, 0, database_name+"."+std::to_string(rank));
+            for(auto i=0; i < size; i++) {
+                MPI_Barrier(comm);
+                if(i == rank)
+                    admin.destroyDatabase(address, 0, database_name+"."+std::to_string(rank));
+            }
         }
     }
 };
