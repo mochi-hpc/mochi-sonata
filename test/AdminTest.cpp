@@ -13,6 +13,7 @@ class AdminTest : public CppUnit::TestFixture
 {
     CPPUNIT_TEST_SUITE( AdminTest );
     CPPUNIT_TEST( testAdminCreateDatabase );
+    CPPUNIT_TEST( testAdminCreateTwoDatabases );
     CPPUNIT_TEST_SUITE_END();
 
     static constexpr const char* db_config = "{ \"path\" : \"mydb\" }";
@@ -49,6 +50,21 @@ class AdminTest : public CppUnit::TestFixture
 
         // Destroy the Database
         admin.destroyDatabase(addr, 0, "db1");
+    }
+
+    void testAdminCreateTwoDatabases() {
+        sonata::Admin admin(*engine);
+        std::string addr = engine->self();
+
+        // Create two valid Database
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db1", db_type, "{ \"path\" : \"mydb1\" }"));
+        CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
+                admin.createDatabase(addr, 0, "db2", db_type, "{ \"path\" : \"mydb2\" }"));
+
+        // Destroy the Databases
+        admin.destroyDatabase(addr, 0, "db1");
+        admin.destroyDatabase(addr, 0, "db2");
     }
 };
 CPPUNIT_TEST_SUITE_REGISTRATION( AdminTest );

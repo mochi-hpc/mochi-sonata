@@ -36,6 +36,7 @@ class UnQLiteBackend : public Backend {
 
     UnQLiteBackend() {
         m_unqlite_is_threadsafe = unqlite_lib_is_threadsafe();
+        std::cerr << "UnQLite is thread safe : " << m_unqlite_is_threadsafe << std::endl;
     }
 
     UnQLiteBackend(UnQLiteBackend&&) = delete;
@@ -1060,12 +1061,14 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> destroy() override {
         RequestResult<bool> result;
+        std::cerr << "Closing and destroying database " << m_filename << std::endl;
         if(m_db) unqlite_close(m_db);
         m_db = nullptr;
         if(remove(m_filename.c_str()) != 0) {
             result.success() = false;
             result.error() = "Could not remove file: "s + strerror(errno);
         }
+        std::cerr << "Done destroying " << m_filename << std::endl;
         return result;
     }
 
