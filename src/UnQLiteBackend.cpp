@@ -57,6 +57,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(thallium::engine& engine, const 
     backend->m_filename = db_path;
     backend->m_client = Client(engine);
     backend->m_admin = Admin(engine);
+    backend->m_es = tl::xstream::self();
     spdlog::trace("[unqlite] Successfully created database at {}", db_path);
     return backend;
 }
@@ -82,6 +83,7 @@ std::unique_ptr<Backend> UnQLiteBackend::attach(thallium::engine& engine, const 
     backend->m_filename = db_path;
     backend->m_client = Client(engine);
     backend->m_admin = Admin(engine);
+    backend->m_es = tl::xstream::self();
     spdlog::trace("[unqlite] Successfully opened database at {}", db_path);
     return backend;
 }

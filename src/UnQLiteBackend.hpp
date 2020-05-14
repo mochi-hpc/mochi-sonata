@@ -1061,15 +1061,16 @@ class UnQLiteBackend : public Backend {
 
     virtual RequestResult<bool> destroy() override {
         RequestResult<bool> result;
-        int rank;
-        ABT_xstream_self_rank(&rank);
-        std::cerr << "Closing and destroying database " << m_filename << " from ES " << rank << std::endl;
-        if(m_db) unqlite_close(m_db);
-        m_db = nullptr;
-        if(remove(m_filename.c_str()) != 0) {
-            result.success() = false;
-            result.error() = "Could not remove file: "s + strerror(errno);
-        }
+        std::cerr << "Closing and destroying database " << m_filename << std::endl;
+        auto thread = m_es.make_thread([this,&result](){
+            if(m_db) unqlite_close(m_db);
+            m_db = nullptr;
+            if(remove(m_filename.c_str()) != 0) {
+                result.success() = false;
+                result.error() = "Could not remove file: "s + strerror(errno);
+            }
+        });
+        thread->join();
         std::cerr << "Done destroying " << m_filename << std::endl;
         return result;
     }
@@ -1082,6 +1083,7 @@ class UnQLiteBackend : public Backend {
     bool        m_unqlite_is_threadsafe;
     Client      m_client;
     Admin       m_admin;
+    tl::xstream m_es;
 };
 
 }
