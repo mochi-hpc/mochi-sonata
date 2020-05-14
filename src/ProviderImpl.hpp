@@ -21,6 +21,21 @@
 
 #include <tuple>
 
+#define FIND_DATABASE(__dbvar__) \
+        std::shared_ptr<Backend> __dbvar__;\
+        do {\
+            std::lock_guard<tl::mutex> lock(m_backends_mtx);\
+            auto it = m_backends.find(db_name);\
+            if(it == m_backends.end()) {\
+                result.success() = false;\
+                result.error() = "Database "s + db_name + " not found";\
+                req.respond(result);\
+                spdlog::error("[provider:{}] Database {} not found", id(), db_name);\
+                return;\
+            }\
+            __dbvar__ = it->second;\
+        }while(0)
+
 namespace sonata {
 
 namespace tl = thallium;
@@ -67,7 +82,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     tl::remote_procedure m_coll_erase;
     tl::remote_procedure m_coll_erase_multi;
     // Backends
-    std::unordered_map<std::string, std::unique_ptr<Backend>> m_backends;
+    std::unordered_map<std::string, std::shared_ptr<Backend>> m_backends;
+    tl::mutex m_backends_mtx;
 
     ProviderImpl(tl::engine& engine, uint16_t provider_id, const tl::pool& pool)
     : tl::provider<ProviderImpl>(engine, provider_id)
@@ -162,6 +178,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             return;
         }
 
+        std::lock_guard<tl::mutex> lock(m_backends_mtx);
+
         if(m_backends.count(db_name) != 0) {
             result.success() = false;
             result.error() = "Database "s + db_name + " already attached";
@@ -188,7 +206,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             result.success() = false;
             result.error() = std::move(errors);
             req.respond(result);
-            spdlog::error("[provider:{}] Could not parse database configuration for database {}", id(), db_name);
+            spdlog::error("[provider:{}] Could not parse database configuration for database {}",
+                    id(), db_name);
             return;
         }
         
@@ -198,7 +217,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();
-            spdlog::error("[provider:{}] Error when creating database {} of type {}:", id(), db_name, db_type);
+            spdlog::error("[provider:{}] Error when creating database {} of type {}:",
+                    id(), db_name, db_type);
             spdlog::error("[provider:{}]    => {}", id(), result.error());
             req.respond(result);
             return;
@@ -207,7 +227,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         if(not backend) {
             result.success() = false;
             result.error() = "Unknown database type "s + db_type;
-            spdlog::error("[provider:{}] Unknown database type {} for database {}", id(), db_type, db_name);
+            spdlog::error("[provider:{}] Unknown database type {} for database {}",
+                    id(), db_type, db_name);
             req.respond(result);
             return;
         } else {
@@ -215,7 +236,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         }
         
         req.respond(result);
-        spdlog::trace("[provider:{}] Successfully created database {} of type {}", id(), db_name, db_type);
+        spdlog::trace("[provider:{}] Successfully created database {} of type {}",
+                id(), db_name, db_type);
     }
 
     void attachDatabase(const tl::request& req,
@@ -239,6 +261,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             return;
         }
 
+        std::lock_guard<tl::mutex> lock(m_backends_mtx);
+
         if(m_backends.count(db_name) != 0) {
             result.success() = false;
             result.error() = "Database "s + db_name + " already attached";
@@ -265,7 +289,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             result.success() = false;
             result.error() = std::move(errors);
             req.respond(result);
-            spdlog::error("[provider:{}] Could not parse database configuration for database {}", id(), db_name);
+            spdlog::error("[provider:{}] Could not parse database configuration for database {}",
+                    id(), db_name);
             return;
         }
         
@@ -275,8 +300,10 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();
-            spdlog::error("[provider:{}] Error when attaching database {} of type {}:", id(), db_name, db_type);
-            spdlog::error("[provider:{}]    => {}", id(), result.error());
+            spdlog::error("[provider:{}] Error when attaching database {} of type {}:",
+                    id(), db_name, db_type);
+            spdlog::error("[provider:{}]    => {}",
+                    id(), result.error());
             req.respond(result);
             return;
         }
@@ -284,7 +311,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         if(not backend) {
             result.success() = false;
             result.error() = "Unknown database type "s + db_type;
-            spdlog::error("[provider:{}] Unknown database type {} for database {}", id(), db_type, db_name);
+            spdlog::error("[provider:{}] Unknown database type {} for database {}",
+                    id(), db_type, db_name);
             req.respond(result);
             return;
         } else {
@@ -292,23 +320,29 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         }
         
         req.respond(result);
-        spdlog::trace("[provider:{}] Successfully attached database {} of type {}", id(), db_name, db_type);
+        spdlog::trace("[provider:{}] Successfully attached database {} of type {}",
+                id(), db_name, db_type);
     }
 
     void detachDatabase(const tl::request& req,
                         const std::string& token,
                         const std::string& db_name) {
-        spdlog::trace("[provider:{}] Received detachDatabase request for database {}", id(), db_name);
+        spdlog::trace("[provider:{}] Received detachDatabase request for database {}",
+                id(), db_name);
         RequestResult<bool> result;
-        if(m_backends.count(db_name) == 0) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
+        {
+            std::lock_guard<tl::mutex> lock(m_backends_mtx);
 
-        m_backends.erase(db_name);
+            if(m_backends.count(db_name) == 0) {
+                result.success() = false;
+                result.error() = "Database "s + db_name + " not found";
+                req.respond(result);
+                spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+                return;
+            }
+
+            m_backends.erase(db_name);
+        }
         req.respond(result);
         spdlog::trace("[provider:{}] Database {} successfully detached", id(), db_name);
     }
@@ -327,16 +361,20 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
             return;
         }
 
-        if(m_backends.count(db_name) == 0) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
+        {
+            std::lock_guard<tl::mutex> lock(m_backends_mtx);
 
-        result = m_backends[db_name]->destroy();
-        m_backends.erase(db_name);
+            if(m_backends.count(db_name) == 0) {
+                result.success() = false;
+                result.error() = "Database "s + db_name + " not found";
+                req.respond(result);
+                spdlog::error("[provider:{}] Database {} not found", id(), db_name);
+                return;
+            }
+
+            result = m_backends[db_name]->destroy();
+            m_backends.erase(db_name);
+        }
 
         req.respond(result);
         spdlog::trace("[provider:{}] Database {} successfully destroyed", id(), db_name);
@@ -348,16 +386,9 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
                         const std::unordered_set<std::string>& vars,
                         bool commit) {
         spdlog::trace("provider:{}] Received execOnDatabase request for database {}", id(), db_name);
-        auto it = m_backends.find(db_name);
         RequestResult<std::unordered_map<std::string,std::string>> result;
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->execute(code, vars, commit);
+        FIND_DATABASE(db);
+        result = db->execute(code, vars, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Code successfully executed on database {}", id(), db_name);
     }
@@ -365,16 +396,9 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void commit(const tl::request& req,
                 const std::string& db_name) {
         spdlog::trace("provider:{}] Received commit request for database {}", id(), db_name);
-        auto it = m_backends.find(db_name);
         RequestResult<bool> result;
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->commit();
+        FIND_DATABASE(db);
+        result = db->commit();
         req.respond(result);
         spdlog::trace("[provider:{}] Commit successfully executed on database {}", id(), db_name);
     }
@@ -382,15 +406,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     void openDatabase(const tl::request& req,
                       const std::string& db_name) {
         spdlog::trace("[provider:{}] Received openDatabase request for database {}", id(), db_name);
-        auto it = m_backends.find(db_name);
         RequestResult<bool> result;
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
+        FIND_DATABASE(db);
         req.respond(result);
         spdlog::trace("[provider:{}] Database {} successfully opened", id(), db_name);
     }
@@ -402,15 +419,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->createCollection(coll_name);
+        FIND_DATABASE(db);
+        result = db->createCollection(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Collection {} successfully created", id(), coll_name);
     }
@@ -422,15 +432,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->openCollection(coll_name);
+        FIND_DATABASE(db);
+        result = db->openCollection(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Collection {} successfully opened", id(), coll_name);
     }
@@ -442,15 +445,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->dropCollection(coll_name);
+        FIND_DATABASE(db);
+        result = db->dropCollection(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Collection {} successfully dropped", id(), coll_name);
     }
@@ -464,15 +460,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<uint64_t> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->store(coll_name, record, commit);
+        FIND_DATABASE(db);
+        result = db->store(coll_name, record, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored (id = {})", id(), result.value());
     }
@@ -486,15 +475,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<uint64_t> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->storeJson(coll_name, record, commit);
+        FIND_DATABASE(db);
+        result = db->storeJson(coll_name, record, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored (id = {})", id(), result.value());
     }
@@ -508,15 +490,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<uint64_t>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->storeMulti(coll_name, records, commit);
+        FIND_DATABASE(db);
+        result = db->storeMulti(coll_name, records, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored", id());
     }
@@ -530,15 +505,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<uint64_t>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->storeMultiJson(coll_name, records, commit);
+        FIND_DATABASE(db);
+        result = db->storeMultiJson(coll_name, records, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Record successfully stored", id());
     }
@@ -552,15 +520,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         spdlog::trace("[provider:{}]    => record id  = {}", id(), record_id);
         RequestResult<std::string> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->fetch(coll_name, record_id);
+        FIND_DATABASE(db);
+        result = db->fetch(coll_name, record_id);
         req.respond(result);
         spdlog::trace("[provider:{}] Record {} successfully fetched", id(), record_id);
     }
@@ -574,15 +535,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         spdlog::trace("[provider:{}]    => record id  = {}", id(), record_id);
         RequestResult<Json::Value> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->fetchJson(coll_name, record_id);
+        FIND_DATABASE(db);
+        result = db->fetchJson(coll_name, record_id);
         req.respond(result);
         spdlog::trace("[provider:{}] Record {} successfully fetched", id(), record_id);
     }
@@ -595,15 +549,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<std::string>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->fetchMulti(coll_name, record_ids);
+        FIND_DATABASE(db);
+        result = db->fetchMulti(coll_name, record_ids);
         req.respond(result);
         spdlog::trace("[provider:{}] Records successfully fetched", id());
     }
@@ -616,15 +563,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<Json::Value> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->fetchMultiJson(coll_name, record_ids);
+        FIND_DATABASE(db);
+        result = db->fetchMultiJson(coll_name, record_ids);
         req.respond(result);
         spdlog::trace("[provider:{}] Records successfully fetched", id());
     }
@@ -637,15 +577,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<std::string>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->filter(coll_name, filter_code);
+        FIND_DATABASE(db);
+        result = db->filter(coll_name, filter_code);
         req.respond(result);
         spdlog::trace("[provider:{}] Filter successfully executed", id());
     }
@@ -658,15 +591,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<Json::Value> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->filterJson(coll_name, filter_code);
+        FIND_DATABASE(db);
+        result = db->filterJson(coll_name, filter_code);
         req.respond(result);
         spdlog::trace("[provider:{}] Filter successfully executed", id());
     }
@@ -682,15 +608,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         spdlog::trace("[provider:{}]    => record id = {}", id(), record_id);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->update(coll_name, record_id, new_content, commit);
+        FIND_DATABASE(db);
+        result = db->update(coll_name, record_id, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to record {}", id(), record_id);
     }
@@ -706,15 +625,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         spdlog::trace("[provider:{}]    => record id = {}", id(), record_id);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->updateJson(coll_name, record_id, new_content, commit);
+        FIND_DATABASE(db);
+        result = db->updateJson(coll_name, record_id, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to record {}", id(), record_id);
     }
@@ -729,15 +641,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<bool>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->updateMulti(coll_name, record_ids, new_contents, commit);
+        FIND_DATABASE(db);
+        result = db->updateMulti(coll_name, record_ids, new_contents, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to records", id());
     }
@@ -752,15 +657,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<bool>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->updateMultiJson(coll_name, record_ids, new_content, commit);
+        FIND_DATABASE(db);
+        result = db->updateMultiJson(coll_name, record_ids, new_content, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Update successfully applied to records", id());
     }
@@ -772,15 +670,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<std::vector<std::string>> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->all(coll_name);
+        FIND_DATABASE(db);
+        result = db->all(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully returned the full collection {}", id(), coll_name);
     }
@@ -792,15 +683,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<Json::Value> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->allJson(coll_name);
+        FIND_DATABASE(db);
+        result = db->allJson(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully returned the full collection {}", id(), coll_name);
     }
@@ -812,15 +696,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<uint64_t> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->lastID(coll_name); 
+        FIND_DATABASE(db);
+        result = db->lastID(coll_name); 
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully returned the last id ({})", id(), result.value());
     }
@@ -832,15 +709,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<uint64_t> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->size(coll_name);
+        FIND_DATABASE(db);
+        result = db->size(coll_name);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully returned collection size ({})", id(), result.value());
     }
@@ -855,15 +725,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         spdlog::trace("[provider:{}]    => record id = {}", id(), record_id);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->erase(coll_name, record_id, commit);
+        FIND_DATABASE(db);
+        result = db->erase(coll_name, record_id, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully erased record {}", id(), record_id);
     }
@@ -877,15 +740,8 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
         RequestResult<bool> result;
-        auto it = m_backends.find(db_name);
-        if(it == m_backends.end()) {
-            result.success() = false;
-            result.error() = "Database "s + db_name + " not found";
-            req.respond(result);
-            spdlog::error("[provider:{}] Database {} not found", id(), db_name);
-            return;
-        }
-        result = it->second->eraseMulti(coll_name, record_ids, commit);
+        FIND_DATABASE(db);
+        result = db->eraseMulti(coll_name, record_ids, commit);
         req.respond(result);
         spdlog::trace("[provider:{}] Successfully erased records", id());
     }
