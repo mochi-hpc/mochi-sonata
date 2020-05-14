@@ -111,12 +111,14 @@ struct CollectionInfo {
     std::string path;
     std::string database_name;
     std::string collection_name;
-    
+    bool shared_db = true;
+
     CollectionInfo(const Json::Value& config) {
         type = config.get("type", "unqlite").asString();
         path = config.get("path", ".").asString();
         database_name = config.get("database-name", "").asString();
         collection_name = config.get("collection-name", "").asString();
+        shared_db = config.get("shared-database", true).asBool();
         if(database_name.size() == 0) {
             throw std::runtime_error("invalid database name");
         }
@@ -125,15 +127,42 @@ struct CollectionInfo {
         }
     }
 
-    snt::Collection createDatabaseAndCollection(snt::Client& client, snt::Admin& admin, const std::string& address) {
+    snt::Collection createDatabaseAndCollection(
+            MPI_Comm comm,
+            snt::Client& client,
+            snt::Admin& admin, const std::string& address) {
+        int rank;
+        MPI_Comm_rank(comm, &rank);
         std::string db_config = "{ \"path\" : \""s + path + "\" }";
-        admin.createDatabase(address, 0, database_name, type, db_config);
-        snt::Database db = client.open(address, 0, database_name);
-        return db.create(collection_name);
+        if(shared_db) {
+            if(rank == 0) {
+                admin.createDatabase(address, 0, database_name, type, db_config);
+                snt::Database db = client.open(address, 0, database_name);
+                snt::Collection coll = db.create(collection_name);
+                MPI_Barrier(comm);
+                return coll;
+            } else {
+                MPI_Barrier(comm);
+                snt::Database db = client.open(address, 0, database_name);
+                return db.open(collection_name);
+            }
+        } else {
+            admin.createDatabase(address, 0, database_name+"."+std::to_string(rank), type, db_config);
+            snt::Database db = client.open(address, 0, database_name);
+            return  db.create(collection_name);
+        }
     }
 
-    void eraseDatabaseAndCollection(snt::Client& client, snt::Admin& admin, const std::string& address) {
-        admin.destroyDatabase(address, 0, database_name);
+    void eraseDatabaseAndCollection(MPI_Comm comm, 
+            snt::Client& client, snt::Admin& admin, const std::string& address) {
+        int rank;
+        MPI_Comm_rank(comm, &rank);
+        if(shared_db) {
+            if(rank == 0)
+                admin.destroyDatabase(address, 0, database_name);
+        } else {
+            admin.destroyDatabase(address, 0, database_name+"."+std::to_string(rank));
+        }
     }
 
     snt::Collection getCollection(snt::Client& client, const std::string& address) {
@@ -246,17 +275,8 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
-        }
+        m_collection = 
+            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
 
         if(!m_use_json) {
             m_records.reserve(m_record_info.num);
@@ -288,10 +308,7 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
     }
@@ -405,17 +422,8 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void setup() override {
         spdlog::trace("Setting up IngestBenchmark...");
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
-        }
+        m_collection = 
+            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
         size_t num_objects = 0;
         for(auto& f : m_input_files) {
             std::ifstream file(f);
@@ -486,10 +494,7 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void teardown() override {
         spdlog::trace("Tearing down IngestBenchmark...");
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
         spdlog::trace("Done tearing down IngestBenchmark");
@@ -528,19 +533,14 @@ class FetchBenchmark : public AbstractBenchmark {
     virtual void setup() override {
         int rank;
         MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
+        m_collection = 
+            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        if(rank == 0 || !m_collection_info.shared_db) {
             for(size_t i = 0; i < m_record_info.num; i++) {
                 std::string r;
                 m_record_info.generateRandomRecordString(&r);
                 m_collection.store(r);
             }
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
         }
     }
 
@@ -558,10 +558,7 @@ class FetchBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("fetch", FetchBenchmark);
@@ -607,14 +604,10 @@ REGISTER_BENCHMARK("fetch-multi", FetchMultiBenchmark);
 /**
  * FilterBenchmark executes a series of filter operations and measures their duration.
  */
-class FilterBenchmark : public AbstractBenchmark {
+class FilterBenchmark : public FetchBenchmark {
 
     protected:
 
-    RecordInfo      m_record_info;
-    CollectionInfo  m_collection_info;
-    snt::Collection m_collection;
-    bool            m_use_json = false;
     double          m_selectivity = 0.0;
     std::string     m_function;
 
@@ -622,9 +615,7 @@ class FilterBenchmark : public AbstractBenchmark {
 
     template<typename ... T>
     FilterBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...)
-    , m_record_info(config["records"])
-    , m_collection_info(config["collection"]) 
+    : FetchBenchmark(config, std::forward<T>(args)...)
     {
         m_use_json = config.get("use-json", false).asBool();
         if(!config["filter-selectivity"]) {
@@ -638,25 +629,6 @@ class FilterBenchmark : public AbstractBenchmark {
         m_function = ss.str();
     }
 
-    virtual void setup() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            for(size_t i = 0; i < m_record_info.num; i++) {
-                std::string r;
-                m_record_info.generateRandomRecordString(&r);
-                m_collection.store(r);
-            }
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
-        }
-    }
-
     virtual void execute() override {
         if(!m_use_json) {
             std::vector<std::string> result;
@@ -666,27 +638,16 @@ class FilterBenchmark : public AbstractBenchmark {
             m_collection.filter(m_function, &result);
         }
     }
-
-    virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
-    }
 };
 REGISTER_BENCHMARK("filter", FilterBenchmark);
 
 /**
  * UpdateBenchmark executes a series of update operations and measures their duration.
  */
-class UpdateBenchmark : public AbstractBenchmark {
+class UpdateBenchmark : public FetchBenchmark {
 
     protected:
 
-    RecordInfo      m_record_info;
-    CollectionInfo  m_collection_info;
-    snt::Collection m_collection;
-    bool            m_use_json = false;
     size_t          m_num_updates = 0;
     std::vector<std::string> m_new_records;
     std::vector<Json::Value> m_new_records_json;
@@ -696,34 +657,17 @@ class UpdateBenchmark : public AbstractBenchmark {
 
     template<typename ... T>
     UpdateBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...)
-    , m_record_info(config["records"])
-    , m_collection_info(config["collection"]) 
+    : FetchBenchmark(config, std::forward<T>(args)...)
     {
-        m_use_json = config.get("use-json", false).asBool();
         if(!config["num-operations"]) {
-            throw std::runtime_error("Fetch benchmark needs a num-operations parameter");
+            throw std::runtime_error("Update benchmark needs a num-operations parameter");
         }
         m_num_updates = config["num-operations"].asUInt64();
     }
 
     virtual void setup() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            for(size_t i = 0; i < m_record_info.num; i++) {
-                std::string r;
-                m_record_info.generateRandomRecordString(&r);
-                m_collection.store(r);
-            }
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
-        }
+        FetchBenchmark::setup();
+
         if(m_use_json) m_new_records_json.reserve(m_num_updates);
         else m_new_records.reserve(m_num_updates);
 
@@ -754,13 +698,6 @@ class UpdateBenchmark : public AbstractBenchmark {
                 m_collection.update(id, m_new_records_json[i]);
             }
         }
-    }
-
-    virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("update", UpdateBenchmark);
@@ -835,44 +772,14 @@ REGISTER_BENCHMARK("update-multi", UpdateMultiBenchmark);
 /**
  * AllBenchmark executes a series of "all" operations and measures their duration.
  */
-class AllBenchmark : public AbstractBenchmark {
-
-    protected:
-
-    RecordInfo      m_record_info;
-    CollectionInfo  m_collection_info;
-    snt::Collection m_collection;
-    bool            m_use_json = false;
+class AllBenchmark : public FetchBenchmark {
 
     public:
 
     template<typename ... T>
     AllBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...)
-    , m_record_info(config["records"])
-    , m_collection_info(config["collection"]) 
-    {
-        m_use_json = config.get("use-json", false).asBool();
-    }
-
-    virtual void setup() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            for(size_t i = 0; i < m_record_info.num; i++) {
-                std::string r;
-                m_record_info.generateRandomRecordString(&r);
-                m_collection.store(r);
-            }
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
-        }
-    }
+    : FetchBenchmark(config, std::forward<T>(args)...)
+    {}
 
     virtual void execute() override {
         if(m_use_json) {
@@ -883,65 +790,37 @@ class AllBenchmark : public AbstractBenchmark {
             m_collection.all(&all);
         }
     }
-
-    virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
-    }
 };
 REGISTER_BENCHMARK("all", AllBenchmark);
 
 /**
  * EraseBenchmark executes a series of "erase" operations and measures their duration.
  */
-class EraseBenchmark : public AbstractBenchmark {
+class EraseBenchmark : public FetchBenchmark {
 
     protected:
 
-    RecordInfo      m_record_info;
-    CollectionInfo  m_collection_info;
-    snt::Collection m_collection;
     std::vector<uint64_t> m_erase_order;
 
     public:
 
     template<typename ... T>
     EraseBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...)
-    , m_record_info(config["records"])
-    , m_collection_info(config["collection"]) 
+    : FetchBenchmark(config, std::forward<T>(args)...)
     {}
 
     virtual void setup() override {
+        FetchBenchmark::setup();
         int rank;
-        int size;
         MPI_Comm_rank(comm(), &rank);
-        MPI_Comm_size(comm(), &size);
-        if(rank == 0) {
-            m_collection = 
-                m_collection_info.createDatabaseAndCollection(client(), admin(), server_addr());
-            for(size_t i = 0; i < m_record_info.num; i++) {
-                std::string r;
-                m_record_info.generateRandomRecordString(&r);
-                m_collection.store(r);
-            }
-            MPI_Barrier(comm());
-        } else {
-            MPI_Barrier(comm());
-            m_collection =
-                m_collection_info.getCollection(client(), server_addr());
+        m_erase_order.resize(m_record_info.num);
+        for(size_t i = 0; i < m_record_info.num; i++) {
+            m_erase_order[i] = i;
         }
-        m_erase_order.resize(0);
-        m_erase_order.reserve(m_record_info.num);
-        if(rank == 0) {
-            for(size_t i = 0; i < m_record_info.num; i++) {
-                m_erase_order.push_back(i);
-            }
-            std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
+        std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
+        if(m_collection_info.shared_db) {
+            MPI_Bcast(m_erase_order.data(), m_record_info.num*sizeof(uint64_t), MPI_BYTE, 0, comm());
         }
-        MPI_Bcast(m_erase_order.data(), m_record_info.num*sizeof(uint64_t), MPI_BYTE, 0, comm());
     }
 
     virtual void execute() override {
@@ -950,15 +829,12 @@ class EraseBenchmark : public AbstractBenchmark {
         MPI_Comm_rank(comm(), &rank);
         MPI_Comm_size(comm(), &size);
         for(size_t i = 0; i < m_erase_order.size(); i++) {
-            if(i % size == rank) m_collection.erase(m_erase_order[i]);
+            if(m_collection_info.shared_db) {
+                if(i % size == rank) m_collection.erase(m_erase_order[i]);
+            } else {
+                m_collection.erase(m_erase_order[i]);
+            }
         }
-    }
-
-    virtual void teardown() override {
-        int rank;
-        MPI_Comm_rank(comm(), &rank);
-        if(rank == 0)
-            m_collection_info.eraseDatabaseAndCollection(client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("erase", EraseBenchmark);
@@ -986,8 +862,8 @@ class EraseMultiBenchmark : public EraseBenchmark {
         MPI_Comm_rank(comm(), &rank);
         MPI_Comm_size(comm(), &size);
         size_t chunk_size = m_erase_order.size()/size;
-        size_t remaining = chunk_size;
-        size_t i = rank * chunk_size;
+        size_t remaining = m_collection_info.shared_db ? chunk_size : m_erase_order.size();
+        size_t i = m_collection_info.shared_db ? rank*chunk_size : 0;
         while(remaining != 0) {
             size_t batch_size = std::min(remaining, m_batch_size);
             m_collection.erase_multi(&m_erase_order[i], batch_size);
