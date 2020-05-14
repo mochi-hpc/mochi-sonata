@@ -127,7 +127,7 @@ struct CollectionInfo {
         }
     }
 
-    snt::Collection createDatabaseAndCollection(
+    std::tuple<snt::Database,snt::Collection> createDatabaseAndCollection(
             MPI_Comm comm,
             snt::Client& client,
             snt::Admin& admin, const std::string& address) {
@@ -140,18 +140,18 @@ struct CollectionInfo {
                 snt::Database db = client.open(address, 0, database_name);
                 snt::Collection coll = db.create(collection_name);
                 MPI_Barrier(comm);
-                return coll;
+                return std::make_tuple(db, coll);
             } else {
                 MPI_Barrier(comm);
                 snt::Database db = client.open(address, 0, database_name);
-                return db.open(collection_name);
+                return std::make_tuple(db, db.open(collection_name));
             }
         } else {
             auto db_config = "{ \"path\" : \""s + path + "-" + std::to_string(rank) + "\" }";
             auto db_name =  database_name+"."+std::to_string(rank);
             admin.createDatabase(address, 0, db_name, type, db_config);
             snt::Database db = client.open(address, 0, db_name);
-            return  db.create(collection_name);
+            return  std::make_tuple(db, db.create(collection_name));
         }
     }
 
@@ -261,6 +261,7 @@ class StoreBenchmark : public AbstractBenchmark {
     RecordInfo      m_record_info;
     CollectionInfo  m_collection_info;
     snt::Collection m_collection;
+    snt::Database   m_database;
     bool            m_use_json = false;
     std::vector<std::string> m_records;
     std::vector<Json::Value> m_records_json;
@@ -277,7 +278,7 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        m_collection = 
+        std::tie(m_database, m_collection) = 
             m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
 
         if(!m_use_json) {
@@ -374,6 +375,7 @@ class StoreMultiBenchmark : public StoreBenchmark {
     virtual void teardown() override {
         m_batches.clear();
         m_batches_json.clear();
+        m_database.commit();
         StoreBenchmark::teardown();
     }
 };
@@ -387,6 +389,7 @@ class IngestBenchmark : public AbstractBenchmark {
     protected:
 
     CollectionInfo  m_collection_info;
+    snt::Database   m_database;
     snt::Collection m_collection;
     bool            m_use_json = false;
     size_t          m_batch_size;
@@ -424,7 +427,7 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void setup() override {
         spdlog::trace("Setting up IngestBenchmark...");
-        m_collection = 
+        std::tie(m_database, m_collection) = 
             m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
         size_t num_objects = 0;
         for(auto& f : m_input_files) {
@@ -513,6 +516,7 @@ class FetchBenchmark : public AbstractBenchmark {
 
     RecordInfo      m_record_info;
     CollectionInfo  m_collection_info;
+    snt::Database   m_database;
     snt::Collection m_collection;
     bool            m_use_json = false;
     size_t          m_num_fetch = 0; 
@@ -535,7 +539,7 @@ class FetchBenchmark : public AbstractBenchmark {
     virtual void setup() override {
         int rank;
         MPI_Comm_rank(comm(), &rank);
-        m_collection = 
+        std::tie(m_database, m_collection) = 
             m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
         if(rank == 0 || !m_collection_info.shared_db) {
             for(size_t i = 0; i < m_record_info.num; i++) {
