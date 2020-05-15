@@ -278,8 +278,14 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void setup() override {
-        std::tie(m_database, m_collection) = 
-            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        int rank, size;
+        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_size(comm(), &size);
+        for(int i=0; i < size; i++) {
+            if(i == rank)
+                std::tie(m_database, m_collection) = 
+                    m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        }
 
         if(!m_use_json) {
             m_records.reserve(m_record_info.num);

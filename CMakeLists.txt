@@ -20,6 +20,8 @@ option(ENABLE_EXAMPLES  "Build examples" OFF)
 option(ENABLE_BENCHMARK "Build benchmark" OFF)
 option(ENABLE_DAEMON    "Build default daemon" OFF)
 
+#add_definitions(-Wall -Wpedantic -fpermissive)
+
 # add our cmake module directory to the path
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
      "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
