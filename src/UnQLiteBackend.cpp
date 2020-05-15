@@ -27,12 +27,12 @@ std::unique_ptr<Backend> UnQLiteBackend::create(thallium::engine& engine, const 
     // Setup Unqlite so it can be multithreaded
     static bool unqlite_lib_is_initialized = false;
     if(not unqlite_lib_is_initialized) {
-        jx9_lib_config(JX9_LIB_CONFIG_THREAD_LEVEL_MULTI);
-        jx9_lib_config(JX9_LIB_CONFIG_USER_MUTEX,
-            ExportUnqliteArgobotsMutexMethods());
-        unqlite_lib_config(UNQLITE_LIB_CONFIG_THREAD_LEVEL_MULTI);
-        unqlite_lib_config(UNQLITE_LIB_CONFIG_USER_MUTEX, 
-            ExportUnqliteArgobotsMutexMethods());
+//        jx9_lib_config(JX9_LIB_CONFIG_THREAD_LEVEL_MULTI);
+//        jx9_lib_config(JX9_LIB_CONFIG_USER_MUTEX,
+//            ExportUnqliteArgobotsMutexMethods());
+//        unqlite_lib_config(UNQLITE_LIB_CONFIG_THREAD_LEVEL_MULTI);
+//        unqlite_lib_config(UNQLITE_LIB_CONFIG_USER_MUTEX, 
+//            ExportUnqliteArgobotsMutexMethods());
         unqlite_lib_is_initialized = true;
     }
     // Open the Unqlite database
