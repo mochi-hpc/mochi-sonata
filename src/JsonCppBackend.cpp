@@ -27,7 +27,6 @@ std::unique_ptr<Backend> JsonCppBackend::create(
     }
     */
     spdlog::trace("[jsoncpp] Creating JsonCpp database");
-    int ret;
     auto backend = std::make_unique<JsonCppBackend>();
     spdlog::trace("[jsoncpp] Successfully created database");
     return backend;
@@ -45,7 +44,6 @@ std::unique_ptr<Backend> JsonCppBackend::attach(
     }
     */
     spdlog::trace("[jsoncpp] Opening JsonCpp database");
-    int ret;
     auto backend = std::make_unique<JsonCppBackend>();
     spdlog::trace("[jsoncpp] Successfully opened database");
     return backend;
