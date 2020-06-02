@@ -18,7 +18,10 @@ namespace sonata {
 Admin::Admin() = default;
 
 Admin::Admin(tl::engine& engine)
-: self(std::make_shared<AdminImpl>(engine)) {}
+: self(std::make_shared<AdminImpl>(&engine)) {}
+
+Admin::Admin(margo_instance_id mid)
+: self(std::make_shared<AdminImpl>(mid)) {}
 
 Admin::Admin(Admin&& other) = default;
 
@@ -41,7 +44,7 @@ void Admin::createDatabase(const std::string& address,
                            const std::string& db_type,
                            const std::string& db_config,
                            const std::string& token) const {
-    auto endpoint  = self->m_engine.lookup(address);
+    auto endpoint  = self->m_engine->lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_create_database.on(ph)(token, db_name, db_type, db_config);
     if(not result.success()) {
@@ -64,7 +67,7 @@ void Admin::attachDatabase(const std::string& address,
                            const std::string& db_type,
                            const std::string& db_config,
                            const std::string& token) const {
-    auto endpoint  = self->m_engine.lookup(address);
+    auto endpoint  = self->m_engine->lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_attach_database.on(ph)(token, db_name, db_type, db_config);
     if(not result.success()) {
@@ -85,7 +88,7 @@ void Admin::detachDatabase(const std::string& address,
                            uint16_t provider_id,
                            const std::string& db_name,
                            const std::string& token) const {
-    auto endpoint  = self->m_engine.lookup(address);
+    auto endpoint  = self->m_engine->lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_detach_database.on(ph)(token, db_name);
     if(not result.success()) {
@@ -97,7 +100,7 @@ void Admin::destroyDatabase(const std::string& address,
                             uint16_t provider_id,
                             const std::string& db_name,
                             const std::string& token) const {
-    auto endpoint  = self->m_engine.lookup(address);
+    auto endpoint  = self->m_engine->lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result = self->m_destroy_database.on(ph)(token, db_name);
     if(not result.success()) {
@@ -106,8 +109,8 @@ void Admin::destroyDatabase(const std::string& address,
 }
 
 void Admin::shutdownServer(const std::string& address) const {
-    auto ep = self->m_engine.lookup(address);
-    self->m_engine.shutdown_remote_engine(ep);
+    auto ep = self->m_engine->lookup(address);
+    self->m_engine->shutdown_remote_engine(ep);
 }
 
 }

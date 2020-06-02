@@ -31,6 +31,13 @@ class Client {
     Client();
 
     /**
+     * @brief Constructor using a margo instance id.
+     *
+     * @param mid Margo instance id.
+     */
+    Client(margo_instance_id mid);
+
+    /**
      * @brief Constructor.
      *
      * @param engine Thallium engine.

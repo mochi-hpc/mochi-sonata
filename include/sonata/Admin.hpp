@@ -35,6 +35,13 @@ class Admin {
     Admin();
 
     /**
+     * @brief Constructor using a margo instance id.
+     *
+     * @param mid Margo instance id.
+     */
+    Admin(margo_instance_id mid);
+
+    /**
      * @brief Constructor.
      *
      * @param engine Thallium engine.
