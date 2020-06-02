@@ -28,7 +28,9 @@ Provider::Provider(margo_instance_id mid, uint16_t provider_id, const tl::pool& 
     auto engine = new tl::engine(mid);
     self = std::make_shared<ProviderImpl>(*engine, provider_id, p);
     engine->push_finalize_callback(this, [p=this]() { p->self.reset(); });
-    margo_push_finalize_callback(mid, delete_engine, static_cast<void*>(engine));
+// TODO this should be uncommented when thallium's finalization mechanism is fixed.
+// For now we are leaking memory.
+//    margo_push_finalize_callback(mid, delete_engine, static_cast<void*>(engine));
 }
 
 Provider::Provider(Provider&& other) {
