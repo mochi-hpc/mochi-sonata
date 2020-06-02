@@ -11,11 +11,24 @@
 
 namespace tl = thallium;
 
+namespace {
+    void delete_engine(void* uargs) {
+        delete static_cast<tl::engine*>(uargs);
+    }
+}
+
 namespace sonata {
 
 Provider::Provider(tl::engine& engine, uint16_t provider_id, const tl::pool& p)
 : self(std::make_shared<ProviderImpl>(engine, provider_id, p)) {
     engine.push_finalize_callback(this, [p=this]() { p->self.reset(); });
+}
+
+Provider::Provider(margo_instance_id mid, uint16_t provider_id, const tl::pool& p) {
+    auto engine = new tl::engine(mid);
+    self = std::make_shared<ProviderImpl>(*engine, provider_id, p);
+    engine->push_finalize_callback(this, [p=this]() { p->self.reset(); });
+    margo_push_finalize_callback(mid, delete_engine, static_cast<void*>(engine));
 }
 
 Provider::Provider(Provider&& other) {
