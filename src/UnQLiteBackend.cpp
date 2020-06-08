@@ -12,7 +12,7 @@ using namespace std::string_literals;
 
 SONATA_REGISTER_BACKEND(unqlite, UnQLiteBackend);
 
-std::unique_ptr<Backend> UnQLiteBackend::create(thallium::engine& engine, const Json::Value& config) {
+std::unique_ptr<Backend> UnQLiteBackend::create(const thallium::engine& engine, const Json::Value& config) {
     bool temporary = config.get("temporary", false).asBool();
     bool inmemory  = config.get("in-memory", false).asBool();
     if((not config.isMember("path")) && not inmemory)
@@ -61,7 +61,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(thallium::engine& engine, const 
     return backend;
 }
 
-std::unique_ptr<Backend> UnQLiteBackend::attach(thallium::engine& engine, const Json::Value& config) {
+std::unique_ptr<Backend> UnQLiteBackend::attach(const thallium::engine& engine, const Json::Value& config) {
     if(not config.isMember("path"))
         throw Exception("UnQLiteBackend needs to be initialized with a path");
     std::string db_path = config["path"].asString();

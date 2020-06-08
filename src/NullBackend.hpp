@@ -34,10 +34,10 @@ class NullBackend : public Backend {
     NullBackend& operator=(const NullBackend&) = delete;
 
     static std::unique_ptr<Backend> create(
-            thallium::engine& engine, const Json::Value& config);
+            const thallium::engine& engine, const Json::Value& config);
     
     static std::unique_ptr<Backend> attach(
-            thallium::engine& engine, const Json::Value& config);
+            const thallium::engine& engine, const Json::Value& config);
 
     virtual ~NullBackend() {}
 

@@ -20,8 +20,8 @@ namespace sonata {
 
 Client::Client() = default;
 
-Client::Client(tl::engine& engine)
-: self(std::make_shared<ClientImpl>(&engine)) {}
+Client::Client(const tl::engine& engine)
+: self(std::make_shared<ClientImpl>(engine)) {}
 
 Client::Client(margo_instance_id mid)
 : self(std::make_shared<ClientImpl>(mid)) {}
@@ -41,11 +41,7 @@ Client& Client::operator=(const Client& other) = default;
 Client::~Client() = default;
 
 const tl::engine& Client::engine() const {
-    return *(self->m_engine);
-}
-
-tl::engine& Client::engine() {
-    return *(self->m_engine);
+    return self->m_engine;
 }
 
 Client::operator bool() const {
@@ -56,7 +52,7 @@ Database Client::open(const std::string& address,
                       uint16_t provider_id,
                       const std::string& db_name,
                       bool check) const {
-    auto endpoint  = self->m_engine->lookup(address);
+    auto endpoint  = self->m_engine.lookup(address);
     auto ph        = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result;
     result.success() = true;

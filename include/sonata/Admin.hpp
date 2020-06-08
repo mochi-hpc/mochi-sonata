@@ -46,7 +46,7 @@ class Admin {
      *
      * @param engine Thallium engine.
      */
-    Admin(tl::engine& engine);
+    Admin(const tl::engine& engine);
     
     /**
      * @brief Copy constructor.

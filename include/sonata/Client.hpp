@@ -42,7 +42,7 @@ class Client {
      *
      * @param engine Thallium engine.
      */
-    Client(thallium::engine& engine);
+    Client(const thallium::engine& engine);
     
     /**
      * @brief Copy constructor.
@@ -73,11 +73,6 @@ class Client {
      * @brief Returns the thallium engine used by the client.
      */
     const thallium::engine& engine() const;
-
-    /**
-     * @brief Returns the thallium engine used by the client.
-     */
-    thallium::engine& engine();
 
     /**
      * @brief Opens a remote database and returns a

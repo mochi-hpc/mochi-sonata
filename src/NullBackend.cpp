@@ -12,14 +12,14 @@ using namespace std::string_literals;
 
 SONATA_REGISTER_BACKEND(null, NullBackend);
 
-std::unique_ptr<Backend> NullBackend::create(thallium::engine& engine, const Json::Value& config) {
+std::unique_ptr<Backend> NullBackend::create(const thallium::engine& engine, const Json::Value& config) {
     spdlog::trace("[null] Creating Null database");
     auto backend = std::make_unique<NullBackend>();
     spdlog::trace("[null] Successfully created database");
     return backend;
 }
 
-std::unique_ptr<Backend> NullBackend::attach(thallium::engine& engine, const Json::Value& config) {
+std::unique_ptr<Backend> NullBackend::attach(const thallium::engine& engine, const Json::Value& config) {
     spdlog::trace("[null] Opening Null database");
     auto backend = std::make_unique<NullBackend>();
     spdlog::trace("[null] Successfully opened database");
