@@ -229,7 +229,7 @@ class NullBackend : public Backend {
 
     virtual RequestResult<size_t> size(
             const std::string& coll_name) override {
-        RequestResult<uint64_t> result;
+        RequestResult<size_t> result;
         result.value() = 0;
         result.success() = true;
         return result;

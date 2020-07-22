@@ -190,7 +190,7 @@ class UnQLiteValue {
 
     UnQLiteValue(const Null&, unqlite_context* ctx)
     : m_ctx(ctx)
-    , m_value(unqlite_context_new_scalar(m_ctx)) {
+    , m_value(unqlite_context_new_scalar(ctx)) {
         unqlite_value_null(m_value);
     }
 

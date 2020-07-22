@@ -708,7 +708,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         spdlog::trace("[provider:{}] Received size request", id());
         spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
         spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-        RequestResult<uint64_t> result;
+        RequestResult<size_t> result;
         FIND_DATABASE(db);
         result = db->size(coll_name);
         req.respond(result);
