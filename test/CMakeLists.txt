@@ -9,7 +9,7 @@ foreach(file ${JX9_TEST_FILES})
 endforeach()
 
 add_library(sonata-test Main.cpp)
-target_link_libraries(sonata-test cppunit sonata-server sonata-admin sonata-client)
+target_link_libraries(sonata-test ${CPPUNIT_LIBRARIES} sonata-server sonata-admin sonata-client)
 
 add_executable(AdminTest AdminTest.cpp)
 target_link_libraries(AdminTest sonata-test)

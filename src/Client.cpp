@@ -52,8 +52,21 @@ Database Client::open(const std::string& address,
                       uint16_t provider_id,
                       const std::string& db_name,
                       bool check) const {
-    auto endpoint  = self->m_engine.lookup(address);
-    auto ph        = tl::provider_handle(endpoint, provider_id);
+    tl::endpoint endpoint;
+    while(endpoint.is_null()) {
+        try {
+            endpoint  = self->m_engine.lookup(address);
+        } catch(const tl::margo_exception& ex) {
+            // TODO when thallium provides a way to get the error
+            // code from a margo_exception, change the code bellow
+            // to compare the exception code instead of searching
+            // of HG_AGAIN in the error message
+            auto s = std::string(ex.what());
+            if(s.find("HG_AGAIN") == std::string::npos)
+                throw;
+        }
+    }
+    auto ph = tl::provider_handle(endpoint, provider_id);
     RequestResult<bool> result;
     result.success() = true;
     if(check) {
