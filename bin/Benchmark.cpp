@@ -128,26 +128,28 @@ struct CollectionInfo {
     }
 
     snt::Collection createDatabaseAndCollection(
-            MPI_Comm comm,
+            MPI_Comm team_comm,
             snt::Client& client,
-            snt::Admin& admin, const std::string& address) {
+            snt::Admin& admin,
+            const std::string& address,
+            int team) {
         int rank;
-        MPI_Comm_rank(comm, &rank);
+        MPI_Comm_rank(team_comm, &rank);
         if(shared_db) {
             if(rank == 0) {
-                std::string db_config = "{ \"path\" : \""s + path + "\" }";
+                std::string db_config = "{ \"path\" : \""s + path + "-" + std::to_string(team) + "\" }";
                 admin.createDatabase(address, 0, database_name, type, db_config);
                 snt::Database db = client.open(address, 0, database_name);
                 snt::Collection coll = db.create(collection_name);
-                MPI_Barrier(comm);
+                MPI_Barrier(team_comm);
                 return coll;
             } else {
-                MPI_Barrier(comm);
+                MPI_Barrier(team_comm);
                 snt::Database db = client.open(address, 0, database_name);
                 return db.open(collection_name);
             }
         } else {
-            auto db_config = "{ \"path\" : \""s + path + "-" + std::to_string(rank) + "\" }";
+            auto db_config = "{ \"path\" : \""s + path + "-" + std::to_string(team) + "-" + std::to_string(rank) + "\" }";
             auto db_name =  database_name+"."+std::to_string(rank);
             admin.createDatabase(address, 0, db_name, type, db_config);
             snt::Database db = client.open(address, 0, db_name);
@@ -155,10 +157,10 @@ struct CollectionInfo {
         }
     }
 
-    void eraseDatabaseAndCollection(MPI_Comm comm, 
+    void eraseDatabaseAndCollection(MPI_Comm team_comm, 
             snt::Client& client, snt::Admin& admin, const std::string& address) {
         int rank;
-        MPI_Comm_rank(comm, &rank);
+        MPI_Comm_rank(team_comm, &rank);
         if(shared_db) {
             if(rank == 0)
                 admin.destroyDatabase(address, 0, database_name);
@@ -178,33 +180,41 @@ class BenchmarkRegistration;
  */
 class AbstractBenchmark {
 
-    MPI_Comm    m_comm;   // communicator gathering all clients
+    MPI_Comm    m_client_comm; // communicator gathering all clients
+    MPI_Comm    m_team_comm;   // communicator gather clients of a team
     std::string m_server_addr; // server address
     snt::Client m_client; // Sonata client
     snt::Admin  m_admin;  // Sonata admin
+    int         m_team;   // team number
 
     template<typename T>
     friend class BenchmarkRegistration;
 
     using benchmark_factory_function = std::function<
-        std::unique_ptr<AbstractBenchmark>(Json::Value&, MPI_Comm, 
-                const std::string& addr, const snt::Client&, const snt::Admin&)>;
+        std::unique_ptr<AbstractBenchmark>(Json::Value&, MPI_Comm team_comm, MPI_Comm client_comm,
+                const std::string& addr, const snt::Client&, const snt::Admin&, int team)>;
     static std::map<std::string, benchmark_factory_function> s_benchmark_factories;
 
     protected:
 
     snt::Client& client() { return m_client; }
     snt::Admin& admin() { return m_admin; }
-    MPI_Comm comm() const { return m_comm; }
+    MPI_Comm client_comm() const { return m_client_comm; }
+    MPI_Comm team_comm() const { return m_team_comm; }
     const std::string& server_addr() const { return m_server_addr; }
+    int team() const { return m_team; }
 
     public:
 
-    AbstractBenchmark(MPI_Comm c, const std::string& addr, const snt::Client& client, const snt::Admin& admin)
-    : m_comm(c)
+    AbstractBenchmark(MPI_Comm team_comm, MPI_Comm client_comm, 
+                      const std::string& addr, const snt::Client& client,
+                      const snt::Admin& admin, int team)
+    : m_team_comm(team_comm)
+    , m_client_comm(client_comm)
     , m_server_addr(addr)
     , m_client(client)
     , m_admin(admin)
+    , m_team(team)
     {}
 
     virtual ~AbstractBenchmark() = default;
@@ -234,9 +244,9 @@ class BenchmarkRegistration {
     public:
     BenchmarkRegistration(const std::string& type) {
         AbstractBenchmark::s_benchmark_factories[type] = 
-            [](Json::Value& config, MPI_Comm comm,
-                    const std::string& addr, const snt::Client& client, const snt::Admin& admin) {
-                return std::make_unique<T>(config, comm, addr, client, admin);
+            [](Json::Value& config, MPI_Comm team_comm, MPI_Comm client_comm,
+                    const std::string& addr, const snt::Client& client, const snt::Admin& admin, int team) {
+                return std::make_unique<T>(config, team_comm, client_comm, addr, client, admin, team);
         };
     }
 };
@@ -273,7 +283,8 @@ class StoreBenchmark : public AbstractBenchmark {
 
     virtual void setup() override {
         m_collection = 
-            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+            m_collection_info.createDatabaseAndCollection(
+                    team_comm(), client(), admin(), server_addr(), team());
 
         if(!m_use_json) {
             m_records.reserve(m_record_info.num);
@@ -305,7 +316,7 @@ class StoreBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(team_comm(), client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
     }
@@ -420,7 +431,8 @@ class IngestBenchmark : public AbstractBenchmark {
     virtual void setup() override {
         spdlog::trace("Setting up IngestBenchmark...");
         m_collection = 
-            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+            m_collection_info.createDatabaseAndCollection(
+                    team_comm(), client(), admin(), server_addr(), team());
         size_t num_objects = 0;
         for(auto& f : m_input_files) {
             std::ifstream file(f);
@@ -491,7 +503,7 @@ class IngestBenchmark : public AbstractBenchmark {
 
     virtual void teardown() override {
         spdlog::trace("Tearing down IngestBenchmark...");
-        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(team_comm(), client(), admin(), server_addr());
         m_records.clear();
         m_records_json.clear();
         spdlog::trace("Done tearing down IngestBenchmark");
@@ -522,16 +534,17 @@ class FetchBenchmark : public AbstractBenchmark {
     {
         m_use_json = config.get("use-json", false).asBool();
         if(!config["num-operations"]) {
-            throw std::runtime_error("Fetch benchmark needs a num-operations parameter");
+            throw std::runtime_error("Benchmark needs a num-operations parameter");
         }
         m_num_fetch = config["num-operations"].asUInt64();
     }
 
     virtual void setup() override {
         int rank;
-        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_rank(team_comm(), &rank);
         m_collection = 
-            m_collection_info.createDatabaseAndCollection(comm(), client(), admin(), server_addr());
+            m_collection_info.createDatabaseAndCollection(
+                    team_comm(), client(), admin(), server_addr(), team());
         if(rank == 0 || !m_collection_info.shared_db) {
             for(size_t i = 0; i < m_record_info.num; i++) {
                 std::string r;
@@ -555,7 +568,7 @@ class FetchBenchmark : public AbstractBenchmark {
     }
 
     virtual void teardown() override {
-        m_collection_info.eraseDatabaseAndCollection(comm(), client(), admin(), server_addr());
+        m_collection_info.eraseDatabaseAndCollection(team_comm(), client(), admin(), server_addr());
     }
 };
 REGISTER_BENCHMARK("fetch", FetchBenchmark);
@@ -583,9 +596,7 @@ class FetchMultiBenchmark : public FetchBenchmark {
             for(size_t j = 0; j < ids.size(); j++) { 
                 uint64_t id = rand() % m_record_info.num;
                 ids[j] = id;
-                std::cerr << id << ", ";
             }
-            std::cerr << std::endl;
             if(!m_use_json) {
                 std::vector<std::string> r;
                 m_collection.fetch_multi(ids.data(), ids.size(), &r);
@@ -616,7 +627,7 @@ class FilterBenchmark : public FetchBenchmark {
     {
         m_use_json = config.get("use-json", false).asBool();
         if(!config["filter-selectivity"]) {
-            throw std::runtime_error("Fetch benchmark needs a filter-selectivity parameter");
+            throw std::runtime_error("Filter benchmark needs a filter-selectivity parameter");
         }
         m_selectivity = config["filter-selectivity"].asDouble();
         std::stringstream ss;
@@ -656,9 +667,6 @@ class UpdateBenchmark : public FetchBenchmark {
     UpdateBenchmark(Json::Value& config, T&& ... args)
     : FetchBenchmark(config, std::forward<T>(args)...)
     {
-        if(!config["num-operations"]) {
-            throw std::runtime_error("Update benchmark needs a num-operations parameter");
-        }
         m_num_updates = config["num-operations"].asUInt64();
     }
 
@@ -809,22 +817,22 @@ class EraseBenchmark : public FetchBenchmark {
     virtual void setup() override {
         FetchBenchmark::setup();
         int rank;
-        MPI_Comm_rank(comm(), &rank);
+        MPI_Comm_rank(team_comm(), &rank);
         m_erase_order.resize(m_record_info.num);
         for(size_t i = 0; i < m_record_info.num; i++) {
             m_erase_order[i] = i;
         }
         std::random_shuffle(m_erase_order.begin(), m_erase_order.end());
         if(m_collection_info.shared_db) {
-            MPI_Bcast(m_erase_order.data(), m_record_info.num*sizeof(uint64_t), MPI_BYTE, 0, comm());
+            MPI_Bcast(m_erase_order.data(), m_record_info.num*sizeof(uint64_t), MPI_BYTE, 0, team_comm());
         }
     }
 
     virtual void execute() override {
         int rank;
         int size;
-        MPI_Comm_rank(comm(), &rank);
-        MPI_Comm_size(comm(), &size);
+        MPI_Comm_rank(team_comm(), &rank);
+        MPI_Comm_size(team_comm(), &size);
         for(size_t i = 0; i < m_erase_order.size(); i++) {
             if(m_collection_info.shared_db) {
                 if(i % size == rank) m_collection.erase(m_erase_order[i]);
@@ -856,8 +864,8 @@ class EraseMultiBenchmark : public EraseBenchmark {
     virtual void execute() override {
         int rank;
         int size;
-        MPI_Comm_rank(comm(), &rank);
-        MPI_Comm_size(comm(), &size);
+        MPI_Comm_rank(team_comm(), &rank);
+        MPI_Comm_size(team_comm(), &size);
         size_t chunk_size = m_erase_order.size()/size;
         size_t remaining = m_collection_info.shared_db ? chunk_size : m_erase_order.size();
         size_t i = m_collection_info.shared_db ? rank*chunk_size : 0;
@@ -873,8 +881,8 @@ REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
 
 
 
-static void run_server(MPI_Comm comm, Json::Value& config);
-static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id);
+static void run_server(MPI_Comm group_comm, Json::Value& config);
+static void run_client(MPI_Comm group_comm, MPI_Comm client_comm, Json::Value& config, int team, int benchmark_id);
 
 /**
  * @brief Main function.
@@ -908,23 +916,43 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    MPI_Comm comm;
-    MPI_Comm_split(MPI_COMM_WORLD, rank == 0 ? 0 : 1, rank, &comm);
+    int server_count = 1;
+    if(config.isMember("server") && config["server"].isMember("count")) {
+        server_count = config["server"]["count"].asInt();
+        if((size - server_count) % server_count != 0 && rank == 0) {
+            std::cerr << "Number of servers does not divide the number of clients" << std::endl;
+            MPI_Abort(MPI_COMM_WORLD, -1);
+        }
+    }
+
+    MPI_Comm type_comm; // servers or clients
+    MPI_Comm_split(MPI_COMM_WORLD, rank < server_count ? 0 : 1, rank, &type_comm);
+
+    MPI_Comm group_comm; // team of clients + their dedicated server
+    int team;
+    if(rank < server_count) {
+        team = rank;
+    } else {
+        int client_rank;
+        MPI_Comm_rank(type_comm, &client_rank);
+        team = client_rank % server_count;
+    }
+    MPI_Comm_split(MPI_COMM_WORLD, team, rank, &group_comm);
 
     int benchmark_id = -1;
     if(argc >= 3)
         benchmark_id = atoi(argv[2]);
-    if(rank == 0) {
-        run_server(comm, config);
+    if(rank < server_count) {
+        run_server(group_comm, config);
     } else {
-        run_client(comm, config, benchmark_id);
+        run_client(group_comm, type_comm, config, team, benchmark_id);
     }
 
     MPI_Finalize();
     return 0;
 }
 
-static void run_server(MPI_Comm comm, Json::Value& config) {
+static void run_server(MPI_Comm group_comm, Json::Value& config) {
     // initialize Thallium 
     std::string loglevel = config.get("log","info").asString();
     spdlog::set_level(spdlog::level::from_str(loglevel));
@@ -942,8 +970,11 @@ static void run_server(MPI_Comm comm, Json::Value& config) {
     std::string server_addr = engine.self();
     // send server address to client
     size_t server_addr_size = server_addr.size();
-    MPI_Bcast(&server_addr_size, sizeof(server_addr_size), MPI_BYTE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(const_cast<char*>(server_addr.data()), server_addr_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&server_addr_size, sizeof(server_addr_size), MPI_BYTE, 0, group_comm);
+    MPI_Bcast(const_cast<char*>(server_addr.data()), server_addr_size, MPI_BYTE, 0, group_comm);
+    // clients are creating their team_comm (server doesn't need it but need to participate)
+    MPI_Comm team_comm;
+    MPI_Comm_split(group_comm, 0, 0, &team_comm);
     // initialize Sonata provider
     snt::Provider provider(engine);
     // notify clients that the provider is ready
@@ -952,13 +983,13 @@ static void run_server(MPI_Comm comm, Json::Value& config) {
     engine.wait_for_finalize();
 }
 
-static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
+static void run_client(MPI_Comm group_comm, MPI_Comm client_comm, Json::Value& config, int team, int benchmark_id) {
     std::string loglevel = config.get("log","info").asString();
     spdlog::set_level(spdlog::level::from_str(loglevel));
     // get info from communicator
     int rank, num_clients;
-    MPI_Comm_rank(comm, &rank);
-    MPI_Comm_size(comm, &num_clients);
+    MPI_Comm_rank(client_comm, &rank);
+    MPI_Comm_size(client_comm, &num_clients);
     Json::StreamWriterBuilder builder;
     const std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
     // initialize Thallium
@@ -972,10 +1003,15 @@ static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
     // receive server address
     std::string server_addr_str;
     size_t addr_size;
-    MPI_Bcast(&addr_size, sizeof(size_t), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&addr_size, sizeof(size_t), MPI_BYTE, 0, group_comm);
     server_addr_str.resize(addr_size, '\0');
-    MPI_Bcast(const_cast<char*>(server_addr_str.data()), addr_size, MPI_BYTE, 0, MPI_COMM_WORLD);
-    // wait for server to have initialize the database
+    MPI_Bcast(const_cast<char*>(server_addr_str.data()), addr_size, MPI_BYTE, 0, group_comm);
+    // create team_comm
+    MPI_Comm team_comm;
+    int group_rank;
+    MPI_Comm_rank(group_comm, &group_rank);
+    MPI_Comm_split(group_comm, 1, group_rank, &team_comm);
+    // wait for servers to have initialized
     MPI_Barrier(MPI_COMM_WORLD);
     {
         // open remote database
@@ -992,14 +1028,17 @@ static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
         types.reserve(config["benchmarks"].size());
         int current_benchmark = 0;
         for(auto& bench_config : config["benchmarks"]) {
-
             if(current_benchmark != benchmark_id
             && benchmark_id >= 0) continue;
 
             std::string type = bench_config["type"].asString();
             types.push_back(type);
-            benchmarks.push_back(AbstractBenchmark::create(type, bench_config, comm, server_addr_str, client, admin));
+            benchmarks.push_back(AbstractBenchmark::create(
+                        type, bench_config, team_comm,
+                        client_comm, server_addr_str,
+                        client, admin, team));
             repetitions.push_back(bench_config["repetitions"].asUInt());
+            current_benchmark += 1;
         }
         // main execution loop
         for(unsigned i = 0; i < benchmarks.size(); i++) {
@@ -1009,16 +1048,16 @@ static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
             srand(seed + rank*1789);
             std::vector<double> local_timings(rep);
             for(unsigned j = 0; j < rep; j++) {
-                MPI_Barrier(comm);
+                MPI_Barrier(client_comm);
                 // benchmark setup
                 bench->setup();
-                MPI_Barrier(comm);
+                MPI_Barrier(client_comm);
                 // benchmark execution
                 double t_start = MPI_Wtime();
                 bench->execute();
                 double t_end = MPI_Wtime();
                 local_timings[j] = t_end - t_start;
-                MPI_Barrier(comm);
+                MPI_Barrier(client_comm);
                 // teardown
                 bench->teardown();
             }
@@ -1026,7 +1065,7 @@ static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
             std::vector<double> global_timings(rep*num_clients);
             if(num_clients != 1) {
                 MPI_Gather(local_timings.data(), local_timings.size(), MPI_DOUBLE,
-                       global_timings.data(), local_timings.size(), MPI_DOUBLE, 0, comm);
+                       global_timings.data(), local_timings.size(), MPI_DOUBLE, 0, client_comm);
             } else {
                 std::copy(local_timings.begin(), local_timings.end(), global_timings.begin());
             }
@@ -1062,9 +1101,11 @@ static void run_client(MPI_Comm comm, Json::Value& config, int benchmark_id) {
             }
         }
         // wait for all the clients to be done with their tasks
-        MPI_Barrier(comm);
+        MPI_Barrier(client_comm);
         // shutdown server and finalize margo
-        if(rank == 0) {
+        int team_rank;
+        MPI_Comm_rank(team_comm, &team_rank);
+        if(team_rank == 0) {
             auto server_addr = engine.lookup(server_addr_str);
             engine.shutdown_remote_engine(server_addr);
         }
