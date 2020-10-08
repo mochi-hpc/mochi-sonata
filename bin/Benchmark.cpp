@@ -111,6 +111,7 @@ struct CollectionInfo {
     std::string path;
     std::string database_name;
     std::string collection_name;
+    bool keep_db = false;
     bool shared_db = true;
 
     CollectionInfo(const Json::Value& config) {
@@ -119,6 +120,7 @@ struct CollectionInfo {
         database_name = config.get("database-name", "").asString();
         collection_name = config.get("collection-name", "").asString();
         shared_db = config.get("shared-database", true).asBool();
+        keep_db = config.get("keep-database", false).asBool();
         if(database_name.size() == 0) {
             throw std::runtime_error("invalid database name");
         }
@@ -153,7 +155,7 @@ struct CollectionInfo {
             auto db_name =  database_name+"."+std::to_string(rank);
             admin.createDatabase(address, 0, db_name, type, db_config);
             snt::Database db = client.open(address, 0, db_name);
-            return  db.create(collection_name);
+            return db.create(collection_name);
         }
     }
 
@@ -161,6 +163,7 @@ struct CollectionInfo {
             snt::Client& client, snt::Admin& admin, const std::string& address) {
         int rank;
         MPI_Comm_rank(team_comm, &rank);
+        if(keep_db) return;
         if(shared_db) {
             if(rank == 0)
                 admin.destroyDatabase(address, 0, database_name);
