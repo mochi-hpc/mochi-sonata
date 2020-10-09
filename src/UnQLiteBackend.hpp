@@ -51,7 +51,7 @@ class UnQLiteBackend : public Backend {
     static std::unique_ptr<Backend> attach(const thallium::engine& engine, const Json::Value& config);
 
     virtual ~UnQLiteBackend() {
-        if(m_db) unqlite_close(m_db);
+        //if(m_db) unqlite_close(m_db); // XXX commented because of bug
     }
 
     virtual RequestResult<bool> createCollection(
