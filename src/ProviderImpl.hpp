@@ -120,6 +120,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
     , m_coll_erase_multi(      define("sonata_erase_multi",       &ProviderImpl::eraseMulti,       pool))
     {
         spdlog::trace("[provider:{0}] Registered provider with id {0}", id());
+        if(!m_pool) m_pool = engine.get_handler_pool();
     }
 
     ~ProviderImpl() {
@@ -213,7 +214,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         
         std::unique_ptr<Backend> backend;
         try {
-            backend = BackendFactory::createBackend(db_type, get_engine(), json_config);
+            backend = BackendFactory::createBackend(db_type, get_engine(), m_pool, json_config);
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();
@@ -296,7 +297,7 @@ class ProviderImpl : public tl::provider<ProviderImpl> {
         
         std::unique_ptr<Backend> backend;
         try {
-            backend = BackendFactory::attachBackend(db_type, get_engine(), json_config);
+            backend = BackendFactory::attachBackend(db_type, get_engine(), m_pool, json_config);
         } catch(const std::exception& ex) {
             result.success() = false;
             result.error() = ex.what();

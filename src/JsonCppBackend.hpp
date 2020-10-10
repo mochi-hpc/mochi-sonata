@@ -36,10 +36,10 @@ class JsonCppBackend : public Backend {
     JsonCppBackend& operator=(const JsonCppBackend&) = delete;
 
     static std::unique_ptr<Backend> create(
-            const thallium::engine& engine, const Json::Value& config);
+            const tl::engine& engine, const tl::pool& pool, const Json::Value& config);
     
     static std::unique_ptr<Backend> attach(
-            const thallium::engine& engine, const Json::Value& config);
+            const tl::engine& engine, const tl::pool& pool, const Json::Value& config);
 
     virtual ~JsonCppBackend() {}
 

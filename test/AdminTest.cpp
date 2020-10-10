@@ -26,18 +26,27 @@ class AdminTest : public CppUnit::TestFixture
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
 
+        std::string cfg;
+        if(db_type == "lazy") {
+            cfg += "{ \"backend\" : \"unqlite\", \"config\" : ";
+            cfg += db_config;
+            cfg += "}";
+        } else {
+            cfg = db_config;
+        }
+
         // Create a valid Database
         CPPUNIT_ASSERT_NO_THROW_MESSAGE("admin.createDatabase should return a valid Database",
-                admin.createDatabase(addr, 0, "db1", db_type, db_config));
+                admin.createDatabase(addr, 0, "db1", db_type, cfg));
 
         // Create a Database with a name already taken
         CPPUNIT_ASSERT_THROW_MESSAGE("admin.createDatabase should throw an exception (wrong name)",
-                admin.createDatabase(addr, 0, "db1", db_type, db_config),
+                admin.createDatabase(addr, 0, "db1", db_type, cfg),
                 sonata::Exception);
 
         // Create a Database with a wrong backend type
         CPPUNIT_ASSERT_THROW_MESSAGE("admin.createDatabase should throw an exception (wrong backend)",
-                admin.createDatabase(addr, 0, "db_blabla", "blabla", db_config),
+                admin.createDatabase(addr, 0, "db_blabla", "blabla", cfg),
                 sonata::Exception);
 
         // Create a Database with a wrong configuration

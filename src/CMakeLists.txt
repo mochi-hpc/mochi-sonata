@@ -8,6 +8,7 @@ set(sonata-client-src
 set(sonata-server-src
 	Provider.cpp
 	Backend.cpp
+	LazyBackend.cpp
 	JsonCppBackend.cpp
 	NullBackend.cpp
 	UnQLiteBackend.cpp
@@ -33,7 +34,7 @@ set (sonata-pkg "share/cmake/sonata")
 # library version set here (e.g. for shared libs).
 #
 set (SONATA_VERSION_MAJOR 0)
-set (SONATA_VERSION_MINOR 1)
+set (SONATA_VERSION_MINOR 6)
 set (SONATA_VERSION_PATCH 0)
 set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")

@@ -33,7 +33,15 @@ class CollectionTest : public CppUnit::TestFixture,
     void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
-        admin.createDatabase(addr, 0, "mydb", db_type, db_config);
+        std::string cfg;
+        if(db_type == "lazy") {
+            cfg += "{ \"backend\" : \"unqlite\", \"config\" : ";
+            cfg += db_config;
+            cfg += "}";
+        } else {
+            cfg = db_config;
+        }
+        admin.createDatabase(addr, 0, "mydb", db_type, cfg);
 
         sonata::Client client(*engine);
         auto db = client.open(addr, 0, "mydb");

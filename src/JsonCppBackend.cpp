@@ -13,7 +13,7 @@ using namespace std::string_literals;
 SONATA_REGISTER_BACKEND(jsoncpp, JsonCppBackend);
 
 std::unique_ptr<Backend> JsonCppBackend::create(
-        const thallium::engine& engine, const Json::Value& config) {
+        const thallium::engine& engine, const tl::pool& pool, const Json::Value& config) {
     /*
     bool inmemory  = config.get("in-memory", false).asBool();
     if((not config.isMember("path")) && not inmemory)
@@ -34,7 +34,7 @@ std::unique_ptr<Backend> JsonCppBackend::create(
 }
 
 std::unique_ptr<Backend> JsonCppBackend::attach(
-        const thallium::engine& engine, const Json::Value& config) {
+        const thallium::engine& engine, const tl::pool& pool, const Json::Value& config) {
     /*
     if(not config.isMember("path"))
         throw Exception("JsonCppBackend needs to be initialized with a path");

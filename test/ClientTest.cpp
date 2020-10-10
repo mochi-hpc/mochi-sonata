@@ -23,7 +23,15 @@ class ClientTest : public CppUnit::TestFixture
     void setUp() {
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
-        admin.createDatabase(addr, 0, "mydb", db_type, db_config);
+        std::strinf cfg;
+        if(db_type == "lazy") {
+            cfg += "{ \"backend\" : \"unqlite\", \"config\" : ";
+            cfg += db_config;
+            cfg += "}";
+        } else {
+            cfg = db_config;
+        }
+        admin.createDatabase(addr, 0, "mydb", db_type, cfg);
     }
 
     void tearDown() {
