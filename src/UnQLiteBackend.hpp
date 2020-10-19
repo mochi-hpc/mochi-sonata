@@ -51,6 +51,7 @@ class UnQLiteBackend : public Backend {
     static std::unique_ptr<Backend> attach(const tl::engine& engine, const tl::pool& pool, const Json::Value& config);
 
     virtual ~UnQLiteBackend() {
+        if(m_db) unqlite_commit(m_db);
         //if(m_db) unqlite_close(m_db); // XXX commented because of bug
     }
 
