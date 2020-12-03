@@ -19,6 +19,9 @@ set(sonata-server-src
 set(sonata-admin-src
 	Admin.cpp
 )
+set(sonata-bedrock-src
+	BedrockModule.cpp
+)
 
 if(${ENABLE_UNQLITE_THREADS})
   add_definitions("-DUNQLITE_ENABLE_THREADS")
@@ -51,12 +54,18 @@ add_library(sonata-server ${sonata-server-src})
 target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
+add_library(sonata-bedrock ${sonata-bedrock-src})
+target_link_libraries (sonata-bedrock sonata-server sonata-client sonata-admin)
+target_include_directories (sonata-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
+
 # local include's BEFORE, in case old incompatable .h files in prefix/include
 target_include_directories (sonata-client BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
 target_include_directories (sonata-admin BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
 target_include_directories (sonata-server BEFORE PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
+target_include_directories (sonata-bedrock BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
 
 # for shared libs, establish the lib version
@@ -69,6 +78,10 @@ set_target_properties (sonata-admin
     SOVERSION ${SONATA_VERSION_MAJOR})
 
 set_target_properties (sonata-server
+    PROPERTIES VERSION ${SONATA_VERSION}
+    SOVERSION ${SONATA_VERSION_MAJOR})
+
+set_target_properties (sonata-bedrock
     PROPERTIES VERSION ${SONATA_VERSION}
     SOVERSION ${SONATA_VERSION_MAJOR})
 
@@ -95,7 +108,7 @@ configure_file ("sonata-admin.pc.in" "sonata-admin.pc" @ONLY)
 #
 # "make install" rules
 #
-install (TARGETS sonata-client sonata-server sonata-admin EXPORT sonata-targets
+install (TARGETS sonata-client sonata-server sonata-admin sonata-bedrock EXPORT sonata-targets
          ARCHIVE DESTINATION lib
          LIBRARY DESTINATION lib)
 install (EXPORT sonata-targets

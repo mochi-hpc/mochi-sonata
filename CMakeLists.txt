@@ -19,6 +19,7 @@ option(ENABLE_TESTS     "Build tests. May require CppUnit_ROOT" OFF)
 option(ENABLE_EXAMPLES  "Build examples" OFF)
 option(ENABLE_BENCHMARK "Build benchmark" OFF)
 option(ENABLE_DAEMON    "Build default daemon" OFF)
+option(ENABLE_BEDROCK   "Build the Bedrock module" ON)
 
 # add our cmake module directory to the path
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
@@ -36,7 +37,7 @@ if (NOT CMAKE_BUILD_TYPE)
                   "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif ()
 set (CMAKE_PREFIX_PATH "" CACHE STRING "External dependencies path")
-set (BUILD_SHARED_LIBS "OFF" CACHE BOOL "Build a shared library")
+set (BUILD_SHARED_LIBS "ON" CACHE BOOL "Build a shared library")
 
 # packages we depend on
 include (xpkg-import)

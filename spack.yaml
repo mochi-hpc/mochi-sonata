@@ -7,6 +7,7 @@ spack:
   - spdlog
   - mpi
   - nlohmann-json
-  - mochi-margo
-  - mochi-thallium
+  - mochi-margo@0.9
+  - mochi-thallium@master
+  - mochi-bedrock@master
   concretization: together

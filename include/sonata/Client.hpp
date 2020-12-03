@@ -1,11 +1,12 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_CLIENT_HPP
 #define __SONATA_CLIENT_HPP
 
+#include <sonata/ProviderHandle.hpp>
 #include <sonata/Database.hpp>
 #include <thallium.hpp>
 #include <memory>
@@ -43,7 +44,7 @@ class Client {
      * @param engine Thallium engine.
      */
     Client(const thallium::engine& engine);
-    
+
     /**
      * @brief Copy constructor.
      */
@@ -86,10 +87,38 @@ class Client {
      *
      * @return a Database instance.
      */
-    Database open(const std::string& address, 
+    Database open(const std::string& address,
                   uint16_t provider_id,
                   const std::string& db_name,
                   bool check = true) const;
+
+    /**
+     * @brief Same as above but use a provider handle instead of
+     * a strinf address and provider id.
+     *
+     * @param ph Provider handle.
+     * @param db_name Database name.
+     * @param check Checks if the Database exists by issuing an RPC.
+     *
+     * @return a Database instance.
+     */
+    Database open(const ProviderHandle& ph,
+                  const std::string& db_name,
+                  bool check = true) const;
+
+    /**
+     * @brief Create a provider handle.
+     *
+     * @param address Address of the provider.
+     * @param provider_id Provider id.
+     *
+     * @return A provider handle.
+     */
+    ProviderHandle createProviderHandle(const std::string& address,
+                                        uint16_t provider_id) const;
+
+    ProviderHandle createProviderHandle(hg_addr_t address,
+                                        uint16_t provider_id) const;
 
     /**
      * @brief Checks that the Client instance is valid.

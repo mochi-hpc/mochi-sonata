@@ -1,6 +1,6 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_DATABASE_IMPL_H
@@ -22,10 +22,10 @@ class DatabaseImpl {
     DatabaseImpl() = default;
 
     DatabaseImpl(const std::shared_ptr<ClientImpl>& client,
-                 tl::provider_handle&& ph, const std::string& name)
+                 const tl::provider_handle& ph, const std::string& name)
     : m_name(name)
     , m_client(client)
-    , m_ph(std::move(ph)) {
+    , m_ph(ph) {
         Json::CharReaderBuilder builder;
         m_json_reader = builder.newCharReader();
     }
