@@ -27,9 +27,11 @@ public:
    *
    * @param engine Thallium engine to use to receive RPCs.
    * @param provider_id Provider id.
+   * @param config JSON-formatted configuration.
    * @param pool Argobots pool to use to handle RPCs.
    */
   Provider(tl::engine &engine, uint16_t provider_id = 0,
+           const std::string &config = std::string(),
            const tl::pool &pool = tl::pool());
 
   /**
@@ -37,9 +39,11 @@ public:
    *
    * @param mid Margo instance id to use to receive RPCs.
    * @param provider_id Provider id.
+   * @param config JSON-formatted configuration.
    * @param pool Argobots pool to use to handle RPCs.
    */
   Provider(margo_instance_id mid, uint16_t provider_id = 0,
+           const std::string &config = std::string(),
            const tl::pool &pool = tl::pool());
 
   /**
@@ -66,6 +70,13 @@ public:
    * @brief Destructor.
    */
   ~Provider();
+
+  /**
+   * @brief Get the internal configuration as a JSON string.
+   *
+   * @return The internal configuration.
+   */
+  std::string getConfig() const;
 
   /**
    * @brief Sets a security string that should be provided

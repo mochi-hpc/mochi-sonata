@@ -17,13 +17,14 @@ void delete_engine(void *uargs) { delete static_cast<tl::engine *>(uargs); }
 
 namespace sonata {
 
-Provider::Provider(tl::engine &engine, uint16_t provider_id, const tl::pool &p)
+Provider::Provider(tl::engine &engine, uint16_t provider_id,
+                   const std::string &config, const tl::pool &p)
     : self(std::make_shared<ProviderImpl>(engine, provider_id, p)) {
   engine.push_finalize_callback(this, [p = this]() { p->self.reset(); });
 }
 
 Provider::Provider(margo_instance_id mid, uint16_t provider_id,
-                   const tl::pool &p) {
+                   const std::string &config, const tl::pool &p) {
   auto engine = new tl::engine(mid);
   margo_push_finalize_callback(mid, delete_engine, static_cast<void *>(engine));
   self = std::make_shared<ProviderImpl>(*engine, provider_id, p);
@@ -44,6 +45,11 @@ Provider::~Provider() {
 }
 
 Provider::operator bool() const { return static_cast<bool>(self); }
+
+std::string Provider::getConfig() const {
+  // TODO
+  return std::string();
+}
 
 void Provider::setSecurityToken(const std::string &token) {
   if (self)

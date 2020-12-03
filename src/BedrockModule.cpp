@@ -16,9 +16,8 @@ public:
   SonataFactory() {}
 
   void *registerProvider(const bedrock::FactoryArgs &args) override {
-    auto provider =
-        new sonata::Provider(args.mid, args.provider_id, tl::pool(args.pool));
-    // TODO add config support
+    auto provider = new sonata::Provider(args.mid, args.provider_id,
+                                         args.config, tl::pool(args.pool));
     return static_cast<void *>(provider);
   }
 
@@ -27,10 +26,9 @@ public:
     delete provider;
   }
 
-  std::string getProviderConfig(void *provider) override {
-    (void)provider;
-    // TODO
-    return "{}";
+  std::string getProviderConfig(void *p) override {
+    auto provider = static_cast<sonata::Provider *>(p);
+    return provider->getConfig();
   }
 
   void *initClient(margo_instance_id mid) override {
