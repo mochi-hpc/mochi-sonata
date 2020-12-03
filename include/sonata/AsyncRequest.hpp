@@ -1,6 +1,6 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_ASYNC_REQUEST_HPP
@@ -20,63 +20,60 @@ class Collection;
  */
 class AsyncRequest {
 
-    friend Collection;
+  friend Collection;
 
-    public:
+public:
+  /**
+   * @brief Default constructor. Will create a non-valid AsyncRequest.
+   */
+  AsyncRequest();
 
-    /**
-     * @brief Default constructor. Will create a non-valid AsyncRequest.
-     */
-    AsyncRequest();
+  /**
+   * @brief Copy constructor.
+   */
+  AsyncRequest(const AsyncRequest &other);
 
-    /**
-     * @brief Copy constructor.
-     */
-    AsyncRequest(const AsyncRequest& other);
+  /**
+   * @brief Move constructor.
+   */
+  AsyncRequest(AsyncRequest &&other);
 
-    /**
-     * @brief Move constructor.
-     */
-    AsyncRequest(AsyncRequest&& other);
+  /**
+   * @brief Copy-assignment operator.
+   */
+  AsyncRequest &operator=(const AsyncRequest &other);
 
-    /**
-     * @brief Copy-assignment operator.
-     */
-    AsyncRequest& operator=(const AsyncRequest& other);
+  /**
+   * @brief Move-assignment operator.
+   */
+  AsyncRequest &operator=(AsyncRequest &&other);
 
-    /**
-     * @brief Move-assignment operator.
-     */
-    AsyncRequest& operator=(AsyncRequest&& other);
+  /**
+   * @brief Destructor.
+   */
+  ~AsyncRequest();
 
-    /**
-     * @brief Destructor.
-     */
-    ~AsyncRequest();
+  /**
+   * @brief Wait for the request to complete.
+   */
+  void wait() const;
 
-    /**
-     * @brief Wait for the request to complete.
-     */
-    void wait() const;
+  /**
+   * @brief Test if the request has completed, without blocking.
+   */
+  bool completed() const;
 
-    /**
-     * @brief Test if the request has completed, without blocking.
-     */
-    bool completed() const;
+  /**
+   * @brief Checks if the Collection object is valid.
+   */
+  operator bool() const;
 
-    /**
-     * @brief Checks if the Collection object is valid.
-     */
-    operator bool() const;
+private:
+  std::shared_ptr<AsyncRequestImpl> self;
 
-    private:
-
-    std::shared_ptr<AsyncRequestImpl> self;
-
-    AsyncRequest(const std::shared_ptr<AsyncRequestImpl>& impl);
-
+  AsyncRequest(const std::shared_ptr<AsyncRequestImpl> &impl);
 };
 
-}
+} // namespace sonata
 
 #endif

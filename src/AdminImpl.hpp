@@ -1,6 +1,6 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_ADMIN_IMPL_H
@@ -14,29 +14,25 @@ namespace tl = thallium;
 
 class AdminImpl {
 
-    public:
+public:
+  tl::engine m_engine;
+  tl::remote_procedure m_create_database;
+  tl::remote_procedure m_attach_database;
+  tl::remote_procedure m_detach_database;
+  tl::remote_procedure m_destroy_database;
 
-    tl::engine           m_engine;
-    tl::remote_procedure m_create_database;
-    tl::remote_procedure m_attach_database;
-    tl::remote_procedure m_detach_database;
-    tl::remote_procedure m_destroy_database;
+  AdminImpl(const tl::engine &engine)
+      : m_engine(engine),
+        m_create_database(m_engine.define("sonata_create_database")),
+        m_attach_database(m_engine.define("sonata_attach_database")),
+        m_detach_database(m_engine.define("sonata_detach_database")),
+        m_destroy_database(m_engine.define("sonata_destroy_database")) {}
 
-    AdminImpl(const tl::engine& engine)
-    : m_engine(engine)
-    , m_create_database(m_engine.define("sonata_create_database"))
-    , m_attach_database(m_engine.define("sonata_attach_database"))
-    , m_detach_database(m_engine.define("sonata_detach_database"))
-    , m_destroy_database(m_engine.define("sonata_destroy_database"))
-    {}
+  AdminImpl(margo_instance_id mid) : AdminImpl(tl::engine(mid)) {}
 
-    AdminImpl(margo_instance_id mid)
-    : AdminImpl(tl::engine(mid)) {
-    }
-
-    ~AdminImpl() {}
+  ~AdminImpl() {}
 };
 
-}
+} // namespace sonata
 
 #endif

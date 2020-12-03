@@ -1,6 +1,6 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_ASYNC_REQUEST_IMPL_H
@@ -15,15 +15,14 @@ namespace tl = thallium;
 
 struct AsyncRequestImpl {
 
-    AsyncRequestImpl(tl::async_response&& async_response)
-    : m_async_response(std::move(async_response)) {}
+  AsyncRequestImpl(tl::async_response &&async_response)
+      : m_async_response(std::move(async_response)) {}
 
-    tl::async_response                     m_async_response;
-    bool                                   m_waited = false;
-    std::function<void(AsyncRequestImpl&)> m_wait_callback;
-
+  tl::async_response m_async_response;
+  bool m_waited = false;
+  std::function<void(AsyncRequestImpl &)> m_wait_callback;
 };
 
-}
+} // namespace sonata
 
 #endif
