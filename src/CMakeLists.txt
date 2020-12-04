@@ -37,7 +37,7 @@ set (sonata-pkg "share/cmake/sonata")
 # library version set here (e.g. for shared libs).
 #
 set (SONATA_VERSION_MAJOR 0)
-set (SONATA_VERSION_MINOR 7)
+set (SONATA_VERSION_MINOR 6)
 set (SONATA_VERSION_PATCH 0)
 set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")
@@ -54,9 +54,11 @@ add_library(sonata-server ${sonata-server-src})
 target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
+if(${ENABLE_BEDROCK})
 add_library(sonata-bedrock ${sonata-bedrock-src})
 target_link_libraries (sonata-bedrock sonata-server sonata-client sonata-admin)
 target_include_directories (sonata-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
+endif()
 
 # local include's BEFORE, in case old incompatable .h files in prefix/include
 target_include_directories (sonata-client BEFORE PUBLIC
@@ -65,8 +67,10 @@ target_include_directories (sonata-admin BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
 target_include_directories (sonata-server BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
+if(${ENABLE_BEDROCK})
 target_include_directories (sonata-bedrock BEFORE PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>)
+endif()
 
 # for shared libs, establish the lib version
 set_target_properties (sonata-client
@@ -81,9 +85,11 @@ set_target_properties (sonata-server
     PROPERTIES VERSION ${SONATA_VERSION}
     SOVERSION ${SONATA_VERSION_MAJOR})
 
+if(${ENABLE_BEDROCK})
 set_target_properties (sonata-bedrock
     PROPERTIES VERSION ${SONATA_VERSION}
     SOVERSION ${SONATA_VERSION_MAJOR})
+endif()
 
 #
 # installation stuff (packaging and install commands)
@@ -108,9 +114,14 @@ configure_file ("sonata-admin.pc.in" "sonata-admin.pc" @ONLY)
 #
 # "make install" rules
 #
-install (TARGETS sonata-client sonata-server sonata-admin sonata-bedrock EXPORT sonata-targets
+install (TARGETS sonata-client sonata-server sonata-admin EXPORT sonata-targets
          ARCHIVE DESTINATION lib
          LIBRARY DESTINATION lib)
+if(${ENABLE_BEDROCK})
+install (TARGETS sonata-bedrock
+         ARCHIVE DESTINATION lib
+         LIBRARY DESTINATION lib)
+endif()
 install (EXPORT sonata-targets
          DESTINATION ${sonata-pkg}
          FILE "sonata-targets.cmake")
