@@ -8,6 +8,7 @@
 #include <cppunit/XmlOutputter.h>
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/ui/text/TestRunner.h>
+#include <cppunit/extensions/HelperMacros.h>
 #include <spdlog/spdlog.h>
 
 #include <sonata/Client.hpp>
@@ -17,7 +18,48 @@
 namespace tl = thallium;
 
 tl::engine* engine = nullptr;
-std::string db_type = "unqlite";
+
+class ProviderTest : public CppUnit::TestFixture
+{
+    CPPUNIT_TEST_SUITE( ProviderTest );
+    CPPUNIT_TEST( testCreateProviderWithConfig );
+    CPPUNIT_TEST( testFailingCreateProviderWithConfig );
+    CPPUNIT_TEST_SUITE_END();
+
+    public:
+
+    void setUp() {}
+    void tearDown() {}
+
+    void testCreateProviderWithConfig() {
+        const std::string config = R"(
+        { "databases" : [
+            { "name" : "test-db1",
+              "type" : "null",
+              "mode" : "create",
+              "config" : {}
+            },
+            { "name" : "test-db2",
+              "type" : "jsoncpp",
+              "mode" : "create",
+              "config" : {}
+            }
+          ]
+        }
+        )";
+
+        sonata::Provider provider(*engine, 0, config);
+    }
+
+    void testFailingCreateProviderWithConfig() {
+        CPPUNIT_ASSERT_THROW(sonata::Provider(*engine,1, "{"), sonata::Exception);
+        CPPUNIT_ASSERT_THROW(sonata::Provider(*engine,2, "{ \"databases\" : {}}"), sonata::Exception);
+        CPPUNIT_ASSERT_THROW(sonata::Provider(*engine,3,
+            "{ \"databases\" : [{ \"name\" : \"\"}]}"), sonata::Exception);
+    }
+};
+
+CPPUNIT_TEST_SUITE_REGISTRATION( ProviderTest );
 
 int main(int argc, char** argv) {
 
@@ -41,16 +83,10 @@ int main(int argc, char** argv) {
         // Change the default outputter to output XML results into stderr
         runner.setOutputter(new CppUnit::XmlOutputter(&runner.result(), std::cerr));
     }
-    if(argc >= 3) {
-        db_type = argv[2];
-    }
 
     // Initialize the thallium server
     tl::engine theEngine("na+sm", THALLIUM_SERVER_MODE);
     engine = &theEngine;
-
-    // Initialize the Sonata provider
-    sonata::Provider provider(theEngine);
 
     // Run the tests.
     bool wasSucessful = runner.run();

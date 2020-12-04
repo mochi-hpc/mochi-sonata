@@ -8,6 +8,9 @@ foreach(file ${JX9_TEST_FILES})
 	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${filename} ${CMAKE_CURRENT_BINARY_DIR}/${filename} COPYONLY)
 endforeach()
 
+add_executable(ProviderTest ProviderTest.cpp)
+target_link_libraries(ProviderTest ${CPPUNIT_LIBRARIES} sonata-server)
+
 add_library(sonata-test Main.cpp)
 target_link_libraries(sonata-test ${CPPUNIT_LIBRARIES} sonata-server sonata-admin sonata-client)
 
@@ -31,6 +34,8 @@ target_link_libraries(ExecTest sonata-test)
 
 add_executable(Jx9Test Jx9Test.cpp)
 target_link_libraries(Jx9Test sonata-test)
+
+add_test(NAME ProviderTest COMMAND ./ProviderTest ProviderTest.xml)
 
 add_test(NAME AdminTestUnQLite COMMAND ./AdminTest AdminTestUnQLite.xml unqlite)
 add_test(NAME AdminTestJsonCpp COMMAND ./AdminTest AdminTestJsonCpp.xml jsoncpp)
