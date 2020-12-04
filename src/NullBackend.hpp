@@ -255,6 +255,8 @@ public:
     result.success() = true;
     return result;
   }
+
+  std::string getConfig() const override { return "{}"; }
 };
 
 } // namespace sonata

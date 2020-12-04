@@ -82,6 +82,7 @@ public:
   tl::remote_procedure m_coll_erase_multi;
   // Backends
   std::unordered_map<std::string, std::shared_ptr<Backend>> m_backends;
+  std::unordered_map<std::string, std::string> m_backend_types;
   tl::mutex m_backends_mtx;
 
   ProviderImpl(tl::engine &engine, uint16_t provider_id, const tl::pool &pool)
@@ -250,6 +251,7 @@ public:
       return;
     } else {
       m_backends[db_name] = std::move(backend);
+      m_backend_types[db_name] = db_type;
     }
 
     req.respond(result);
@@ -331,6 +333,7 @@ public:
       return;
     } else {
       m_backends[db_name] = std::move(backend);
+      m_backend_types[db_name] = db_type;
     }
 
     req.respond(result);
@@ -356,6 +359,7 @@ public:
       }
 
       m_backends.erase(db_name);
+      m_backend_types.erase(db_name);
     }
     req.respond(result);
     spdlog::trace("[provider:{}] Database {} successfully detached", id(),
@@ -390,6 +394,7 @@ public:
 
       result = m_backends[db_name]->destroy();
       m_backends.erase(db_name);
+      m_backend_types.erase(db_name);
     }
 
     req.respond(result);

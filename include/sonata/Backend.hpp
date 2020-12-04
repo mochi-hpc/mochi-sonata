@@ -392,6 +392,14 @@ public:
    * whether the database was successfully destroyed.
    */
   virtual RequestResult<bool> destroy() = 0;
+
+  /**
+   * @brief Produces a configuration that can be fed back to a Provider
+   * to re-initialize the database in the same state.
+   *
+   * @return JSON-formatted string.
+   */
+  virtual std::string getConfig() const = 0;
 };
 
 /**

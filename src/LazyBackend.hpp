@@ -285,6 +285,12 @@ public:
     return m_db->destroy();
   }
 
+  std::string getConfig() const override {
+    return "{\"flush-on-exec\": "s + (m_flush_on_exec ? "true" : "false") +
+           ", \"flush-on-read\": "s + (m_flush_on_read ? "true" : "false") +
+           ", \"config\": " + m_db->getConfig() + "}";
+  }
+
 private:
   void flush(const std::string &coll_name = "") {
     std::unique_lock<tl::mutex> lock(m_pending_writes_mtx);

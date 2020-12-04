@@ -43,12 +43,20 @@ class ProviderTest : public CppUnit::TestFixture
               "type" : "jsoncpp",
               "mode" : "create",
               "config" : {}
+            },
+            { "name" : "test-db3",
+              "type" : "unqlite",
+              "mode" : "create",
+              "config" : {
+                "path" : "./mydb.unqlite"
+              }
             }
           ]
         }
         )";
 
         sonata::Provider provider(*engine, 0, config);
+        std::cout << provider.getConfig() << std::endl;
     }
 
     void testFailingCreateProviderWithConfig() {

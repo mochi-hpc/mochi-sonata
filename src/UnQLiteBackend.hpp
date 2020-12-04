@@ -1065,9 +1065,17 @@ public:
     return result;
   }
 
+  std::string getConfig() const override {
+    return "{\"path\": \""s + m_filename + "\"" +
+           ", \"temporary\": " + (m_is_temporary ? "true" : "false") +
+           ", \"in-memory\": " + (m_is_in_memory ? "true" : "false") + "}";
+  }
+
 private:
   unqlite *m_db = nullptr;
   std::string m_filename;
+  bool m_is_temporary;
+  bool m_is_in_memory;
   tl::mutex m_mutex; // used only if unqlite doesn't have threads enables
   bool m_unqlite_is_threadsafe;
   Client m_client;

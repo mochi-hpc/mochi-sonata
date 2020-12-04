@@ -549,6 +549,8 @@ public:
     return result;
   }
 
+  std::string getConfig() const override { return "{}"; }
+
 private:
   std::unordered_map<std::string, Json::Value> m_collections;
   std::unordered_map<std::string, size_t> m_collection_size;

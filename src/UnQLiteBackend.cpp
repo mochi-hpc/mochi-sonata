@@ -57,6 +57,8 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
   }
   auto backend = std::make_unique<UnQLiteBackend>();
   backend->m_db = pDB;
+  backend->m_is_temporary = temporary;
+  backend->m_is_in_memory = inmemory;
   backend->m_filename = db_path;
   backend->m_client = Client(engine);
   backend->m_admin = Admin(engine);
@@ -84,6 +86,8 @@ std::unique_ptr<Backend> UnQLiteBackend::attach(const tl::engine &engine,
   }
   auto backend = std::make_unique<UnQLiteBackend>();
   backend->m_db = pDB;
+  backend->m_is_temporary = false;
+  backend->m_is_in_memory = false;
   backend->m_filename = db_path;
   backend->m_client = Client(engine);
   backend->m_admin = Admin(engine);

@@ -107,6 +107,7 @@ void populateDatabasesFromConfig(
     spdlog::trace("Added database {} of type {} from JSON configuration",
                   db_name, db_type);
     provider_impl->m_backends[db_name] = std::move(backend);
+    provider_impl->m_backend_types[db_name] = db_type;
   }
 }
 
@@ -144,8 +145,22 @@ Provider::~Provider() {
 Provider::operator bool() const { return static_cast<bool>(self); }
 
 std::string Provider::getConfig() const {
-  // TODO
-  return std::string();
+  if (!self)
+    return "{}";
+  std::stringstream ss;
+  ss << "{ \"databases\": [";
+  std::lock_guard<tl::mutex> g(self->m_backends_mtx);
+  for (auto &p : self->m_backends) {
+    auto db_name = p.first;
+    auto db_type = self->m_backend_types[db_name];
+    auto db_config = self->m_backends[db_name]->getConfig();
+    ss << "{\"name\": \"" << db_name << "\", "
+       << "\"type\": \"" << db_type << "\", "
+       << "\"mode\": \"attach\", "
+       << "\"config\": " << db_config << "}";
+  }
+  ss << "]}";
+  return ss.str();
 }
 
 void Provider::setSecurityToken(const std::string &token) {
