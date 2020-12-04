@@ -46,6 +46,9 @@ xpkg_import_module (margo REQUIRED margo)
 xpkg_import_module (jsoncpp REQUIRED jsoncpp)
 find_package (TCLAP REQUIRED)
 find_package(spdlog REQUIRED)
+if(${ENABLE_BEDROCK})
+	find_package(bedrock REQUIRED)
+endif()
 
 include_directories(${UnQLite_INCLUDE_DIR})
 
