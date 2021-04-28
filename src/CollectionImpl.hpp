@@ -4,7 +4,7 @@
  * See COPYRIGHT in top-level directory.
  */
 #ifndef __SONATA_COLLECTION_IMPL_H
-#define __SONATA_COLLECYION_IMPL_H
+#define __SONATA_COLLECTION_IMPL_H
 
 namespace sonata {
 
