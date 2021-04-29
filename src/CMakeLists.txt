@@ -43,20 +43,20 @@ set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")
 
 add_library(sonata-client ${sonata-client-src})
-target_link_libraries (sonata-client thallium margo jsoncpp spdlog)
+target_link_libraries (sonata-client thallium margo jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-client PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-admin ${sonata-admin-src})
-target_link_libraries (sonata-admin thallium margo jsoncpp spdlog)
+target_link_libraries (sonata-admin thallium margo jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-admin PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-server ${sonata-server-src})
-target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog)
+target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
 if(${ENABLE_BEDROCK})
 add_library(sonata-bedrock ${sonata-bedrock-src})
-target_link_libraries (sonata-bedrock sonata-server sonata-client sonata-admin)
+target_link_libraries (sonata-bedrock sonata-server sonata-client sonata-admin cereal bedrock-server)
 target_include_directories (sonata-bedrock PUBLIC $<INSTALL_INTERFACE:include>)
 endif()
 

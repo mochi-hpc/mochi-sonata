@@ -42,6 +42,8 @@ set (BUILD_SHARED_LIBS "ON" CACHE BOOL "Build a shared library")
 # packages we depend on
 include (xpkg-import)
 find_package (thallium REQUIRED)
+find_package (cereal REQUIRED)
+
 xpkg_import_module (margo REQUIRED margo)
 xpkg_import_module (jsoncpp REQUIRED jsoncpp)
 find_package (TCLAP REQUIRED)
