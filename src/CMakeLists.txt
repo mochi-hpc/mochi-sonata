@@ -127,7 +127,6 @@ install (EXPORT sonata-targets
          FILE "sonata-targets.cmake")
 install (FILES "${CMAKE_CURRENT_BINARY_DIR}/sonata-config.cmake"
                "${CMAKE_CURRENT_BINARY_DIR}/sonata-config-version.cmake"
-               "../cmake/xpkg-import.cmake"
          DESTINATION ${sonata-pkg} )
 install (DIRECTORY ../include/sonata
          DESTINATION include
