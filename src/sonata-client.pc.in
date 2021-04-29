@@ -3,7 +3,7 @@ exec_prefix=${prefix}
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: sonata-client 
+Name: sonata-client
 Description: Mochi-based structured document service
 Version: @SONATA_VERSION@
 
