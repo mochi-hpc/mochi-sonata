@@ -43,15 +43,15 @@ set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")
 
 add_library(sonata-client ${sonata-client-src})
-target_link_libraries (sonata-client thallium margo jsoncpp spdlog::spdlog cereal)
+target_link_libraries (sonata-client thallium PkgConfig::margo PkgConfig::jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-client PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-admin ${sonata-admin-src})
-target_link_libraries (sonata-admin thallium margo jsoncpp spdlog::spdlog cereal)
+target_link_libraries (sonata-admin thallium PkgConfig::margo PkgConfig::jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-admin PUBLIC $<INSTALL_INTERFACE:include>)
 
 add_library(sonata-server ${sonata-server-src})
-target_link_libraries (sonata-server sonata-client sonata-admin thallium margo jsoncpp spdlog::spdlog cereal)
+target_link_libraries (sonata-server sonata-client sonata-admin thallium PkgConfig::margo PkgConfig::jsoncpp spdlog::spdlog cereal)
 target_include_directories (sonata-server PUBLIC $<INSTALL_INTERFACE:include>)
 
 if(${ENABLE_BEDROCK})
