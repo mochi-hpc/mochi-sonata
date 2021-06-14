@@ -24,16 +24,19 @@
 #define FIND_DATABASE(__dbvar__)                                               \
   std::shared_ptr<Backend> __dbvar__;                                          \
   do {                                                                         \
-    std::lock_guard<tl::mutex> lock(m_backends_mtx);                           \
-    auto it = m_backends.find(db_name);                                        \
-    if (it == m_backends.end()) {                                              \
-      result.success() = false;                                                \
-      result.error() = "Database "s + db_name + " not found";                  \
-      req.respond(result);                                                     \
-      spdlog::error("[provider:{}] Database {} not found", id(), db_name);     \
-      return;                                                                  \
-    }                                                                          \
-    __dbvar__ = it->second;                                                    \
+      {                                                                        \
+        std::lock_guard<tl::mutex> lock(m_backends_mtx);                       \
+        auto it = m_backends.find(db_name);                                    \
+        if (it != m_backends.end())                                            \
+            __dbvar__ = it->second;                                            \
+      }                                                                        \
+      if (!__dbvar__) {                                                        \
+        result.success() = false;                                              \
+        result.error() = "Database "s + db_name + " not found";                \
+        req.respond(result);                                                   \
+        spdlog::error("[provider:{}] Database {} not found", id(), db_name);   \
+        return;                                                                \
+      }                                                                        \
   } while (0)
 
 namespace sonata {
