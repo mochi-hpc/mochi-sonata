@@ -10,6 +10,7 @@ set(sonata-server-src
 	Backend.cpp
 	LazyBackend.cpp
 	JsonCppBackend.cpp
+	VectorBackend.cpp
 	NullBackend.cpp
 	UnQLiteBackend.cpp
 	UnQLiteVM.cpp

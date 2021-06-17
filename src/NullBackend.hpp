@@ -22,7 +22,14 @@ using namespace std::string_literals;
 class NullBackend : public Backend {
 
 public:
-  NullBackend() {}
+  NullBackend(const tl::engine& engine,
+              uint64_t delay_ms=0,
+              bool active_delay=false,
+              bool lock_mutex=false)
+  : m_engine(engine),
+    m_delay_ms(delay_ms),
+    m_active_delay(active_delay),
+    m_lock_mutex(lock_mutex) {}
 
   NullBackend(NullBackend &&) = delete;
 
@@ -44,6 +51,19 @@ public:
 
   virtual RequestResult<bool>
   createCollection(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -51,6 +71,19 @@ public:
 
   virtual RequestResult<bool>
   openCollection(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -58,6 +91,19 @@ public:
 
   virtual RequestResult<bool>
   dropCollection(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -66,6 +112,19 @@ public:
   virtual RequestResult<uint64_t> store(const std::string &coll_name,
                                         const std::string &record,
                                         bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<uint64_t> result;
     result.value() = 0;
     result.success() = true;
@@ -75,6 +134,19 @@ public:
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
                                             const Json::Value &record,
                                             bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<uint64_t> result;
     result.value() = 0;
     result.success() = true;
@@ -84,6 +156,19 @@ public:
   virtual RequestResult<std::vector<uint64_t>>
   storeMulti(const std::string &coll_name,
              const std::vector<std::string> &records, bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<uint64_t>> result;
     result.value().resize(records.size());
     for (unsigned i = 0; i < records.size(); i++)
@@ -93,6 +178,19 @@ public:
   }
 
   virtual RequestResult<bool> commit() override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -101,6 +199,19 @@ public:
   virtual RequestResult<std::vector<uint64_t>>
   storeMultiJson(const std::string &coll_name, const Json::Value &records,
                  bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<uint64_t>> result;
     result.value().resize(records.size());
     for (unsigned i = 0; i < records.size(); i++)
@@ -111,6 +222,19 @@ public:
 
   virtual RequestResult<std::string> fetch(const std::string &coll_name,
                                            uint64_t record_id) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::string> result;
     result.value() = "{}";
     result.success() = true;
@@ -119,6 +243,19 @@ public:
 
   virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<Json::Value> result;
     result.success() = true;
     return result;
@@ -127,6 +264,19 @@ public:
   virtual RequestResult<std::vector<std::string>>
   fetchMulti(const std::string &coll_name,
              const std::vector<uint64_t> &record_ids) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<std::string>> result;
     result.value().resize(record_ids.size(), "{}");
     result.success() = true;
@@ -136,6 +286,19 @@ public:
   virtual RequestResult<Json::Value>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<Json::Value> result;
     result.value().resize(record_ids.size());
     result.success() = true;
@@ -145,6 +308,19 @@ public:
   virtual RequestResult<std::vector<std::string>>
   filter(const std::string &coll_name,
          const std::string &filter_code) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<std::string>> result;
     result.success() = true;
     return result;
@@ -153,6 +329,19 @@ public:
   virtual RequestResult<Json::Value>
   filterJson(const std::string &coll_name,
              const std::string &filter_code) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<Json::Value> result;
     result.success() = true;
     return result;
@@ -162,6 +351,19 @@ public:
                                      uint64_t record_id,
                                      const std::string &new_content,
                                      bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -171,6 +373,19 @@ public:
                                          uint64_t record_id,
                                          const Json::Value &new_content,
                                          bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -179,6 +394,19 @@ public:
   virtual RequestResult<std::vector<bool>> updateMulti(
       const std::string &coll_name, const std::vector<uint64_t> &record_ids,
       const std::vector<std::string> &new_contents, bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<bool>> result;
     result.value().resize(record_ids.size(), true);
     result.success() = true;
@@ -189,6 +417,19 @@ public:
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
                   const Json::Value &new_contents, bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<bool>> result;
     result.value().resize(record_ids.size(), true);
     result.success() = true;
@@ -197,6 +438,19 @@ public:
 
   virtual RequestResult<std::vector<std::string>>
   all(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::vector<std::string>> result;
     result.success() = true;
     return result;
@@ -204,6 +458,19 @@ public:
 
   virtual RequestResult<Json::Value>
   allJson(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<Json::Value> result;
     result.success() = true;
     return result;
@@ -211,6 +478,19 @@ public:
 
   virtual RequestResult<uint64_t>
   lastID(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<uint64_t> result;
     result.value() = 0;
     result.success() = true;
@@ -218,6 +498,19 @@ public:
   }
 
   virtual RequestResult<size_t> size(const std::string &coll_name) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<size_t> result;
     result.value() = 0;
     result.success() = true;
@@ -226,6 +519,19 @@ public:
 
   virtual RequestResult<bool> erase(const std::string &coll_name,
                                     uint64_t record_id, bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -234,6 +540,19 @@ public:
   virtual RequestResult<bool>
   eraseMulti(const std::string &coll_name,
              const std::vector<uint64_t> &record_ids, bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
@@ -242,6 +561,19 @@ public:
   virtual RequestResult<std::unordered_map<std::string, std::string>>
   execute(const std::string &code, const std::unordered_set<std::string> &vars,
           bool commit) override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<std::unordered_map<std::string, std::string>> result;
     for (const auto &v : vars) {
       result.value().emplace(v, "null");
@@ -251,12 +583,39 @@ public:
   }
 
   virtual RequestResult<bool> destroy() override {
+    std::unique_lock<tl::mutex> lock;
+    if (m_lock_mutex)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    if (m_delay_ms > 0) {
+        if (m_active_delay) {
+            double start = tl::timer::wtime()*1000;
+            double end = start;
+            while(end - start < m_delay_ms)
+                end = tl::timer::wtime()*1000;
+        } else {
+            tl::thread::sleep(m_engine, m_delay_ms);
+        }
+    }
     RequestResult<bool> result;
     result.success() = true;
     return result;
   }
 
-  std::string getConfig() const override { return "{}"; }
+  std::string getConfig() const override {
+      std::stringstream ss;
+      ss << "{\"delay_ms\":" << m_delay_ms
+         << ",\"active_delay\":" << std::boolalpha << m_active_delay
+         << ",\"lock_mutex\":" << std::boolalpha << m_lock_mutex
+         << "}";
+      return ss.str();
+  }
+
+private:
+  tl::engine m_engine;
+  uint64_t   m_delay_ms = 0;
+  bool       m_active_delay = false;
+  bool       m_lock_mutex = false;
+  tl::mutex  m_mutex;
 };
 
 } // namespace sonata
