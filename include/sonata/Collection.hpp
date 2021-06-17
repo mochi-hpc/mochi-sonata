@@ -333,7 +333,7 @@ public:
    */
   void update(uint64_t id, const char *record, bool commit = false,
               AsyncRequest *req = nullptr) const {
-    return update(id, std::string(record));
+    return update(id, std::string(record), commit, req);
   }
 
   /**
