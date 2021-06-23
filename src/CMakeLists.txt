@@ -26,6 +26,7 @@ set(sonata-bedrock-src
 
 if(${ENABLE_UNQLITE_THREADS})
   add_definitions("-DUNQLITE_ENABLE_THREADS")
+  add_definitions("-DJX9_ENABLE_THREADS")
 endif(${ENABLE_UNQLITE_THREADS})
 
 # load package helper for generating cmake CONFIG packages

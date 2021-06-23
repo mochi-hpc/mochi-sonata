@@ -28,7 +28,7 @@ class CollectionTest : public CppUnit::TestFixture,
     CPPUNIT_TEST( testErase );
     CPPUNIT_TEST_SUITE_END();
 
-    static constexpr const char* db_config = "{ \"path\" : \"mydb\" }";
+    static constexpr const char* db_config = "{ \"path\" : \"mydb\", \"mutex\" : \"posix\" }";
 
     public:
 

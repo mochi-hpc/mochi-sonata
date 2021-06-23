@@ -34,7 +34,15 @@ class UnQLiteBackend : public Backend {
   friend class UnQLiteVM;
 
 public:
-  UnQLiteBackend() { m_unqlite_is_threadsafe = unqlite_lib_is_threadsafe(); }
+
+  enum class MutexMode : int {
+    global,
+    none,
+    posix,
+    abt
+  };
+
+  UnQLiteBackend() = default;
 
   UnQLiteBackend(UnQLiteBackend &&) = delete;
 
@@ -74,7 +82,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -103,7 +111,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -133,7 +141,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -171,7 +179,7 @@ public:
     RequestResult<uint64_t> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, ss.str().c_str(), this);
       vm.set("collection", coll_name);
@@ -210,7 +218,7 @@ public:
     RequestResult<uint64_t> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("input", record.m_object);
@@ -261,7 +269,7 @@ public:
     RequestResult<std::vector<uint64_t>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, ss.str().c_str(), this);
       vm.set("collection", coll_name);
@@ -285,7 +293,7 @@ public:
     RequestResult<bool> result;
     result.success() = true;
     std::unique_lock<tl::mutex> lock;
-    if (!m_unqlite_is_threadsafe)
+    if (m_mutex_mode == MutexMode::global)
       lock = std::unique_lock<tl::mutex>(m_mutex);
     unqlite_commit(m_db);
     return result;
@@ -313,7 +321,7 @@ public:
     RequestResult<std::vector<uint64_t>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("input", records.m_object);
@@ -353,7 +361,7 @@ public:
     RequestResult<std::string> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -393,7 +401,7 @@ public:
     RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -431,7 +439,7 @@ public:
     RequestResult<std::vector<std::string>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -474,7 +482,7 @@ public:
     RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -520,7 +528,7 @@ public:
     RequestResult<std::vector<std::string>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script.c_str(), this);
       vm.registerSonataFunctions();
@@ -575,7 +583,7 @@ public:
     RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script.c_str(), this);
       vm.registerSonataFunctions();
@@ -613,7 +621,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script.c_str(), this);
       vm.set("collection", coll_name);
@@ -650,7 +658,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("input", new_content.m_object);
@@ -704,7 +712,7 @@ public:
     RequestResult<std::vector<bool>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, ss.str().c_str(), this);
       vm.set("collection", coll_name);
@@ -752,7 +760,7 @@ public:
     RequestResult<std::vector<bool>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("input", new_contents.m_object);
@@ -798,7 +806,7 @@ public:
     RequestResult<std::vector<std::string>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -847,7 +855,7 @@ public:
     RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -884,7 +892,7 @@ public:
     RequestResult<uint64_t> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -920,7 +928,7 @@ public:
     RequestResult<size_t> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -957,7 +965,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -1003,7 +1011,7 @@ public:
     RequestResult<bool> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
       vm.set("collection", coll_name);
@@ -1028,7 +1036,7 @@ public:
     RequestResult<std::unordered_map<std::string, std::string>> result;
     try {
       std::unique_lock<tl::mutex> lock;
-      if (!m_unqlite_is_threadsafe)
+      if (m_mutex_mode == MutexMode::global)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, code.c_str(), this);
       vm.registerSonataFunctions();
@@ -1077,8 +1085,9 @@ private:
   std::string m_filename;
   bool m_is_temporary;
   bool m_is_in_memory;
-  tl::mutex m_mutex; // used only if unqlite doesn't have threads enables
-  bool m_unqlite_is_threadsafe;
+  MutexMode m_mutex_mode = MutexMode::global;
+  tl::mutex m_mutex; // used only if mutex_mode is "global"
+
   Client m_client;
   Admin m_admin;
 };
