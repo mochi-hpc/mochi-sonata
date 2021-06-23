@@ -16,18 +16,14 @@ public:
   std::string m_name;
   std::shared_ptr<ClientImpl> m_client;
   tl::provider_handle m_ph;
-  Json::CharReader *m_json_reader = nullptr;
 
   DatabaseImpl() = default;
 
   DatabaseImpl(const std::shared_ptr<ClientImpl> &client,
                const tl::provider_handle &ph, const std::string &name)
-      : m_name(name), m_client(client), m_ph(ph) {
-    Json::CharReaderBuilder builder;
-    m_json_reader = builder.newCharReader();
-  }
+      : m_name(name), m_client(client), m_ph(ph) {}
 
-  ~DatabaseImpl() { delete m_json_reader; }
+  ~DatabaseImpl() = default;
 };
 
 } // namespace sonata

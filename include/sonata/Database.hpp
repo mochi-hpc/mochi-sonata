@@ -6,17 +6,18 @@
 #ifndef __SONATA_DATABASE_HPP
 #define __SONATA_DATABASE_HPP
 
-#include <json/json.h>
-#include <memory>
 #include <sonata/Client.hpp>
 #include <sonata/Collection.hpp>
 #include <sonata/Exception.hpp>
 #include <thallium.hpp>
+#include <nlohmann/json.hpp>
 #include <unordered_set>
+#include <memory>
 
 namespace sonata {
 
 namespace tl = thallium;
+using nlohmann::json;
 
 class Client;
 class DatabaseImpl;
@@ -132,7 +133,7 @@ public:
    * @param commit Whether to commit changes to storage.
    */
   void execute(const std::string &code,
-               const std::unordered_set<std::string> &vars, Json::Value *result,
+               const std::unordered_set<std::string> &vars, json *result,
                bool commit = false) const;
 
   /**

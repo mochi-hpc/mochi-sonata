@@ -10,7 +10,7 @@
 #include "sonata/Client.hpp"
 
 #include <cstdio>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <thallium.hpp>
 
@@ -18,6 +18,7 @@ namespace sonata {
 
 namespace tl = thallium;
 using namespace std::string_literals;
+using nlohmann::json;
 
 class NullBackend : public Backend {
 
@@ -41,11 +42,11 @@ public:
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   static std::unique_ptr<Backend> attach(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   virtual ~NullBackend() {}
 
@@ -132,7 +133,7 @@ public:
   }
 
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
-                                            const Json::Value &record,
+                                            const JsonWrapper &record,
                                             bool commit) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
@@ -197,7 +198,7 @@ public:
   }
 
   virtual RequestResult<std::vector<uint64_t>>
-  storeMultiJson(const std::string &coll_name, const Json::Value &records,
+  storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
@@ -213,8 +214,8 @@ public:
         }
     }
     RequestResult<std::vector<uint64_t>> result;
-    result.value().resize(records.size());
-    for (unsigned i = 0; i < records.size(); i++)
+    result.value().resize(records->size());
+    for (unsigned i = 0; i < records->size(); i++)
       result.value()[i] = i;
     result.success() = true;
     return result;
@@ -241,7 +242,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
+  virtual RequestResult<JsonWrapper> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
@@ -256,7 +257,7 @@ public:
             tl::thread::sleep(m_engine, m_delay_ms);
         }
     }
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     result.success() = true;
     return result;
   }
@@ -283,7 +284,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) override {
     std::unique_lock<tl::mutex> lock;
@@ -299,8 +300,10 @@ public:
             tl::thread::sleep(m_engine, m_delay_ms);
         }
     }
-    RequestResult<Json::Value> result;
-    result.value().resize(record_ids.size());
+    RequestResult<JsonWrapper> result;
+    result.value() = json::array();
+    for(size_t i = 0; i < record_ids.size(); i++)
+        result.value()->emplace_back();
     result.success() = true;
     return result;
   }
@@ -326,7 +329,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   filterJson(const std::string &coll_name,
              const std::string &filter_code) override {
     std::unique_lock<tl::mutex> lock;
@@ -342,7 +345,7 @@ public:
             tl::thread::sleep(m_engine, m_delay_ms);
         }
     }
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     result.success() = true;
     return result;
   }
@@ -371,7 +374,7 @@ public:
 
   virtual RequestResult<bool> updateJson(const std::string &coll_name,
                                          uint64_t record_id,
-                                         const Json::Value &new_content,
+                                         const JsonWrapper &new_content,
                                          bool commit) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
@@ -416,7 +419,7 @@ public:
   virtual RequestResult<std::vector<bool>>
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
-                  const Json::Value &new_contents, bool commit) override {
+                  const JsonWrapper &new_contents, bool commit) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
         lock = std::unique_lock<tl::mutex>(m_mutex);
@@ -456,7 +459,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   allJson(const std::string &coll_name) override {
     std::unique_lock<tl::mutex> lock;
     if (m_lock_mutex)
@@ -471,7 +474,7 @@ public:
             tl::thread::sleep(m_engine, m_delay_ms);
         }
     }
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     result.success() = true;
     return result;
   }

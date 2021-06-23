@@ -51,10 +51,10 @@ void Admin::createDatabase(const std::string &address, uint16_t provider_id,
 void Admin::createDatabase(const std::string &address, uint16_t provider_id,
                            const std::string &db_name,
                            const std::string &db_type,
-                           const Json::Value &db_config,
+                           const json &db_config,
                            const std::string &token) const {
   createDatabase(address, provider_id, db_name, db_type,
-                 db_config.toStyledString(), token);
+                 db_config.dump(), token);
 }
 
 void Admin::attachDatabase(const std::string &address, uint16_t provider_id,
@@ -74,10 +74,10 @@ void Admin::attachDatabase(const std::string &address, uint16_t provider_id,
 void Admin::attachDatabase(const std::string &address, uint16_t provider_id,
                            const std::string &db_name,
                            const std::string &db_type,
-                           const Json::Value &db_config,
+                           const json &db_config,
                            const std::string &token) const {
   attachDatabase(address, provider_id, db_name, db_type,
-                 db_config.toStyledString(), token);
+                 db_config.dump(), token);
 }
 
 void Admin::detachDatabase(const std::string &address, uint16_t provider_id,

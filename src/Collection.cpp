@@ -13,6 +13,7 @@
 #include "CollectionImpl.hpp"
 #include "DatabaseImpl.hpp"
 
+#include <thallium/serialization/stl/vector.hpp>
 #include <thallium/serialization/stl/pair.hpp>
 #include <thallium/serialization/stl/string.hpp>
 
@@ -37,14 +38,16 @@ Collection::operator bool() const { return static_cast<bool>(self); }
 
 Database Collection::database() const { return Database(self->m_database); }
 
-void Collection::store(const Json::Value &record, uint64_t *id, bool commit,
+void Collection::store(const json &record, uint64_t *id, bool commit,
                        AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
   auto &rpc = self->m_database->m_client->m_coll_store_json;
   auto &ph = self->m_database->m_ph;
   auto &db_name = self->m_database->m_name;
-  auto async_response = rpc.on(ph).async(db_name, self->m_name, record, commit);
+  auto wrapper = ConstJsonRefWrapper(record);
+  auto async_response = rpc.on(ph).async(db_name, self->m_name,
+                                         wrapper, commit);
   auto async_request_impl =
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
@@ -91,18 +94,20 @@ void Collection::store(const std::string &record, uint64_t *id, bool commit,
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::store_multi(const Json::Value &records, uint64_t *ids,
+void Collection::store_multi(const json &records, uint64_t *ids,
                              bool commit, AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
-  if (records.type() != Json::arrayValue) {
+  if (records.type() != json::value_t::array) {
     throw Exception("JSON object is not of Array type");
   }
   auto &rpc = self->m_database->m_client->m_coll_store_multi_json;
   auto &ph = self->m_database->m_ph;
   auto &db_name = self->m_database->m_name;
   auto async_response =
-      rpc.on(ph).async(db_name, self->m_name, records, commit);
+      rpc.on(ph).async(db_name, self->m_name,
+                       ConstJsonRefWrapper(records),
+                       commit);
   auto async_request_impl =
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
@@ -180,7 +185,7 @@ void Collection::fetch(uint64_t id, std::string *out, AsyncRequest *req) const {
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::fetch(uint64_t id, Json::Value *out, AsyncRequest *req) const {
+void Collection::fetch(uint64_t id, json *out, AsyncRequest *req) const {
   if (not out)
     return;
   if (not self)
@@ -193,10 +198,10 @@ void Collection::fetch(uint64_t id, Json::Value *out, AsyncRequest *req) const {
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
       [out, self = self](AsyncRequestImpl &async_request_impl) {
-        RequestResult<Json::Value> result =
+        RequestResult<JsonWrapper> result =
             async_request_impl.m_async_response.wait();
         if (result.success()) {
-          *out = std::move(result.value());
+          *out = std::move(result.value().m_object);
         } else {
           throw Exception(result.error());
         }
@@ -238,7 +243,7 @@ void Collection::fetch_multi(const uint64_t *ids, size_t count,
 }
 
 void Collection::fetch_multi(const uint64_t *ids, size_t count,
-                             Json::Value *out, AsyncRequest *req) const {
+                             json *out, AsyncRequest *req) const {
   if (not out)
     return;
   if (not self)
@@ -252,10 +257,10 @@ void Collection::fetch_multi(const uint64_t *ids, size_t count,
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
       [out, self = self](AsyncRequestImpl &async_request_impl) {
-        RequestResult<Json::Value> result =
+        RequestResult<JsonWrapper> result =
             async_request_impl.m_async_response.wait();
         if (result.success()) {
-          *out = std::move(result.value());
+          *out = std::move(result.value().m_object);
         } else {
           throw Exception(result.error());
         }
@@ -294,7 +299,7 @@ void Collection::filter(const std::string &filterCode,
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::filter(const std::string &filterCode, Json::Value *out,
+void Collection::filter(const std::string &filterCode, json *out,
                         AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
@@ -306,11 +311,11 @@ void Collection::filter(const std::string &filterCode, Json::Value *out,
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
       [out, self = self](AsyncRequestImpl &async_request_impl) {
-        RequestResult<Json::Value> result =
+        RequestResult<JsonWrapper> result =
             async_request_impl.m_async_response.wait();
         if (result.success()) {
           if (out)
-            *out = std::move(result.value());
+            *out = std::move(result.value().m_object);
         } else {
           throw Exception(result.error());
         }
@@ -345,7 +350,7 @@ void Collection::update(uint64_t id, const std::string &record, bool commit,
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::update(uint64_t id, const Json::Value &record, bool commit,
+void Collection::update(uint64_t id, const json &record, bool commit,
                         AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
@@ -353,7 +358,9 @@ void Collection::update(uint64_t id, const Json::Value &record, bool commit,
   auto &ph = self->m_database->m_ph;
   auto &db_name = self->m_database->m_name;
   auto async_response =
-      rpc.on(ph).async(db_name, self->m_name, id, record, commit);
+      rpc.on(ph).async(db_name, self->m_name, id,
+                       ConstJsonRefWrapper(record),
+                       commit);
   auto async_request_impl =
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
@@ -401,12 +408,12 @@ void Collection::update_multi(const uint64_t *ids,
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::update_multi(const uint64_t *ids, const Json::Value &records,
+void Collection::update_multi(const uint64_t *ids, const json &records,
                               std::vector<bool> *updated, bool commit,
                               AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
-  if (records.type() != Json::arrayValue) {
+  if (records.type() != json::value_t::array) {
     throw Exception("JSON object is not of Array type");
   }
   auto &rpc = self->m_database->m_client->m_coll_update_multi_json;
@@ -414,7 +421,9 @@ void Collection::update_multi(const uint64_t *ids, const Json::Value &records,
   auto &db_name = self->m_database->m_name;
   std::vector<uint64_t> ids_vec(ids, ids + records.size());
   auto async_response =
-      rpc.on(ph).async(db_name, self->m_name, ids_vec, records, commit);
+      rpc.on(ph).async(db_name, self->m_name, ids_vec,
+                       ConstJsonRefWrapper(records),
+                       commit);
   auto async_request_impl =
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
@@ -462,7 +471,7 @@ void Collection::all(std::vector<std::string> *out, AsyncRequest *req) const {
     AsyncRequest(std::move(async_request_impl)).wait();
 }
 
-void Collection::all(Json::Value *out, AsyncRequest *req) const {
+void Collection::all(json *out, AsyncRequest *req) const {
   if (not self)
     throw Exception("Invalid sonata::Collection object");
   auto &rpc = self->m_database->m_client->m_coll_all_json;
@@ -473,11 +482,11 @@ void Collection::all(Json::Value *out, AsyncRequest *req) const {
       std::make_shared<AsyncRequestImpl>(std::move(async_response));
   async_request_impl->m_wait_callback =
       [out, self = self](AsyncRequestImpl &async_request_impl) {
-        RequestResult<Json::Value> result =
+        RequestResult<JsonWrapper> result =
             async_request_impl.m_async_response.wait();
         if (result.success()) {
           if (out)
-            *out = std::move(result.value());
+            *out = std::move(result.value().m_object);
         } else {
           throw Exception(result.error());
         }

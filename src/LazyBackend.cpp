@@ -14,15 +14,15 @@ SONATA_REGISTER_BACKEND(lazy, LazyBackend);
 
 std::unique_ptr<Backend> LazyBackend::create(const tl::engine &engine,
                                              const tl::pool &pool,
-                                             const Json::Value &config) {
+                                             const json &config) {
   spdlog::trace("[lazy] Creating Cached database");
-  std::string backend_type = config.get("backend", "").asString();
+  std::string backend_type = config.value("backend", "");
   if (backend_type.size() == 0) {
     throw Exception(
         "LazyBackend needs to be initialized with a \"backend\" entry");
   }
-  bool flush_on_read = config.get("flush-on-read", true).asBool();
-  bool flush_on_exec = config.get("flush-on-exec", true).asBool();
+  bool flush_on_read = config.value("flush-on-read", true);
+  bool flush_on_exec = config.value("flush-on-exec", true);
   const auto &inner_cfg = config["config"];
   std::unique_ptr<Backend> inner =
       BackendFactory::createBackend(backend_type, engine, pool, inner_cfg);
@@ -34,16 +34,16 @@ std::unique_ptr<Backend> LazyBackend::create(const tl::engine &engine,
 
 std::unique_ptr<Backend> LazyBackend::attach(const thallium::engine &engine,
                                              const tl::pool &pool,
-                                             const Json::Value &config) {
+                                             const json &config) {
   spdlog::trace("[lazy] Opening Cached database");
-  std::string backend_type = config.get("backend", "").asString();
+  std::string backend_type = config.value("backend", "");
   if (backend_type.size() == 0) {
     throw Exception(
         "LazyBackend needs to be initialized with a \"backend\" entry");
   }
   const auto &inner_cfg = config["config"];
-  bool flush_on_read = config.get("flush-on-read", true).asBool();
-  bool flush_on_exec = config.get("flush-on-exec", true).asBool();
+  bool flush_on_read = config.value("flush-on-read", true);
+  bool flush_on_exec = config.value("flush-on-exec", true);
   std::unique_ptr<Backend> inner =
       BackendFactory::attachBackend(backend_type, engine, pool, inner_cfg);
   auto backend = std::make_unique<LazyBackend>(std::move(inner), pool,

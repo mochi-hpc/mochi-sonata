@@ -16,10 +16,12 @@
 #include <thallium/serialization/stl/unordered_set.hpp>
 #include <thallium/serialization/stl/vector.hpp>
 
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include <tuple>
+
+using nlohmann::json;
 
 #define FIND_DATABASE(__dbvar__)                                               \
   std::shared_ptr<Backend> __dbvar__;                                          \
@@ -210,20 +212,12 @@ public:
       return;
     }
 
-    Json::CharReaderBuilder builder;
-    Json::CharReader *reader = builder.newCharReader();
-
-    Json::Value json_config;
-    std::string errors;
-
-    bool parsingSuccessful =
-        reader->parse(db_config.c_str(), db_config.c_str() + db_config.size(),
-                      &json_config, &errors);
-    delete reader;
-
-    if (!parsingSuccessful) {
+    json json_config;
+    try {
+        json_config = json::parse(db_config);
+    } catch(const std::exception& ex) {
       result.success() = false;
-      result.error() = std::move(errors);
+      result.error() = ex.what();
       req.respond(result);
       spdlog::error("[provider:{}] Could not parse database configuration for "
                     "database {}",
@@ -291,20 +285,12 @@ public:
       return;
     }
 
-    Json::CharReaderBuilder builder;
-    Json::CharReader *reader = builder.newCharReader();
-
-    Json::Value json_config;
-    std::string errors;
-
-    bool parsingSuccessful =
-        reader->parse(db_config.c_str(), db_config.c_str() + db_config.size(),
-                      &json_config, &errors);
-    delete reader;
-
-    if (!parsingSuccessful) {
+    json json_config;
+    try {
+        json_config = json::parse(db_config);
+    } catch(const std::exception& ex) {
       result.success() = false;
-      result.error() = std::move(errors);
+      result.error() = ex.what();
       req.respond(result);
       spdlog::error("[provider:{}] Could not parse database configuration for "
                     "database {}",
@@ -495,7 +481,7 @@ public:
   }
 
   void storeJson(const tl::request &req, const std::string &db_name,
-                 const std::string &coll_name, const Json::Value &record,
+                 const std::string &coll_name, const JsonWrapper &record,
                  bool commit) {
     spdlog::trace("[provider:{}] Received store request", id(), db_name);
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
@@ -522,7 +508,7 @@ public:
   }
 
   void storeMultiJson(const tl::request &req, const std::string &db_name,
-                      const std::string &coll_name, const Json::Value &records,
+                      const std::string &coll_name, const JsonWrapper &records,
                       bool commit) {
     spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
@@ -554,7 +540,7 @@ public:
     spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
     spdlog::trace("[provider:{}]    => record id  = {}", id(), record_id);
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     FIND_DATABASE(db);
     result = db->fetchJson(coll_name, record_id);
     req.respond(result);
@@ -581,7 +567,7 @@ public:
     spdlog::trace("[provider:{}] Received fetch_multi request", id());
     spdlog::trace("[provider:{}]    => database   = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     FIND_DATABASE(db);
     result = db->fetchMultiJson(coll_name, record_ids);
     req.respond(result);
@@ -606,7 +592,7 @@ public:
     spdlog::trace("[provider:{}] Received filter request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     FIND_DATABASE(db);
     result = db->filterJson(coll_name, filter_code);
     req.respond(result);
@@ -630,7 +616,7 @@ public:
 
   void updateJson(const tl::request &req, const std::string &db_name,
                   const std::string &coll_name, uint64_t record_id,
-                  const Json::Value &new_content, bool commit) {
+                  const JsonWrapper &new_content, bool commit) {
     spdlog::trace("[provider:{}] Received update request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -660,7 +646,7 @@ public:
   void updateMultiJson(const tl::request &req, const std::string &db_name,
                        const std::string &coll_name,
                        const std::vector<uint64_t> &record_ids,
-                       const Json::Value &new_content, bool commit) {
+                       const JsonWrapper &new_content, bool commit) {
     spdlog::trace("[provider:{}] Received update request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
@@ -689,7 +675,7 @@ public:
     spdlog::trace("[provider:{}] Received all request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     FIND_DATABASE(db);
     result = db->allJson(coll_name);
     req.respond(result);
