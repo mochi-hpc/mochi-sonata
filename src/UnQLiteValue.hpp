@@ -9,7 +9,7 @@
 #include "unqlite/unqlite.h"
 #include <cstring>
 #include <iostream>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <map>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -21,6 +21,8 @@
 #include "sonata/Exception.hpp"
 
 namespace sonata {
+
+using nlohmann::json;
 
 class UnQLiteVM;
 
@@ -80,33 +82,30 @@ public:
     unqlite_value_null(m_value);
   }
 
-  UnQLiteValue(const Json::Value &val, unqlite_vm *vm) : m_vm(vm) {
+  UnQLiteValue(const json &val, unqlite_vm *vm) : m_vm(vm) {
     switch (val.type()) {
-    case Json::nullValue:
+    case json::value_t::null:
       m_value = unqlite_vm_new_scalar(vm);
       unqlite_value_null(m_value);
       break;
-    case Json::intValue:
+    case json::value_t::number_integer:
+    case json::value_t::number_unsigned:
       m_value = unqlite_vm_new_scalar(vm);
-      unqlite_value_int64(m_value, val.asInt64());
+      unqlite_value_int64(m_value, val.get<int64_t>());
       break;
-    case Json::uintValue:
+    case json::value_t::number_float:
       m_value = unqlite_vm_new_scalar(vm);
-      unqlite_value_int64(m_value, val.asInt64());
+      unqlite_value_double(m_value, val.get<double>());
       break;
-    case Json::realValue:
+    case json::value_t::string:
       m_value = unqlite_vm_new_scalar(vm);
-      unqlite_value_double(m_value, val.asDouble());
+      unqlite_value_string(m_value, val.get_ref<const std::string&>().c_str(), -1);
       break;
-    case Json::stringValue:
+    case json::value_t::boolean:
       m_value = unqlite_vm_new_scalar(vm);
-      unqlite_value_string(m_value, val.asString().c_str(), -1);
+      unqlite_value_bool(m_value, val.get<bool>());
       break;
-    case Json::booleanValue:
-      m_value = unqlite_vm_new_scalar(vm);
-      unqlite_value_bool(m_value, val.asBool());
-      break;
-    case Json::arrayValue:
+    case json::value_t::array:
       m_value = unqlite_vm_new_array(vm);
       for (unsigned i = 0; i < val.size(); i++) {
         UnQLiteValue index(i, vm);
@@ -114,44 +113,41 @@ public:
         unqlite_array_add_elem(m_value, index.m_value, element.m_value);
       }
       break;
-    case Json::objectValue:
+    case json::value_t::object:
       m_value = unqlite_vm_new_array(vm);
-      for (auto it = val.begin(); it != val.end(); it++) {
-        UnQLiteValue element(*it, vm);
-        unqlite_array_add_strkey_elem(m_value, it.name().c_str(),
+      for (auto& elem : val.items()) {
+        UnQLiteValue element(elem.value(), vm);
+        unqlite_array_add_strkey_elem(m_value, elem.key().c_str(),
                                       element.m_value);
       }
       break;
     }
   }
 
-  UnQLiteValue(const Json::Value &val, unqlite_context *ctx) : m_ctx(ctx) {
+  UnQLiteValue(const json &val, unqlite_context *ctx) : m_ctx(ctx) {
     switch (val.type()) {
-    case Json::nullValue:
+    case json::value_t::null:
       m_value = unqlite_context_new_scalar(ctx);
       unqlite_value_null(m_value);
       break;
-    case Json::intValue:
+    case json::value_t::number_integer:
+    case json::value_t::number_unsigned:
       m_value = unqlite_context_new_scalar(ctx);
-      unqlite_value_int64(m_value, val.asInt64());
+      unqlite_value_int64(m_value, val.get<int64_t>());
       break;
-    case Json::uintValue:
+    case json::value_t::number_float:
       m_value = unqlite_context_new_scalar(ctx);
-      unqlite_value_int64(m_value, val.asInt64());
+      unqlite_value_double(m_value, val.get<double>());
       break;
-    case Json::realValue:
+    case json::value_t::string:
       m_value = unqlite_context_new_scalar(ctx);
-      unqlite_value_double(m_value, val.asDouble());
+      unqlite_value_string(m_value, val.get_ref<const std::string&>().c_str(), -1);
       break;
-    case Json::stringValue:
+    case json::value_t::boolean:
       m_value = unqlite_context_new_scalar(ctx);
-      unqlite_value_string(m_value, val.asString().c_str(), -1);
+      unqlite_value_bool(m_value, val.get<bool>());
       break;
-    case Json::booleanValue:
-      m_value = unqlite_context_new_scalar(ctx);
-      unqlite_value_bool(m_value, val.asBool());
-      break;
-    case Json::arrayValue:
+    case json::value_t::array:
       m_value = unqlite_context_new_array(ctx);
       for (unsigned i = 0; i < val.size(); i++) {
         UnQLiteValue index(i, ctx);
@@ -159,11 +155,11 @@ public:
         unqlite_array_add_elem(m_value, index.m_value, element.m_value);
       }
       break;
-    case Json::objectValue:
+    case json::value_t::object:
       m_value = unqlite_context_new_array(ctx);
-      for (auto it = val.begin(); it != val.end(); it++) {
-        UnQLiteValue element(*it, ctx);
-        unqlite_array_add_strkey_elem(m_value, it.name().c_str(),
+      for(auto& elem : val.items()) {
+        UnQLiteValue element(elem.value(), ctx);
+        unqlite_array_add_strkey_elem(m_value, elem.key().c_str(),
                                       element.m_value);
       }
       break;
@@ -652,9 +648,9 @@ private:
     return result;
   }
 
-  static Json::Value convertType(unqlite_value *value,
-                                 const type<Json::Value> &) {
-    Json::Value result;
+  static json convertType(unqlite_value *value,
+                          const type<json> &) {
+    json result;
     if (unqlite_value_is_null(value)) {
     } else if (unqlite_value_is_int(value)) {
       result = (int64_t)unqlite_value_to_int64(value);
@@ -666,13 +662,14 @@ private:
       result = unqlite_value_to_string(value, nullptr);
     } else if (unqlite_value_is_json_object(value)) {
       foreach (value, [&result](const std::string &key, unqlite_value *pValue) {
-        result[key] = convertType(pValue, type<Json::Value>());
+        result[key] = convertType(pValue, type<json>());
         return UNQLITE_OK;
       })
         ;
     } else if (unqlite_value_is_json_array(value)) {
+      result = json::array();
       foreach (value, [&result](unsigned, unqlite_value *pValue) {
-        result.append(convertType(pValue, type<Json::Value>()));
+        result.push_back(convertType(pValue, type<json>()));
         return UNQLITE_OK;
       })
         ;
@@ -686,7 +683,7 @@ private:
     return unqlite_value_is_null(value);
   }
 
-  static bool checkType(unqlite_value *value, const type<Json::Value> &) {
+  static bool checkType(unqlite_value *value, const type<json> &) {
     return true;
   }
 
