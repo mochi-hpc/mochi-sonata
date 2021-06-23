@@ -91,7 +91,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         }
 
         // Fetch records 0 and 2, which should exist
-        Json::Value result_json;
+        json result_json;
         std::vector<uint64_t> ids_to_fetch = { 0, 2};
         std::vector<std::string> result;
 
@@ -111,8 +111,8 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         for(uint64_t id : ids_to_fetch) {
             CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "Fetched record should contain correct data.",
-                records_json[id]["name"].asString(),
-                result_json[i]["name"].asString());
+                records_json[id]["name"].get<std::string>(),
+                result_json[i]["name"].get<std::string>());
             i += 1;
         }
 
@@ -166,11 +166,11 @@ class CollectionMultiTest : public CppUnit::TestFixture,
 
   //      mydb.commit();
         // Check the content of record 0, it should have changed
-        Json::Value val;
+        json val;
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "record 0 should not have changed.",
-                val["name"].asString(), std::string("Georges"));
+                val["name"].get<std::string>(), std::string("Georges"));
 
 //        mydb.commit();
         // Do a correct update of 2 records
@@ -194,12 +194,12 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val["name"].asString(), std::string("Georges"));
+                val["name"].get<std::string>(), std::string("Georges"));
 
         coll.fetch(2, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val["name"].asString(), std::string("Denis"));
+                val["name"].get<std::string>(), std::string("Denis"));
 
         }
 
@@ -216,7 +216,7 @@ class CollectionMultiTest : public CppUnit::TestFixture,
     //    mydb.commit();
 
         // Update record 0 and 2 with new content
-        Json::Value new_contents;
+        json new_contents;
         new_contents[0]["name"] = "Georges";
         new_contents[0]["city"] = "Lyon";
         new_contents[0]["papers"] = 89;
@@ -245,11 +245,11 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 !updated[1]);
 
         // Check the content of record 0, it should have changed
-        Json::Value val;
+        json val;
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "record 0 should not have changed.",
-                val["name"].asString(), std::string("Georges"));
+                val["name"].get<std::string>(), std::string("Georges"));
 
         // Do a correct update of 2 records
         ids_to_update[1]  = 2;
@@ -272,12 +272,12 @@ class CollectionMultiTest : public CppUnit::TestFixture,
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val["name"].asString(), std::string("Georges"));
+                val["name"].get<std::string>(), std::string("Georges"));
 
         coll.fetch(2, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val["name"].asString(), std::string("Denis"));
+                val["name"].get<std::string>(), std::string("Denis"));
 
         } 
     }
