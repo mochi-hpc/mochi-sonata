@@ -7,6 +7,6 @@ Name: sonata-admin
 Description: Mochi-based structured document service
 Version: @SONATA_VERSION@
 
-Requires: thallium
+Requires: thallium nlohmann_json spdlog
 Libs: -L${libdir} @PRIVATE_ADMIN_LIBS@
 Cflags: -I${includedir}

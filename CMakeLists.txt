@@ -39,18 +39,17 @@ endif ()
 set (CMAKE_PREFIX_PATH "" CACHE STRING "External dependencies path")
 set (BUILD_SHARED_LIBS "ON" CACHE BOOL "Build a shared library")
 
-find_package (PkgConfig REQUIRED)
 find_package (thallium REQUIRED)
-find_package (cereal REQUIRED)
-
-pkg_check_modules (margo REQUIRED IMPORTED_TARGET margo)
-pkg_check_modules (jsoncpp REQUIRED IMPORTED_TARGET jsoncpp)
-
 find_package (TCLAP REQUIRED)
-find_package(spdlog REQUIRED)
+find_package (spdlog REQUIRED)
+find_package (nlohmann_json REQUIRED)
 
 if(${ENABLE_BEDROCK})
-	find_package(bedrock REQUIRED)
+  find_package(bedrock REQUIRED)
+endif()
+
+if(${ENABLE_BENCHMARK})
+  find_package(MPI REQUIRED)
 endif()
 
 include_directories(${UnQLite_INCLUDE_DIR})
