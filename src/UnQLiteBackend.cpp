@@ -21,7 +21,7 @@ static UnQLiteBackend::MutexMode getMutexMode(const std::string& mode) {
 }
 
 static bool unqlite_lib_is_initialized = false;
-static std::string unqlite_mutex_mode = "none";
+static std::string unqlite_mutex_mode = "global";
 
 std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
                                                 const tl::pool &pool,
