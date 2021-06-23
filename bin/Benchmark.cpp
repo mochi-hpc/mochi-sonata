@@ -12,11 +12,13 @@
 #include <sonata/Admin.hpp>
 #include <sonata/Client.hpp>
 #include <sonata/Provider.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 namespace tl = thallium;
 namespace snt = sonata;
 
+using nlohmann::json;
 using namespace std::string_literals;
 
 static std::string gen_random_string(size_t len) {
@@ -42,15 +44,15 @@ struct RecordInfo {
       std::uniform_real_distribution<double>(0, 1);
   std::default_random_engine rng;
 
-  RecordInfo(const Json::Value &config) {
-    num = config.get("num", 0).asUInt64();
-    fields = config.get("fields", 0).asUInt64();
+  RecordInfo(const json &config) {
+    num = config.value("num", 0);
+    fields = config.value("fields", 0);
     if (config["key-size"]) {
-      if (config["key-size"].isArray() && config["key-size"].size() == 2) {
-        min_key_size = config["key-size"][0].asUInt64();
-        max_key_size = config["key-size"][1].asUInt64();
-      } else if (config["key-size"].isIntegral()) {
-        min_key_size = config["key-size"].asUInt64();
+      if (config["key-size"].is_array() && config["key-size"].size() == 2) {
+        min_key_size = config["key-size"][0].get<uint64_t>();
+        max_key_size = config["key-size"][1].get<uint64_t>();
+      } else if (config["key-size"].is_number()) {
+        min_key_size = config["key-size"].get<uint64_t>();
         max_key_size = min_key_size;
       } else {
         throw std::runtime_error("invalid key-size field");
@@ -60,11 +62,11 @@ struct RecordInfo {
       throw std::runtime_error("invalid key-size value(s)");
     }
     if (config["val-size"]) {
-      if (config["val-size"].isArray() && config["val-size"].size() == 2) {
-        min_val_size = config["val-size"][0].asUInt64();
-        max_val_size = config["val-size"][1].asUInt64();
-      } else if (config["val-size"].isIntegral()) {
-        min_val_size = config["val-size"].asUInt64();
+      if (config["val-size"].is_array() && config["val-size"].size() == 2) {
+        min_val_size = config["val-size"][0].get<uint64_t>();
+        max_val_size = config["val-size"][1].get<uint64_t>();
+      } else if (config["val-size"].is_number()) {
+        min_val_size = config["val-size"].get<uint64_t>();
         max_val_size = min_key_size;
       } else {
         throw std::runtime_error("invalid val-size field");
@@ -92,8 +94,8 @@ struct RecordInfo {
     *result = ss.str();
   }
 
-  void generateRandomRecordString(Json::Value *result) {
-    Json::Value record;
+  void generateRandomRecordString(json *result) {
+    json record;
     for (size_t i = 0; i < fields; i++) {
       size_t ks = min_key_size + (rand() % (max_key_size - min_key_size + 1));
       std::string key = gen_random_string(ks);
@@ -114,13 +116,13 @@ struct CollectionInfo {
   bool keep_db = false;
   bool shared_db = true;
 
-  CollectionInfo(const Json::Value &config) {
-    type = config.get("type", "unqlite").asString();
-    path = config.get("path", ".").asString();
-    database_name = config.get("database-name", "").asString();
-    collection_name = config.get("collection-name", "").asString();
-    shared_db = config.get("shared-database", true).asBool();
-    keep_db = config.get("keep-database", false).asBool();
+  CollectionInfo(const json &config) {
+    type = config.value("type", "unqlite");
+    path = config.value("path", ".");
+    database_name = config.value("database-name", "");
+    collection_name = config.value("collection-name", "");
+    shared_db = config.value("shared-database", true);
+    keep_db = config.value("keep-database", false);
     if (database_name.size() == 0) {
       throw std::runtime_error("invalid database name");
     }
@@ -198,7 +200,7 @@ class AbstractBenchmark {
 
   using benchmark_factory_function =
       std::function<std::unique_ptr<AbstractBenchmark>(
-          Json::Value &, MPI_Comm team_comm, MPI_Comm client_comm,
+          json &, MPI_Comm team_comm, MPI_Comm client_comm,
           const std::string &addr, const snt::Client &, const snt::Admin &,
           int team)>;
   static std::map<std::string, benchmark_factory_function>
@@ -247,7 +249,7 @@ template <typename T> class BenchmarkRegistration {
 public:
   BenchmarkRegistration(const std::string &type) {
     AbstractBenchmark::s_benchmark_factories[type] =
-        [](Json::Value &config, MPI_Comm team_comm, MPI_Comm client_comm,
+        [](json &config, MPI_Comm team_comm, MPI_Comm client_comm,
            const std::string &addr, const snt::Client &client,
            const snt::Admin &admin, int team) {
           return std::make_unique<T>(config, team_comm, client_comm, addr,
@@ -274,15 +276,15 @@ protected:
   snt::Collection m_collection;
   bool m_use_json = false;
   std::vector<std::string> m_records;
-  std::vector<Json::Value> m_records_json;
+  std::vector<json> m_records_json;
 
 public:
   template <typename... T>
-  StoreBenchmark(Json::Value &config, T &&...args)
+  StoreBenchmark(json &config, T &&...args)
       : AbstractBenchmark(std::forward<T>(args)...),
         m_record_info(config["records"]),
         m_collection_info(config["collection"]) {
-    m_use_json = config.get("use-json", false).asBool();
+    m_use_json = config.value("use-json", false);
   }
 
   virtual void setup() override {
@@ -299,7 +301,7 @@ public:
     } else {
       m_records_json.reserve(m_record_info.num);
       for (size_t i = 0; i < m_record_info.num; i++) {
-        Json::Value r;
+        json r;
         m_record_info.generateRandomRecordString(&r);
         m_records_json.push_back(std::move(r));
       }
@@ -336,13 +338,13 @@ class StoreMultiBenchmark : public StoreBenchmark {
 protected:
   size_t m_batch_size;
   std::vector<std::vector<std::string>> m_batches;
-  std::vector<Json::Value> m_batches_json;
+  std::vector<json> m_batches_json;
 
 public:
   template <typename... T>
-  StoreMultiBenchmark(Json::Value &config, T &&...args)
+  StoreMultiBenchmark(json &config, T &&...args)
       : StoreBenchmark(config, std::forward<T>(args)...),
-        m_batch_size(config.get("batch-size", 1).asUInt64()) {}
+        m_batch_size(config.value("batch-size", (uint64_t)1)) {}
 
   virtual void setup() override {
     StoreBenchmark::setup();
@@ -361,7 +363,7 @@ public:
       else
         m_batches_json.resize(1 + m_record_info.num / m_batch_size);
       for (unsigned i = 0; i < m_records_json.size(); i++) {
-        m_batches_json[i / m_batch_size].append(std::move(m_records_json[i]));
+        m_batches_json[i / m_batch_size].push_back(std::move(m_records_json[i]));
       }
       m_records_json.clear();
     }
@@ -400,26 +402,26 @@ protected:
   std::vector<std::string> m_input_files;
   std::vector<std::string> m_object_path;
   std::vector<std::vector<std::string>> m_records;
-  std::vector<Json::Value> m_records_json;
-  Json::Value &m_config;
+  std::vector<json> m_records_json;
+  json &m_config;
 
 public:
   template <typename... T>
-  IngestBenchmark(Json::Value &config, T &&...args)
+  IngestBenchmark(json &config, T &&...args)
       : AbstractBenchmark(std::forward<T>(args)...),
         m_collection_info(config["collection"]),
-        m_use_json(config.get("use-json", false).asBool()),
-        m_batch_size(config.get("batch-size", 1).asUInt64()), m_config(config) {
-    auto input_files_json = config.get("files", Json::Value());
-    if (input_files_json.isString()) {
-      m_input_files.push_back(input_files_json.asString());
-    } else if (input_files_json.isArray()) {
+        m_use_json(config.value("use-json", false)),
+        m_batch_size(config.value("batch-size", (uint64_t)1)), m_config(config) {
+    auto input_files_json = config.value("files", json());
+    if (input_files_json.is_string()) {
+      m_input_files.push_back(input_files_json.get<std::string>());
+    } else if (input_files_json.is_array()) {
       for (size_t i = 0; i < input_files_json.size(); i++) {
         m_input_files.push_back(
-            input_files_json[(Json::ArrayIndex)i].asString());
+            input_files_json[i].get<std::string>());
       }
     }
-    std::string obj = config.get("object-path", "").asString();
+    std::string obj = config.value("object-path", "");
     std::stringstream ss(obj);
     std::string token;
     while (std::getline(ss, token, '.')) {
@@ -436,34 +438,34 @@ public:
       std::ifstream file(f);
       if (!file.good())
         throw std::runtime_error("Could not open file "s + f);
-      Json::Value root;
+      json root;
       file >> root;
-      Json::Value obj = root;
+      json obj = root;
       size_t current_batch_size = 0;
       if (m_use_json)
         m_records_json.emplace_back();
       else
         m_records.emplace_back();
       for (auto &token : m_object_path) {
-        if (obj.isMember(token))
+        if (obj.contains(token))
           obj = obj[token];
         else
           throw std::runtime_error("Could not find field \""s + token + "\"");
       }
-      if (!obj.isArray()) {
+      if (!obj.is_array()) {
         if (m_use_json)
-          m_records_json.back().append(obj);
+          m_records_json.back().push_back(obj);
         else
-          m_records.back().push_back(obj.toStyledString());
+          m_records.back().push_back(obj.dump());
         current_batch_size += 1;
         num_objects += 1;
       } else {
         for (size_t i = 0; i < obj.size(); i++) {
           if (m_use_json)
-            m_records_json.back().append(obj[(Json::ArrayIndex)i]);
+            m_records_json.back().push_back(obj[i]);
           else
             m_records.back().push_back(
-                obj[(Json::ArrayIndex)i].toStyledString());
+                obj[i].dump());
           current_batch_size += 1;
           if (current_batch_size == m_batch_size) {
             current_batch_size = 0;
@@ -531,15 +533,15 @@ protected:
 
 public:
   template <typename... T>
-  FetchBenchmark(Json::Value &config, T &&...args)
+  FetchBenchmark(json &config, T &&...args)
       : AbstractBenchmark(std::forward<T>(args)...),
         m_record_info(config["records"]),
         m_collection_info(config["collection"]) {
-    m_use_json = config.get("use-json", false).asBool();
+    m_use_json = config.value("use-json", false);
     if (!config["num-operations"]) {
       throw std::runtime_error("Benchmark needs a num-operations parameter");
     }
-    m_num_fetch = config["num-operations"].asUInt64();
+    m_num_fetch = config["num-operations"].get<uint64_t>();
   }
 
   virtual void setup() override {
@@ -563,7 +565,7 @@ public:
         std::string r;
         m_collection.fetch(id, &r);
       } else {
-        Json::Value r;
+        json r;
         m_collection.fetch(id, &r);
       }
     }
@@ -587,9 +589,9 @@ protected:
 
 public:
   template <typename... T>
-  FetchMultiBenchmark(Json::Value &config, T &&...args)
+  FetchMultiBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...),
-        m_batch_size(config.get("batch-size", 1).asUInt64()) {}
+        m_batch_size(config.value("batch-size", (uint64_t)1)) {}
 
   virtual void execute() override {
     std::vector<uint64_t> ids(m_batch_size);
@@ -602,7 +604,7 @@ public:
         std::vector<std::string> r;
         m_collection.fetch_multi(ids.data(), ids.size(), &r);
       } else {
-        Json::Value r;
+        json r;
         m_collection.fetch_multi(ids.data(), ids.size(), &r);
       }
     }
@@ -622,14 +624,14 @@ protected:
 
 public:
   template <typename... T>
-  FilterBenchmark(Json::Value &config, T &&...args)
+  FilterBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...) {
-    m_use_json = config.get("use-json", false).asBool();
+    m_use_json = config.value("use-json", false);
     if (!config["filter-selectivity"]) {
       throw std::runtime_error(
           "Filter benchmark needs a filter-selectivity parameter");
     }
-    m_selectivity = config["filter-selectivity"].asDouble();
+    m_selectivity = config["filter-selectivity"].get<double>();
     std::stringstream ss;
     ss << "function($rec) { return $rec.__p__ < ";
     ss << std::setprecision(12) << m_selectivity;
@@ -642,7 +644,7 @@ public:
       std::vector<std::string> result;
       m_collection.filter(m_function, &result);
     } else {
-      Json::Value result;
+      json result;
       m_collection.filter(m_function, &result);
     }
   }
@@ -658,14 +660,14 @@ class UpdateBenchmark : public FetchBenchmark {
 protected:
   size_t m_num_updates = 0;
   std::vector<std::string> m_new_records;
-  std::vector<Json::Value> m_new_records_json;
+  std::vector<json> m_new_records_json;
   std::vector<uint64_t> m_ids_to_update;
 
 public:
   template <typename... T>
-  UpdateBenchmark(Json::Value &config, T &&...args)
+  UpdateBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...) {
-    m_num_updates = config["num-operations"].asUInt64();
+    m_num_updates = config["num-operations"].get<uint64_t>();
   }
 
   virtual void setup() override {
@@ -682,7 +684,7 @@ public:
         m_record_info.generateRandomRecordString(&r);
         m_new_records.push_back(std::move(r));
       } else {
-        Json::Value r;
+        json r;
         m_record_info.generateRandomRecordString(&r);
         m_new_records_json.push_back(std::move(r));
       }
@@ -716,13 +718,13 @@ class UpdateMultiBenchmark : public UpdateBenchmark {
 protected:
   size_t m_batch_size;
   std::vector<std::vector<std::string>> m_new_records_batches;
-  std::vector<Json::Value> m_new_records_batches_json;
+  std::vector<json> m_new_records_batches_json;
 
 public:
   template <typename... T>
-  UpdateMultiBenchmark(Json::Value &config, T &&...args)
+  UpdateMultiBenchmark(json &config, T &&...args)
       : UpdateBenchmark(config, std::forward<T>(args)...),
-        m_batch_size(config.get("batch-size", 1).asUInt64()) {}
+        m_batch_size(config.value("batch-size", (uint64_t)1)) {}
 
   virtual void setup() override {
     UpdateBenchmark::setup();
@@ -740,7 +742,7 @@ public:
           m_new_records_batches.back().push_back(
               std::move(m_new_records[i + j]));
         } else {
-          m_new_records_batches_json.back().append(
+          m_new_records_batches_json.back().push_back(
               std::move(m_new_records_json[i + j]));
         }
       }
@@ -784,12 +786,12 @@ class AllBenchmark : public FetchBenchmark {
 
 public:
   template <typename... T>
-  AllBenchmark(Json::Value &config, T &&...args)
+  AllBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...) {}
 
   virtual void execute() override {
     if (m_use_json) {
-      Json::Value all;
+      json all;
       m_collection.all(&all);
     } else {
       std::vector<std::string> all;
@@ -810,7 +812,7 @@ protected:
 
 public:
   template <typename... T>
-  EraseBenchmark(Json::Value &config, T &&...args)
+  EraseBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...) {}
 
   virtual void setup() override {
@@ -856,9 +858,9 @@ protected:
 
 public:
   template <typename... T>
-  EraseMultiBenchmark(Json::Value &config, T &&...args)
+  EraseMultiBenchmark(json &config, T &&...args)
       : EraseBenchmark(config, std::forward<T>(args)...),
-        m_batch_size(config.get("batch-size", 1).asUInt64()) {}
+        m_batch_size(config.value("batch-size", (uint64_t)1)) {}
 
   virtual void execute() override {
     int rank;
@@ -879,9 +881,9 @@ public:
 };
 REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
 
-static void run_server(MPI_Comm group_comm, Json::Value &config);
+static void run_server(MPI_Comm group_comm, json &config);
 static void run_client(MPI_Comm group_comm, MPI_Comm client_comm,
-                       Json::Value &config, int team, int benchmark_id);
+                       json &config, int team, int benchmark_id);
 
 /**
  * @brief Main function.
@@ -906,18 +908,11 @@ int main(int argc, char **argv) {
     MPI_Abort(MPI_COMM_WORLD, -1);
   }
 
-  Json::CharReaderBuilder builder;
-  Json::Value config;
-  JSONCPP_STRING errs;
-  if (!parseFromStream(builder, config_file, &config, &errs)) {
-    std::cout << errs << std::endl;
-    MPI_Abort(MPI_COMM_WORLD, -1);
-    return -1;
-  }
+  json config = json::parse(config_file);
 
   int server_count = 1;
-  if (config.isMember("server") && config["server"].isMember("count")) {
-    server_count = config["server"]["count"].asInt();
+  if (config.contains("server") && config["server"].contains("count")) {
+    server_count = config["server"]["count"].get<int>();
     if ((size - server_count) % server_count != 0 && rank == 0) {
       std::cerr << "Number of servers does not divide the number of clients"
                 << std::endl;
@@ -952,18 +947,18 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-static void run_server(MPI_Comm group_comm, Json::Value &config) {
+static void run_server(MPI_Comm group_comm, json &config) {
   // initialize Thallium
-  std::string loglevel = config.get("log", "info").asString();
+  std::string loglevel = config.value("log", "info");
   spdlog::set_level(spdlog::level::from_str(loglevel));
-  std::string protocol = config["protocol"].asString();
+  std::string protocol = config["protocol"].get<std::string>();
   bool use_progress_thread = false;
   int rpc_thread_count = 0;
-  if (config.isMember("server")) {
+  if (config.contains("server")) {
     auto &server_config = config["server"];
     use_progress_thread =
-        server_config.get("use-progress-thread", false).asBool();
-    rpc_thread_count = server_config.get("rpc-thread-count", 0).asInt();
+        server_config.value("use-progress-thread", false);
+    rpc_thread_count = server_config.value("rpc-thread-count", 0);
   }
   tl::engine engine(protocol, THALLIUM_SERVER_MODE, use_progress_thread,
                     rpc_thread_count);
@@ -989,22 +984,20 @@ static void run_server(MPI_Comm group_comm, Json::Value &config) {
 }
 
 static void run_client(MPI_Comm group_comm, MPI_Comm client_comm,
-                       Json::Value &config, int team, int benchmark_id) {
-  std::string loglevel = config.get("log", "info").asString();
+                       json &config, int team, int benchmark_id) {
+  std::string loglevel = config.value("log", "info");
   spdlog::set_level(spdlog::level::from_str(loglevel));
   // get info from communicator
   int rank, num_clients;
   MPI_Comm_rank(client_comm, &rank);
   MPI_Comm_size(client_comm, &num_clients);
-  Json::StreamWriterBuilder builder;
-  const std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
   // initialize Thallium
-  std::string protocol = config["protocol"].asString();
+  std::string protocol = config["protocol"].get<std::string>();
   bool use_progress_thread = false;
-  if (config.isMember("client")) {
+  if (config.contains("client")) {
     auto &client_config = config["client"];
     use_progress_thread =
-        client_config.get("use-progress-thread", false).asBool();
+        client_config.value("use-progress-thread", false);
   }
   tl::engine engine(protocol, THALLIUM_CLIENT_MODE, use_progress_thread, 0);
   // receive server address
@@ -1026,7 +1019,7 @@ static void run_client(MPI_Comm group_comm, MPI_Comm client_comm,
     snt::Client client(engine);
     snt::Admin admin(engine);
     // initialize the RNG seed
-    int seed = config["seed"].asInt();
+    int seed = config["seed"].get<int>();
     // initialize benchmark instances
     std::vector<std::unique_ptr<AbstractBenchmark>> benchmarks;
     std::vector<unsigned> repetitions;
@@ -1039,12 +1032,12 @@ static void run_client(MPI_Comm group_comm, MPI_Comm client_comm,
       if (current_benchmark != benchmark_id && benchmark_id >= 0)
         continue;
 
-      std::string type = bench_config["type"].asString();
+      std::string type = bench_config["type"].get<std::string>();
       types.push_back(type);
       benchmarks.push_back(
           AbstractBenchmark::create(type, bench_config, team_comm, client_comm,
                                     server_addr_str, client, admin, team));
-      repetitions.push_back(bench_config["repetitions"].asUInt());
+      repetitions.push_back(bench_config["repetitions"].get<unsigned>());
       current_benchmark += 1;
     }
     // main execution loop
@@ -1083,7 +1076,7 @@ static void run_client(MPI_Comm group_comm, MPI_Comm client_comm,
         size_t n = global_timings.size();
         std::cout << "================ " << types[i]
                   << " ================" << std::endl;
-        writer->write(config["benchmarks"][i], &std::cout);
+        std::cout << config["benchmarks"][i].dump(4);
         std::cout << std::endl;
         std::cout << "-----------------" << std::string(types[i].size(), '-')
                   << "-----------------" << std::endl;

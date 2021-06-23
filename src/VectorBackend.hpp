@@ -12,7 +12,7 @@
 
 #include <cstdio>
 #include <fstream>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <thallium.hpp>
@@ -21,6 +21,7 @@ namespace sonata {
 
 namespace tl = thallium;
 using namespace std::string_literals;
+using nlohmann::json;
 
 class VectorBackend : public Backend {
 
@@ -39,11 +40,11 @@ public:
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   static std::unique_ptr<Backend> attach(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   virtual ~VectorBackend() {}
 
@@ -109,9 +110,9 @@ public:
   }
 
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
-                                            const Json::Value &record,
+                                            const JsonWrapper &record,
                                             bool commit) override {
-    return store(coll_name, record.toStyledString(), commit);;
+    return store(coll_name, record->dump(), commit);;
   }
 
   virtual RequestResult<std::vector<uint64_t>>
@@ -143,7 +144,7 @@ public:
   }
 
   virtual RequestResult<std::vector<uint64_t>>
-  storeMultiJson(const std::string &coll_name, const Json::Value &records,
+  storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
     RequestResult<std::vector<uint64_t>> result;
     std::lock_guard<tl::mutex> guard(m_mutex);
@@ -153,17 +154,17 @@ public:
       return result;
     }
     auto &collection = m_collections[coll_name];
-    if (!records.isArray()) {
+    if (!records->is_array()) {
       result.error() = "JSON object is not an array";
       result.success() = false;
       return result;
     }
     auto id = collection.size();
-    for (Json::ArrayIndex i = 0; i < records.size(); i++) {
-      collection.push_back(records[i].toStyledString());
+    for (decltype(id) i = 0; i < records->size(); i++) {
+      collection.push_back(records.m_object[i].dump());
       result.value().push_back(id + i);
     }
-    m_collection_size[coll_name] += records.size();
+    m_collection_size[coll_name] += records->size();
     return result;
   }
 
@@ -193,21 +194,18 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
+  virtual RequestResult<JsonWrapper> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) override {
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     auto r = fetch(coll_name, record_id);
     if(r.success()) {
         result.success() = true;
-        Json::CharReaderBuilder builder;
-        Json::CharReader* reader = builder.newCharReader();
-        std::string errors;
-        result.success() = reader->parse(r.value().c_str(),
-                                         r.value().c_str() + r.value().size(),
-                                         &result.value(), &errors);
-        if(!result.success())
-            result.error() = std::move(errors);
-        delete reader;
+        try {
+            result.value() = json::parse(r.value());
+        } catch(const std::exception& ex) {
+            result.success() = false;
+            result.error() = ex.what();
+        }
     } else {
         result.success() = false;
         result.error() = r.error();
@@ -238,35 +236,30 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) override {
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
+    result.value() = json::array();
     auto r = fetchMulti(coll_name, record_ids);
     if(r.success()) {
-        Json::CharReaderBuilder builder;
-        Json::CharReader* reader = builder.newCharReader();
-        std::string errors;
         result.success() = true;
         for(auto& record : r.value()) {
             if(record.empty()) {
-                result.value().append(Json::Value::null);
+                result.value()->push_back(json());
             } else {
-                Json::Value j;
-                auto b = reader->parse(record.c_str(),
-                                       record.c_str() + record.size(),
-                                       &j, &errors);
-                if(b) {
-                    result.value().append(std::move(j));
-                } else {
+                json j;
+                try {
+                    j = json::parse(record);
+                    result.value()->push_back(std::move(j));
+                } catch(const std::exception& ex) {
                     result.success() = false;
-                    result.value().clear();
-                    result.error() = std::move(errors);
+                    result.value()->clear();
+                    result.error() = ex.what();
                     break;
                 }
             }
         }
-        delete reader;
     } else {
         result.success() = false;
         result.error() = r.error();
@@ -283,10 +276,10 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   filterJson(const std::string &coll_name,
              const std::string &filter_code) override {
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     result.success() = false;
     result.error() = "Function not implemented with Vector backend";
     return result;
@@ -315,10 +308,10 @@ public:
 
   virtual RequestResult<bool> updateJson(const std::string &coll_name,
                                          uint64_t record_id,
-                                         const Json::Value &new_content,
+                                         const JsonWrapper &new_content,
                                          bool commit) override {
     RequestResult<bool> result;
-    return update(coll_name, record_id, new_content.toStyledString(), commit);
+    return update(coll_name, record_id, new_content->dump(), commit);
   }
 
   virtual RequestResult<std::vector<bool>> updateMulti(
@@ -353,7 +346,7 @@ public:
   virtual RequestResult<std::vector<bool>>
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
-                  const Json::Value &new_contents, bool commit) override {
+                  const JsonWrapper &new_contents, bool commit) override {
     RequestResult<std::vector<bool>> result;
     std::lock_guard<tl::mutex> guard(m_mutex);
     if (m_collections.count(coll_name) == 0) {
@@ -364,7 +357,7 @@ public:
     auto &collection = m_collections[coll_name];
     result.value().reserve(record_ids.size());
     for (size_t i = 0; i < record_ids.size(); i++) {
-      if (i >= new_contents.size()) {
+      if (i >= new_contents->size()) {
         result.value().push_back(false);
         continue;
       }
@@ -374,11 +367,11 @@ public:
         continue;
       }
       auto &record = collection[id];
-      if (new_contents[(Json::ArrayIndex)i].type() != Json::objectValue) {
+      if (!new_contents.m_object[i].is_object()) {
         result.value().push_back(false);
         continue;
       }
-      record = new_contents[(Json::ArrayIndex)i].toStyledString();
+      record = new_contents.m_object[i].dump();
       result.value().push_back(true);
     }
     return result;
@@ -402,9 +395,9 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   allJson(const std::string &coll_name) override {
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     std::lock_guard<tl::mutex> guard(m_mutex);
 
     if (m_collections.count(coll_name) == 0) {
@@ -415,25 +408,20 @@ public:
 
     auto &collection = m_collections[coll_name];
 
-    Json::CharReaderBuilder builder;
-    Json::CharReader* reader = builder.newCharReader();
-    std::string errors;
-
     for (auto &r : collection) {
       if (r.empty())
           continue;
-      Json::Value j;
-      result.success() = reader->parse(r.c_str(), r.c_str()+r.size(),
-                                       &j, &errors);
-      if(!result.success()) {
-          result.error() = std::move(errors);
-          result.value().clear();
+      json j;
+      try {
+          j = json::parse(r);
+      } catch(const std::exception& ex) {
+          result.success() = false;
+          result.error() = ex.what();
+          result.value()->clear();
           break;
       }
-      result.value().append(std::move(j));
+      result.value()->push_back(std::move(j));
     }
-
-    delete reader;
     return result;
   }
 

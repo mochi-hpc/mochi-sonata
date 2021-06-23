@@ -100,27 +100,21 @@ void Database::execute(const std::string &code,
 
 void Database::execute(const std::string &code,
                        const std::unordered_set<std::string> &vars,
-                       Json::Value *result, bool commit) const {
+                       json *result, bool commit) const {
   if (not self)
     throw Exception("Invalid sonata::Database object");
   std::unordered_map<std::string, std::string> ret;
   if (result) {
     std::unordered_map<std::string, std::string> ret;
     execute(code, vars, &ret, commit);
-    Json::Value tmp_result;
+    json tmp = json::object();
     for (auto &p : ret) {
-      Json::Value tmp;
       const auto &name = p.first;
       const auto &value = p.second;
-      std::string errors;
-      bool parsingSuccessful = self->m_json_reader->parse(
-          value.c_str(), value.c_str() + value.size(), &tmp, &errors);
-      if (!parsingSuccessful) {
-        throw Exception(errors);
-      }
-      tmp_result[name] = std::move(tmp);
+      auto val = json::parse(value);
+      tmp[name] = std::move(val);
     }
-    *result = std::move(tmp_result);
+    *result = std::move(tmp);
   } else {
     execute(
         code, vars,

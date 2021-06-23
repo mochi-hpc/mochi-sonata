@@ -6,15 +6,16 @@
 #ifndef __SONATA_ADMIN_HPP
 #define __SONATA_ADMIN_HPP
 
-#include <json/json.h>
 #include <memory>
 #include <sonata/Exception.hpp>
 #include <string>
+#include <nlohmann/json.hpp>
 #include <thallium.hpp>
 
 namespace sonata {
 
 namespace tl = thallium;
+using nlohmann::json;
 
 class AdminImpl;
 
@@ -123,7 +124,7 @@ public:
    */
   void createDatabase(const std::string &address, uint16_t provider_id,
                       const std::string &name, const std::string &type,
-                      const Json::Value &config,
+                      const json &config,
                       const std::string &token = "") const;
 
   /**
@@ -155,7 +156,7 @@ public:
    */
   void attachDatabase(const std::string &address, uint16_t provider_id,
                       const std::string &name, const std::string &type,
-                      const Json::Value &config,
+                      const json &config,
                       const std::string &token = "") const;
 
   /**

@@ -6,15 +6,16 @@
 #ifndef __SONATA_COLLECTION_HPP
 #define __SONATA_COLLECTION_HPP
 
-#include <json/json.h>
-#include <memory>
 #include <sonata/AsyncRequest.hpp>
 #include <sonata/Database.hpp>
 #include <thallium.hpp>
+#include <nlohmann/json.hpp>
+#include <memory>
 
 namespace sonata {
 
 namespace tl = thallium;
+using nlohmann::json;
 
 class DatabaseImpl;
 class CollectionImpl;
@@ -30,6 +31,7 @@ class Collection {
   friend class Database;
 
 public:
+
   /**
    * @brief Default constructor. The resulting collection
    * instance will be invalid.
@@ -93,7 +95,7 @@ public:
    *
    * @return the record id of the stored document.
    */
-  inline uint64_t store(const Json::Value &record, bool commit = false) const {
+  inline uint64_t store(const json &record, bool commit = false) const {
     uint64_t record_id;
     store(record, &record_id, commit);
     return record_id;
@@ -140,7 +142,7 @@ public:
    *
    * @return the record id of the stored document.
    */
-  void store(const Json::Value &record, uint64_t *id, bool commit = false,
+  void store(const json &record, uint64_t *id, bool commit = false,
              AsyncRequest *req = nullptr) const;
 
   /**
@@ -177,7 +179,7 @@ public:
 
   /**
    * @brief Stores multiple records in the collection. The provided
-   * Json::Value should be an array of objects. The ids parameter
+   * json should be an array of objects. The ids parameter
    * should be a pointer to a memory region sufficiently large to
    * store the resulting records.size() identifiers.
    *
@@ -188,7 +190,7 @@ public:
    * @param commit Whether to commit the changes to storage.
    * @param req Pointer to a request to wait on.
    */
-  void store_multi(const Json::Value &records, uint64_t *ids,
+  void store_multi(const json &records, uint64_t *ids,
                    bool commit = false, AsyncRequest *req = nullptr) const;
 
   /**
@@ -234,7 +236,7 @@ public:
    * @param[out] result Resulting JSON object.
    * @param req Pointer to a request to wait on.
    */
-  void fetch(uint64_t id, Json::Value *result,
+  void fetch(uint64_t id, json *result,
              AsyncRequest *req = nullptr) const;
 
   /**
@@ -259,7 +261,7 @@ public:
    * @param[out] result Resulting JSON array.
    * @param req Pointer to a request to wait on.
    */
-  void fetch_multi(const uint64_t *id, size_t count, Json::Value *result,
+  void fetch_multi(const uint64_t *id, size_t count, json *result,
                    AsyncRequest *req = nullptr) const;
 
   /**
@@ -295,7 +297,7 @@ public:
    * @param result Resuling JSON object containing the array of results.
    * @param req Pointer to a request to wait on.
    */
-  void filter(const std::string &filterCode, Json::Value *result,
+  void filter(const std::string &filterCode, json *result,
               AsyncRequest *req = nullptr) const;
 
   /**
@@ -307,7 +309,7 @@ public:
    * @param commit Whether to commit the changes to storage.
    * @param req Pointer to a request to wait on.
    */
-  void update(uint64_t id, const Json::Value &record, bool commit = false,
+  void update(uint64_t id, const json &record, bool commit = false,
               AsyncRequest *req = nullptr) const;
 
   /**
@@ -348,7 +350,7 @@ public:
    * @param commit Whether to commit the changes to storage.
    * @param req Pointer to a request to wait on.
    */
-  void update_multi(const uint64_t *id, const Json::Value &record,
+  void update_multi(const uint64_t *id, const json &record,
                     std::vector<bool> *updated, bool commit = false,
                     AsyncRequest *req = nullptr) const;
 
@@ -409,7 +411,7 @@ public:
    * @param result All the documents from the collection.
    * @param req Pointer to a request to wait on.
    */
-  void all(Json::Value *result, AsyncRequest *req = nullptr) const;
+  void all(json *result, AsyncRequest *req = nullptr) const;
 
   /**
    * @brief Returns the last record id used by the collection.

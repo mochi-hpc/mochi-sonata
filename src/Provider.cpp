@@ -6,10 +6,12 @@
 #include "sonata/Provider.hpp"
 #include "ProviderImpl.hpp"
 #include "sonata/Exception.hpp"
+#include <nlohmann/json.hpp>
 
 #include <thallium/serialization/stl/string.hpp>
 
 namespace tl = thallium;
+using nlohmann::json;
 
 namespace {
 void delete_engine(void *uargs) { delete static_cast<tl::engine *>(uargs); }
@@ -17,68 +19,63 @@ void delete_engine(void *uargs) { delete static_cast<tl::engine *>(uargs); }
 
 namespace sonata {
 
-Json::Value parseAndValidateJsonConfig(const std::string &config) {
+json parseAndValidateJsonConfig(const std::string &config) {
   if (config.empty()) {
-    auto result = Json::Value(Json::objectValue);
-    result["databases"] = Json::Value(Json::arrayValue);
+    auto result = json::object();
+    result["databases"] = json::array();
     return result;
   }
-  Json::CharReaderBuilder builder;
-  Json::CharReader *reader = builder.newCharReader();
 
-  Json::Value json_config;
-  std::string errors;
-
-  bool parsingSuccessful = reader->parse(
-      config.c_str(), config.c_str() + config.size(), &json_config, &errors);
-  delete reader;
-
-  if (!parsingSuccessful) {
-    throw Exception("Could not parse JSON configuration for provider: " +
-                    errors);
+  json json_config;
+  try {
+    json_config = json::parse(config);
+  } catch(const std::exception& ex) {
+    throw Exception("Could not parse JSON configuration for provider: "s +
+                    ex.what());
   }
 
-  if (!json_config.isMember("databases")) {
-    json_config["databases"] = Json::Value(Json::arrayValue);
+  if (!json_config.contains("databases")) {
+    json_config["databases"] = json::array();
   }
 
   auto &databases = json_config["databases"];
-  if (!databases.isArray()) {
+  if (!databases.is_array()) {
     throw Exception(
         "\"databases\" field in JSON configuration should be an array");
   }
 
   for (auto &db : databases) {
 
-    if (!db.isMember("name"))
+    if (!db.contains("name"))
       throw Exception("\"name\" field missing from database configuration");
-    if (!db["name"].isString())
+    if (!db["name"].is_string())
       throw Exception(
           "\"name\" field in database configuration should be a string");
-    if (db["name"].asString().size() == 0)
+    if (db["name"].get_ref<const std::string&>().empty())
       throw Exception("Empty \"name\" field in database configuration");
 
-    if (!db.isMember("type"))
+    if (!db.contains("type"))
       throw Exception("\"type\" field missing from database configuration");
-    if (!db["type"].isString())
+    if (!db["type"].is_string())
       throw Exception(
           "\"type\" field in database configuration should be a string");
-    if (db["type"].asString().size() == 0)
+    if (db["type"].get_ref<const std::string&>().empty())
       throw Exception("Empty \"type\" field in database configuration");
 
-    if (!db.isMember("mode"))
+    if (!db.contains("mode"))
       throw Exception("\"mode\" field missing from database configuration");
-    if (!db["mode"].isString())
+    if (!db["mode"].is_string())
       throw Exception(
           "\"mode\" field in database configuration should be a string");
-    if (db["mode"].asString() != "attach" && db["mode"].asString() != "create")
-      throw Exception("Empty \"mode\" field in database configuration"
+    if (db["mode"].get_ref<const std::string&>() != "attach"
+    &&  db["mode"].get_ref<const std::string&>() != "create")
+      throw Exception("\"mode\" field in database configuration"
                       " should be either \"create\" or \"attach\"");
 
-    if (!db.isMember("config"))
-      db["config"] = Json::Value(Json::objectValue);
+    if (!db.contains("config"))
+      db["config"] = json::object();
 
-    if (!db["config"].isObject()) {
+    if (!db["config"].is_object()) {
       throw Exception("\"config\" field in database configuration "
                       "should be an object");
     }
@@ -89,13 +86,13 @@ Json::Value parseAndValidateJsonConfig(const std::string &config) {
 
 void populateDatabasesFromConfig(
     const std::shared_ptr<ProviderImpl> &provider_impl,
-    const Json::Value &json_config) {
+    const json &json_config) {
   for (auto &db : json_config["databases"]) {
-    auto db_type = db["type"].asString();
-    auto db_name = db["name"].asString();
-    auto db_config = db["config"];
+    auto& db_type = db["type"].get_ref<const std::string&>();
+    auto& db_name = db["name"].get_ref<const std::string&>();
+    auto& db_config = db["config"];
     std::unique_ptr<Backend> backend;
-    if (db["mode"].asString() == "create") {
+    if (db["mode"].get_ref<const std::string&>() == "create") {
       backend =
           BackendFactory::createBackend(db_type, provider_impl->get_engine(),
                                         provider_impl->m_pool, db_config);

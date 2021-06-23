@@ -1,6 +1,6 @@
 /*
  * (C) 2020 The University of Chicago
- * 
+ *
  * See COPYRIGHT in top-level directory.
  */
 #include <cppunit/extensions/HelperMacros.h>
@@ -10,6 +10,8 @@
 
 extern thallium::engine* engine;
 extern std::string db_type;
+
+using nlohmann::json;
 
 class CollectionTest : public CppUnit::TestFixture,
                        public CollectionTestBase
@@ -124,7 +126,7 @@ class CollectionTest : public CppUnit::TestFixture,
         }
 
         // Fetch a record that should exist
-        Json::Value result;
+        json result;
         uint64_t id = records_str.size()/2;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "coll.fetch should not throw.",
@@ -133,8 +135,8 @@ class CollectionTest : public CppUnit::TestFixture,
         // Fetched record should be as expected
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "Fetched record should contain correct data.",
-                records_json[id]["name"].asString(),
-                result["name"].asString());
+                records_json[id]["name"].get<std::string>(),
+                result["name"].get<std::string>());
 
         // Fetch a record that does not exist
         uint64_t bad_id = records_str.size();
@@ -189,7 +191,7 @@ class CollectionTest : public CppUnit::TestFixture,
 
         // Filter into a Json result
         code = "function($rec) { return $rec.papers > 35; }";
-        Json::Value json_result;
+        json json_result;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "it should be possible to filter from an empty collection.",
                 coll.filter(code, &json_result));
@@ -217,11 +219,11 @@ class CollectionTest : public CppUnit::TestFixture,
                 coll.update(0, new_content));
 
         // Check the new content
-        Json::Value val;
+        json val;
         coll.fetch(0, &val);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val["name"].asString(), std::string("Georges"));
+                val["name"].get<std::string>(), std::string("Georges"));
 
         // Update a record that does not exist
         CPPUNIT_ASSERT_THROW_MESSAGE(
@@ -230,7 +232,7 @@ class CollectionTest : public CppUnit::TestFixture,
                 sonata::Exception);
 
         // Update with a Json record
-        Json::Value new_content_json;
+        json new_content_json;
         new_content_json["name"] = "Bob";
         new_content_json["city"] = "London";
         new_content_json["papers"] = 4;
@@ -239,11 +241,11 @@ class CollectionTest : public CppUnit::TestFixture,
                 coll.update(0, new_content_json));
 
         // Check the new content
-        Json::Value val2;
+        json val2;
         coll.fetch(0, &val2);
         CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "fetch should give the updated value.",
-                val2["name"].asString(), std::string("Bob"));
+                val2["name"].get<std::string>(), std::string("Bob"));
     }
 
     void testAll() {
@@ -253,7 +255,7 @@ class CollectionTest : public CppUnit::TestFixture,
         sonata::Collection coll = mydb.open("mycollection");
 
         // Get all items from an empty collection, as JSON objects
-        Json::Value result_json;
+        json result_json;
         CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                 "coll.all should not throw on empty collection.",
                 coll.all(&result_json));
@@ -285,8 +287,8 @@ class CollectionTest : public CppUnit::TestFixture,
         for(unsigned i=0; i < result_json.size(); i++) {
             CPPUNIT_ASSERT_EQUAL_MESSAGE(
                 "items should have the same name as stored.",
-                records_json[i]["name"].asString(),
-                result_json[i]["name"].asString());
+                records_json[i]["name"],
+                result_json[i]["name"]);
         }
 
         // Get all items as strings

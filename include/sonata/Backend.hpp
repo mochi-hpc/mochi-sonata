@@ -7,11 +7,12 @@
 #define __SONATA_BACKEND_HPP
 
 #include <functional>
-#include <json/json.h>
-#include <sonata/RequestResult.hpp>
+#include <nlohmann/json.hpp>
 #include <thallium.hpp>
 #include <unordered_map>
 #include <unordered_set>
+#include <sonata/RequestResult.hpp>
+#include <sonata/JsonSerialize.hpp>
 
 /**
  * @brief Helper class to register backend types into the backend factory.
@@ -19,6 +20,8 @@
 template <typename BackendType> class __SonataBackendRegistration;
 
 namespace sonata {
+
+using nlohmann::json;
 
 /**
  * @brief Interface for database backends. To build a new backend,
@@ -29,8 +32,8 @@ namespace sonata {
  * Your backend class should also have two static functions to
  * respectively create and open a backend database:
  *
- * std::unique_ptr<Backend> create(const Json::Value& config)
- * std::unique_ptr<Backend> attach(const Json::Value& config)
+ * std::unique_ptr<Backend> create(const json& config)
+ * std::unique_ptr<Backend> attach(const json& config)
  */
 class Backend {
 
@@ -133,7 +136,7 @@ public:
    * containing the record id if successful.
    */
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
-                                            const Json::Value &record,
+                                            const JsonWrapper &record,
                                             bool commit) = 0;
 
   /**
@@ -170,7 +173,7 @@ public:
    * containing the record id if successful.
    */
   virtual RequestResult<std::vector<uint64_t>>
-  storeMultiJson(const std::string &coll_name, const Json::Value &records,
+  storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) = 0;
 
   /**
@@ -191,10 +194,10 @@ public:
    * @param coll_name Name of the collection.
    * @param record_id Record id.
    *
-   * @return a RequestResult<Json::Value> instance.
+   * @return a RequestResult<JsonWrapper> instance.
    * containing the content of the record if successful.
    */
-  virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
+  virtual RequestResult<JsonWrapper> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) = 0;
 
   /**
@@ -216,10 +219,10 @@ public:
    * @param coll_name Name of the collection.
    * @param record_ids Record ids.
    *
-   * @return a RequestResult<Json::Value> instance.
+   * @return a RequestResult<JsonWrapper> instance.
    * containing the content of the record if successful.
    */
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) = 0;
 
@@ -249,10 +252,10 @@ public:
    * @param coll_name Name of the collection.
    * @param filter_code Code of the Jx9 function.
    *
-   * @return a RequestResult<Json::Value>
+   * @return a RequestResult<JsonWrapper>
    * instance containing the result of the request.
    */
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   filterJson(const std::string &coll_name, const std::string &filter_code) = 0;
 
   /**
@@ -284,7 +287,7 @@ public:
    */
   virtual RequestResult<bool> updateJson(const std::string &coll_name,
                                          uint64_t record_id,
-                                         const Json::Value &new_content,
+                                         const JsonWrapper &new_content,
                                          bool commit) = 0;
 
   /**
@@ -317,7 +320,7 @@ public:
   virtual RequestResult<std::vector<bool>>
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
-                  const Json::Value &new_contents, bool commit) = 0;
+                  const JsonWrapper &new_contents, bool commit) = 0;
 
   /**
    * @brief Returns all the records in the collection.
@@ -335,10 +338,10 @@ public:
    *
    * @param coll_name Name of the collection.
    *
-   * @return a RequestResult<Json::Value> instance
+   * @return a RequestResult<JsonWrapper> instance
    * containing all the records as strings, if successful.
    */
-  virtual RequestResult<Json::Value> allJson(const std::string &coll_name) = 0;
+  virtual RequestResult<JsonWrapper> allJson(const std::string &coll_name) = 0;
 
   /**
    * @brief Returns the last record id stored in the collection.
@@ -428,7 +431,7 @@ public:
   static std::unique_ptr<Backend> createBackend(const std::string &backend_name,
                                                 const thallium::engine &engine,
                                                 const thallium::pool &pool,
-                                                const Json::Value &config);
+                                                const json &config);
 
   /**
    * @brief Opens an existing database and returns a unique_ptr to the
@@ -445,19 +448,19 @@ public:
   static std::unique_ptr<Backend> attachBackend(const std::string &backend_name,
                                                 const thallium::engine &engine,
                                                 const thallium::pool &pool,
-                                                const Json::Value &config);
+                                                const json &config);
 
 private:
   static std::unordered_map<
       std::string, std::function<std::unique_ptr<Backend>(
                        const thallium::engine &, const thallium::pool &pool,
-                       const Json::Value &)>>
+                       const json &)>>
       create_fn;
 
   static std::unordered_map<
       std::string, std::function<std::unique_ptr<Backend>(
                        const thallium::engine &, const thallium::pool &pool,
-                       const Json::Value &)>>
+                       const json &)>>
       attach_fn;
 };
 
@@ -473,12 +476,12 @@ public:
   __SonataBackendRegistration(const std::string &backend_name) {
     sonata::BackendFactory::create_fn[backend_name] =
         [](const thallium::engine &engine, const thallium::pool &pool,
-           const Json::Value &config) {
+           const nlohmann::json &config) {
           return BackendType::create(engine, pool, config);
         };
     sonata::BackendFactory::attach_fn[backend_name] =
         [](const thallium::engine &engine, const thallium::pool &pool,
-           const Json::Value &config) {
+           const nlohmann::json &config) {
           return BackendType::attach(engine, pool, config);
         };
   }

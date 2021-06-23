@@ -14,12 +14,12 @@ SONATA_REGISTER_BACKEND(unqlite, UnQLiteBackend);
 
 std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
                                                 const tl::pool &pool,
-                                                const Json::Value &config) {
-  bool temporary = config.get("temporary", false).asBool();
-  bool inmemory = config.get("in-memory", false).asBool();
-  if ((not config.isMember("path")) && not inmemory)
+                                                const json &config) {
+  bool temporary = config.value("temporary", false);
+  bool inmemory = config.value("in-memory", false);
+  if ((not config.contains("path")) && not inmemory)
     throw Exception("UnQLiteBackend needs to be initialized with a path");
-  std::string db_path = config.get("path", "").asString();
+  std::string db_path = config.value("path", "");
   if (db_path.size() > 0) {
     std::ifstream f(db_path.c_str());
     if (f.good()) {
@@ -68,10 +68,10 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
 
 std::unique_ptr<Backend> UnQLiteBackend::attach(const tl::engine &engine,
                                                 const tl::pool &pool,
-                                                const Json::Value &config) {
-  if (not config.isMember("path"))
+                                                const json &config) {
+  if (not config.contains("path"))
     throw Exception("UnQLiteBackend needs to be initialized with a path");
-  std::string db_path = config["path"].asString();
+  std::string db_path = config["path"].get<std::string>();
   std::ifstream f(db_path.c_str());
   if (!f.good()) {
     throw Exception("Database file "s + db_path + " does not exist");

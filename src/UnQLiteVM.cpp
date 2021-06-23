@@ -408,7 +408,7 @@ int UnQLiteVM::sntc_fetch(unqlite_context *pCtx, int argc,
     }
     uint64_t id = unqlite_value_to_int64(argv[1]);
 
-    Json::Value result;
+    json result;
     coll.fetch(id, &result);
     UnQLiteValue uql_result(result, pCtx);
     unqlite_result_value(pCtx, uql_result.m_value);
@@ -444,7 +444,7 @@ int UnQLiteVM::sntc_filter(unqlite_context *pCtx, int argc,
           "Invalid 2nd argument type (expected function or string)");
     }
 
-    Json::Value result;
+    json result;
     coll.filter(code, &result);
 
     UnQLiteValue uql_result(result, pCtx);
@@ -494,7 +494,7 @@ int UnQLiteVM::sntc_all(unqlite_context *pCtx, int argc, unqlite_value **argv) {
         db_info.address, db_info.provider_id, db_info.db_name, false);
     Collection coll = db.open(coll_info.coll_name, false);
 
-    Json::Value result;
+    json result;
     coll.all(&result);
     UnQLiteValue uql_result(result, pCtx);
     unqlite_result_value(pCtx, uql_result.m_value);
@@ -556,7 +556,7 @@ int UnQLiteVM::sntc_erase(unqlite_context *pCtx, int argc,
     }
     uint64_t id = unqlite_value_to_int64(argv[1]);
 
-    Json::Value result;
+    json result;
     coll.erase(id);
     unqlite_result_bool(pCtx, true);
   }

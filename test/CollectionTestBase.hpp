@@ -10,7 +10,9 @@
 #include <vector>
 #include <fstream>
 #include <streambuf>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
+
+using nlohmann::json;
 
 class CollectionTestBase {
 
@@ -20,30 +22,17 @@ class CollectionTestBase {
         std::ifstream t("test.json");
         std::string str((std::istreambuf_iterator<char>(t)),
                          std::istreambuf_iterator<char>());
-        Json::CharReaderBuilder builder;
-        Json::CharReader* reader = builder.newCharReader();
-        Json::Value json;
-        std::string errors;
-        bool parsingSuccessful = reader->parse(
-                str.c_str(),
-                str.c_str() + str.size(),
-                &json,
-                &errors
-                );
-        delete reader;
-        if (!parsingSuccessful) {
-            throw std::runtime_error("Failed to parse test JSON file");
+        json j = json::parse(str);
+        for(unsigned i = 0; i < j.size(); i++) {
+            records_json.push_back(j[i]);
+            records_str.push_back(j[i].dump());
         }
-        for(unsigned i = 0; i < json.size(); i++) {
-            records_json.push_back(json[i]);
-            records_str.push_back(json[i].toStyledString());
-        }
-        records_json_all = json;
+        records_json_all = j;
     }
 
     std::vector<std::string> records_str;
-    std::vector<Json::Value> records_json;
-    Json::Value records_json_all;
+    std::vector<json> records_json;
+    json records_json_all;
 };
 
 #endif

@@ -5,13 +5,14 @@
  */
 #ifndef __SONATA_LAZY_BACKEND_HPP
 #define __SONATA_LAZY_BACKEND_HPP
+
 #include "sonata/Admin.hpp"
 #include "sonata/Backend.hpp"
 #include "sonata/Client.hpp"
 
 #include <cstdio>
 #include <fstream>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <thallium.hpp>
@@ -20,6 +21,7 @@ namespace sonata {
 
 namespace tl = thallium;
 using namespace std::string_literals;
+using nlohmann::json;
 
 class LazyBackend : public Backend {
 
@@ -39,11 +41,11 @@ public:
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   static std::unique_ptr<Backend> attach(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   virtual ~LazyBackend() {}
 
@@ -67,24 +69,19 @@ public:
                                         const std::string &record,
                                         bool commit) override {
     RequestResult<uint64_t> result;
-    Json::CharReaderBuilder builder;
-    Json::CharReader *reader = builder.newCharReader();
-    Json::Value json;
-    std::string errors;
-    bool parsingSuccessful = reader->parse(
-        record.c_str(), record.c_str() + record.size(), &json, &errors);
-    delete reader;
-    if (!parsingSuccessful) {
-      result.error() = "Invalid JSON record";
+    JsonWrapper json_record;
+    try {
+        json_record = json::parse(record);
+    } catch(const std::exception& ex) {
+      result.error() = ex.what();
       result.success() = false;
       return result;
-    } else {
-      return storeJson(coll_name, json, commit);
     }
+    return storeJson(coll_name, json_record, commit);
   }
 
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
-                                            const Json::Value &record,
+                                            const JsonWrapper &record,
                                             bool commit) override {
     RequestResult<uint64_t> result;
     result.success() = true;
@@ -103,23 +100,20 @@ public:
   storeMulti(const std::string &coll_name,
              const std::vector<std::string> &records, bool commit) override {
     RequestResult<std::vector<uint64_t>> result;
-    Json::CharReaderBuilder builder;
-    Json::CharReader *reader = builder.newCharReader();
-    std::string errors;
-    Json::Value records_json;
+    JsonWrapper wrapper;
+    wrapper = json::array();
     for (auto &r : records) {
-      Json::Value json;
-      bool parsingSuccessful =
-          reader->parse(r.c_str(), r.c_str() + r.size(), &json, &errors);
-      if (!parsingSuccessful) {
-        result.error() = "Invalid JSON record";
+      json t;
+      try {
+          t = json::parse(r);
+      } catch(const std::exception& ex) {
+        result.error() = ex.what();
         result.success() = false;
-        delete reader;
         return result;
       }
-      records_json.append(json);
+      wrapper->push_back(t);
     }
-    return storeMultiJson(coll_name, records_json, commit);
+    return storeMultiJson(coll_name, wrapper, commit);
   }
 
   virtual RequestResult<bool> commit() override {
@@ -128,17 +122,17 @@ public:
   }
 
   virtual RequestResult<std::vector<uint64_t>>
-  storeMultiJson(const std::string &coll_name, const Json::Value &records,
+  storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
     RequestResult<std::vector<uint64_t>> result;
-    if (!records.isArray()) {
+    if (!records->is_array()) {
       result.error() = "JSON object is not an array";
       result.success() = false;
       return result;
     }
     result.success() = true;
     result.value() = std::vector<uint64_t>(
-        records.size(), std::numeric_limits<uint64_t>::max());
+        records->size(), std::numeric_limits<uint64_t>::max());
     // TODO check that collection exists
     m_pool.make_thread(
         [backend = this, coll_name, r = std::move(records), commit]() {
@@ -156,7 +150,7 @@ public:
     return m_db->fetch(coll_name, record_id);
   }
 
-  virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
+  virtual RequestResult<JsonWrapper> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) override {
     if (m_flush_on_read)
       flush(coll_name);
@@ -171,7 +165,7 @@ public:
     return m_db->fetchMulti(coll_name, record_ids);
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) override {
     if (m_flush_on_read)
@@ -187,7 +181,7 @@ public:
     return m_db->filter(coll_name, filter_code);
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   filterJson(const std::string &coll_name,
              const std::string &filter_code) override {
     if (m_flush_on_read)
@@ -206,7 +200,7 @@ public:
 
   virtual RequestResult<bool> updateJson(const std::string &coll_name,
                                          uint64_t record_id,
-                                         const Json::Value &new_content,
+                                         const JsonWrapper &new_content,
                                          bool commit) override {
     if (m_flush_on_read)
       flush(coll_name);
@@ -224,7 +218,7 @@ public:
   virtual RequestResult<std::vector<bool>>
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
-                  const Json::Value &new_contents, bool commit) override {
+                  const JsonWrapper &new_contents, bool commit) override {
     if (m_flush_on_read)
       flush(coll_name);
     return m_db->updateMultiJson(coll_name, record_ids, new_contents, commit);
@@ -237,7 +231,7 @@ public:
     return m_db->all(coll_name);
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   allJson(const std::string &coll_name) override {
     if (m_flush_on_read)
       flush(coll_name);

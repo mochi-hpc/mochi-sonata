@@ -16,7 +16,7 @@
 
 #include <cstdio>
 #include <fstream>
-#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <thallium.hpp>
@@ -25,6 +25,7 @@ namespace sonata {
 
 namespace tl = thallium;
 using namespace std::string_literals;
+using nlohmann::json;
 
 class UnQLiteVM;
 
@@ -45,11 +46,11 @@ public:
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   static std::unique_ptr<Backend> attach(const tl::engine &engine,
                                          const tl::pool &pool,
-                                         const Json::Value &config);
+                                         const json &config);
 
   virtual ~UnQLiteBackend() {
     if (m_db)
@@ -191,7 +192,7 @@ public:
   }
 
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
-                                            const Json::Value &record,
+                                            const JsonWrapper &record,
                                             bool commit) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
@@ -212,7 +213,7 @@ public:
       if (!m_unqlite_is_threadsafe)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
-      vm.set("input", record);
+      vm.set("input", record.m_object);
       vm.set("collection", coll_name);
       vm.execute();
       result.success() = vm.get<bool>("ret");
@@ -291,7 +292,7 @@ public:
   }
 
   virtual RequestResult<std::vector<uint64_t>>
-  storeMultiJson(const std::string &coll_name, const Json::Value &records,
+  storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
@@ -315,7 +316,7 @@ public:
       if (!m_unqlite_is_threadsafe)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
-      vm.set("input", records);
+      vm.set("input", records.m_object);
       vm.set("collection", coll_name);
       vm.execute();
       result.success() = vm.get<bool>("ret");
@@ -373,7 +374,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value> fetchJson(const std::string &coll_name,
+  virtual RequestResult<JsonWrapper> fetchJson(const std::string &coll_name,
                                                uint64_t record_id) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
@@ -389,7 +390,7 @@ public:
             }
         }
         )jx9";
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
       if (!m_unqlite_is_threadsafe)
@@ -402,7 +403,7 @@ public:
       if (!result.success()) {
         result.error() = vm.get<std::string>("err");
       } else {
-        result.value() = vm["output"];
+        result.value() = vm["output"].as<json>();
       }
     } catch (const Exception &e) {
       result.success() = false;
@@ -454,7 +455,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   fetchMultiJson(const std::string &coll_name,
                  const std::vector<uint64_t> &record_ids) override {
     constexpr static const char *script = R"jx9(
@@ -470,7 +471,7 @@ public:
             }
         }
         )jx9";
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
       if (!m_unqlite_is_threadsafe)
@@ -483,7 +484,7 @@ public:
       if (!result.success()) {
         result.error() = vm.get<std::string>("err");
       } else {
-        result.value() = vm["output"];
+        result.value() = vm["output"].as<json>();
       }
     } catch (const Exception &e) {
       result.success() = false;
@@ -546,7 +547,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   filterJson(const std::string &coll_name,
              const std::string &filter_code) override {
     const std::string script = "$filter_cb = "s + filter_code +
@@ -571,7 +572,7 @@ public:
             }
         }
         )jx9";
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
       if (!m_unqlite_is_threadsafe)
@@ -584,7 +585,7 @@ public:
       if (!result.success()) {
         result.error() = vm.get<std::string>("err");
       } else {
-        result.value() = vm["data"];
+        result.value() = vm["data"].as<json>();
       }
       unqlite_commit(m_db);
     } catch (const Exception &e) {
@@ -633,7 +634,7 @@ public:
 
   virtual RequestResult<bool> updateJson(const std::string &coll_name,
                                          uint64_t record_id,
-                                         const Json::Value &new_content,
+                                         const JsonWrapper &new_content,
                                          bool commit) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
@@ -652,7 +653,7 @@ public:
       if (!m_unqlite_is_threadsafe)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
-      vm.set("input", new_content);
+      vm.set("input", new_content.m_object);
       vm.set("collection", coll_name);
       vm.set("record_id", record_id);
       vm.execute();
@@ -727,7 +728,7 @@ public:
   virtual RequestResult<std::vector<bool>>
   updateMultiJson(const std::string &coll_name,
                   const std::vector<uint64_t> &record_ids,
-                  const Json::Value &new_contents, bool commit) override {
+                  const JsonWrapper &new_contents, bool commit) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
             $ret = false;
@@ -754,7 +755,7 @@ public:
       if (!m_unqlite_is_threadsafe)
         lock = std::unique_lock<tl::mutex>(m_mutex);
       UnQLiteVM vm(m_db, script, this);
-      vm.set("input", new_contents);
+      vm.set("input", new_contents.m_object);
       vm.set("collection", coll_name);
       vm.set("record_ids", record_ids);
       vm.execute();
@@ -822,7 +823,7 @@ public:
     return result;
   }
 
-  virtual RequestResult<Json::Value>
+  virtual RequestResult<JsonWrapper>
   allJson(const std::string &coll_name) override {
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
@@ -843,7 +844,7 @@ public:
             }
         }
         )jx9";
-    RequestResult<Json::Value> result;
+    RequestResult<JsonWrapper> result;
     try {
       std::unique_lock<tl::mutex> lock;
       if (!m_unqlite_is_threadsafe)
@@ -855,7 +856,7 @@ public:
       if (!result.success()) {
         result.error() = vm.get<std::string>("err");
       } else {
-        result.value() = vm["data"];
+        result.value() = vm["data"].as<json>();
       }
     } catch (const Exception &e) {
       result.success() = false;
