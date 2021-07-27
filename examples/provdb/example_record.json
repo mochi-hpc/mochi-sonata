@@ -1,0 +1,336 @@
+{
+    "algo_params": {
+        "accumulate": 0,
+        "count": 100,
+        "kurtosis": -1.2002400240024,
+        "maximum": 99,
+        "mean": 49.5,
+        "minimum": 0,
+        "skewness": 0,
+        "stddev": 29.011491975882
+    },
+    "call_stack": [
+        {
+            "entry": 1234,
+            "event_id": 1992,
+            "exit": 5678,
+            "fid": 1,
+            "func": "test_function",
+            "is_anomaly": true
+        },
+        {
+            "entry": 1234,
+            "event_id": 1992,
+            "exit": 5678,
+            "fid": 1,
+            "func": "test_function",
+            "is_anomaly": true
+        }
+    ],
+    "counter_events": [
+        {
+            "counter_idx": 3,
+            "counter_name": "counter",
+            "counter_value": 4,
+            "pid": 0,
+            "rid": 1,
+            "tid": 2,
+            "ts": 5
+        },
+        {
+            "counter_idx": 3,
+            "counter_name": "counter",
+            "counter_value": 4,
+            "pid": 0,
+            "rid": 1,
+            "tid": 2,
+            "ts": 5
+        },
+        {
+            "counter_idx": 3,
+            "counter_name": "counter",
+            "counter_value": 4,
+            "pid": 0,
+            "rid": 1,
+            "tid": 2,
+            "ts": 5
+        },
+        {
+            "counter_idx": 3,
+            "counter_name": "counter",
+            "counter_value": 4,
+            "pid": 0,
+            "rid": 1,
+            "tid": 2,
+            "ts": 5
+        },
+        {
+            "counter_idx": 3,
+            "counter_name": "counter",
+            "counter_value": 4,
+            "pid": 0,
+            "rid": 1,
+            "tid": 2,
+            "ts": 5
+        }
+    ],
+    "entry": 1234,
+    "event_id": "0:12:250",
+    "event_window": {
+        "comm_window": [
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            },
+            {
+                "bytes": 6,
+                "execdata_key": "0:0:0",
+                "pid": 0,
+                "rid": 1,
+                "src": 1,
+                "tag": 4,
+                "tar": 5,
+                "tid": 2,
+                "timestamp": 7,
+                "type": "SEND"
+            }
+        ],
+        "exec_window": [
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            },
+            {
+                "entry": 1234,
+                "event_id": 0,
+                "exit": 5678,
+                "fid": 0,
+                "func": "function",
+                "is_anomaly": true,
+                "parent_event_id": 999
+            }
+        ]
+    },
+    "exit": 5678,
+    "fid": 0,
+    "func": "function",
+    "gpu_location": {
+        "context": 0,
+        "device": 0,
+        "stream": 0,
+        "thread": 0
+    },
+    "gpu_parent": {
+        "call_stack": [
+            {
+                "entry": 1234,
+                "event_id": 1992,
+                "exit": 5678,
+                "fid": 1,
+                "func": "test_function",
+                "is_anomaly": true
+            },
+            {
+                "entry": 1234,
+                "event_id": 1992,
+                "exit": 5678,
+                "fid": 1,
+                "func": "test_function",
+                "is_anomaly": true
+            }
+        ],
+        "event_id": "12:24:25",
+        "tid": 0
+    },
+    "io_step": 199,
+    "io_step_tend": 5000,
+    "io_step_tstart": 0,
+    "is_gpu_event": true,
+    "outlier_score": 0.1,
+    "pid": 0,
+    "rid": 0,
+    "runtime_exclusive": 1922,
+    "runtime_total": 2458,
+    "tid": 0
+}

@@ -58,6 +58,7 @@ public:
   tl::remote_procedure m_attach_database;
   tl::remote_procedure m_detach_database;
   tl::remote_procedure m_destroy_database;
+  tl::remote_procedure m_list_databases;
   // Client RPC
   tl::remote_procedure m_exec_on_database;
   tl::remote_procedure m_commit;
@@ -100,6 +101,8 @@ public:
                                  &ProviderImpl::detachDatabase, pool)),
         m_destroy_database(define("sonata_destroy_database",
                                   &ProviderImpl::destroyDatabase, pool)),
+        m_list_databases(define("sonata_list_databases",
+                                  &ProviderImpl::listDatabases, pool)),
         m_exec_on_database(define("sonata_exec_on_database",
                                   &ProviderImpl::execOnDatabase, pool)),
         m_commit(define("sonata_commit", &ProviderImpl::commit, pool)),
@@ -154,6 +157,7 @@ public:
     m_attach_database.deregister();
     m_detach_database.deregister();
     m_destroy_database.deregister();
+    m_list_databases.deregister();
     m_exec_on_database.deregister();
     m_open_database.deregister();
     m_commit.deregister();
@@ -353,6 +357,19 @@ public:
     req.respond(result);
     spdlog::trace("[provider:{}] Database {} successfully detached", id(),
                   db_name);
+  }
+
+  void listDatabases(const tl::request &req, const std::string &token) {
+    spdlog::trace(
+        "[provider:{}] Received listDatabases request", id());
+    RequestResult<std::vector<std::string>> result;
+    {
+      std::lock_guard<tl::mutex> lock(m_backends_mtx);
+      for(auto& backend : m_backends) {
+        result.value().push_back(backend.first);
+      }
+    }
+    req.respond(result);
   }
 
   void destroyDatabase(const tl::request &req, const std::string &token,

@@ -1,0 +1,25 @@
+{
+    "use_progress_thread" : false,
+    "argobots": {
+        "pools": [
+            {
+                "access": "mpmc",
+                "kind": "fifo",
+                "name": "__primary__"
+            }
+        ],
+        "xstreams": [
+            {
+                "affinity": [],
+                "cpubind": -1,
+                "name": "__primary__",
+                "scheduler": {
+                    "pools": [
+                        0
+                    ],
+                    "type": "basic"
+                }
+            }
+        ]
+    }
+}

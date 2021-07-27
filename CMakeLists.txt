@@ -48,7 +48,7 @@ if(${ENABLE_BEDROCK})
   find_package(bedrock REQUIRED)
 endif()
 
-if(${ENABLE_BENCHMARK})
+if(${ENABLE_BENCHMARK} OR ${ENABLE_EXAMPLES})
   find_package(MPI REQUIRED)
 endif()
 

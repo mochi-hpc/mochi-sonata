@@ -10,6 +10,7 @@
 #include "AdminImpl.hpp"
 
 #include <thallium/serialization/stl/string.hpp>
+#include <thallium/serialization/stl/vector.hpp>
 
 namespace tl = thallium;
 
@@ -100,6 +101,19 @@ void Admin::destroyDatabase(const std::string &address, uint16_t provider_id,
   if (not result.success()) {
     throw Exception(result.error());
   }
+}
+
+std::vector<std::string> Admin::listDatabases(const std::string &address,
+                                              uint16_t provider_id,
+                                              const std::string &token) const {
+  auto endpoint = self->m_engine.lookup(address);
+  auto ph = tl::provider_handle(endpoint, provider_id);
+  RequestResult<std::vector<std::string>> result =
+      self->m_list_databases.on(ph)(token);
+  if (not result.success()) {
+    throw Exception(result.error());
+  }
+  return result.value();
 }
 
 void Admin::shutdownServer(const std::string &address) const {

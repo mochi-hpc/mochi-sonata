@@ -1,4 +1,4 @@
-include_directories(../include)
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(01_server 01_server.cpp)
 target_link_libraries(01_server sonata-server)
@@ -17,3 +17,5 @@ target_link_libraries(05_collection sonata-admin sonata-client)
 
 add_executable(06_exec 06_exec.cpp)
 target_link_libraries(06_exec sonata-admin sonata-client)
+
+add_subdirectory(provdb)

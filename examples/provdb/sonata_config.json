@@ -1,0 +1,13 @@
+{
+    "databases":[
+        {
+            "type":"unqlite",
+            "name":"db_${RANK}_${ID}",
+            "mode":"create",
+            "config":{
+                "path":"db_${RANK}_${ID}.unqlite",
+                "mutex":"none"
+            }
+        }
+    ]
+}
