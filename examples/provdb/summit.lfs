@@ -4,6 +4,7 @@
 #BSUB -o sonata.o%J
 #BSUB -W 30
 #BSUB -nnodes 11
+#BSUB -alloc_flags NVME
 
 JOB_INFO=`bjobs -W -noheader $LSB_JOBID`
 JOB_INFO_ARRAY=($JOB_INFO)
@@ -54,7 +55,6 @@ do
 done
 
 # run server
-#jsrun -a 1 -n 1 -r 1 -c ALL_CPUS ./examples/provdb/provdb_server \
 jsrun --erf_input $EXP_DIR/servers.erf ./examples/provdb/provdb_server \
        -a "verbs://mlx5_0" \
        -o "${EXP_DIR}/providers.txt" \
@@ -69,11 +69,10 @@ while [ ! -f $EXP_DIR/providers.txt ]; do sleep 10; done
 sleep 10
 
 # run client
-#jsrun -a 1 -n 1 -r 1 -c ALL_CPUS ./examples/provdb/provdb_client \
 jsrun --erf_input $EXP_DIR/clients.erf ./examples/provdb/provdb_client \
        -a "verbs://mlx5_0" \
        -r "${EXP_DIR}/example_record.json" \
        -p "${EXP_DIR}/providers.txt" \
        -c "${EXP_DIR}/client_margo.json" \
-       -w 1000 -i 500 \
+       -w 1000 -i 500 -f 10 \
        -v info 1> $EXP_DIR/client.out 2> $EXP_DIR/client.err
