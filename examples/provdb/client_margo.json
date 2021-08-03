@@ -1,10 +1,10 @@
 {
-    "use_progress_thread" : false,
+    "use_progress_thread" : true,
     "argobots": {
         "pools": [
             {
                 "access": "mpmc",
-                "kind": "fifo",
+                "kind": "fifo_wait",
                 "name": "__primary__"
             }
         ],
@@ -17,7 +17,7 @@
                     "pools": [
                         0
                     ],
-                    "type": "basic"
+                    "type": "basic_wait"
                 }
             }
         ]

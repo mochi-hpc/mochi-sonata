@@ -1,0 +1,44 @@
+#!/bin/bash
+#BSUB -P CSC332
+#BSUB -J sonata
+#BSUB -o sonata.o%J
+#BSUB -W 10
+#BSUB -nnodes 2
+
+# disable MR cache in libfabric; still problematic as of libfabric 1.10.1
+export FI_MR_CACHE_MAX_COUNT=0
+# use shared recv context in RXM; should improve scalability
+export FI_OFI_RXM_USE_SRX=1
+
+# required to have correct versions of glibc
+module swap xl gcc/9.1.0
+
+# activate spack
+. $HOME/spack/share/spack/setup-env.sh
+spack env activate sonata-env
+
+EXP_DIR=exp-$LSB_JOBID
+mkdir $EXP_DIR
+
+# run server
+jsrun -a 1 -n 1 -r 1 -c ALL_CPUS ./examples/provdb/provdb_server \
+       -o "${EXP_DIR}/providers.txt" \
+       -s "../examples/provdb/sonata_config.json" \
+       -p "0:pool_s0" \
+       -c "../examples/provdb/server_margo.json" \
+       -a "verbs://mlx5_0" \
+       -v trace 1> $EXP_DIR/server.out 2> $EXP_DIR/server.err &
+
+# wait until providers.txt file appears
+while [ ! -f $EXP_DIR/providers.txt ]; do sleep 10; done
+# give servers 10 seconds to write all the addresses and be ready
+sleep 10
+
+# run client
+jsrun -a 1 -n 1 -r 1 -c ALL_CPUS ./examples/provdb/provdb_client \
+       -r "../examples/provdb/example_record.json" \
+       -p "${EXP_DIR}/providers.txt" \
+       -c "../examples/provdb/client_margo.json" \
+       -a "verbs://mlx5_0" \
+       -w 100 -i 10 \
+       -v trace 1> $EXP_DIR/client.out 2> $EXP_DIR/client.err
