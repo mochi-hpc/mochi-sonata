@@ -10,7 +10,8 @@ command line. Load the gcc module as follows:
 $ module swap xl gcc/9.1.0
 ```
 
-Navigate in the `examples/provdb` directory and run:
+Navigate in the `examples/provdb` directory and edit summit.yaml, line 27,
+to make the repo point to your clone of mochi-spack-packages. Then:
 
 ```
 $ spack env create sonata-env summit.yaml
