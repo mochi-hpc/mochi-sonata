@@ -20,6 +20,7 @@ static double      g_waittime        = 0.0;
 static bool        g_progress_thread = false;
 static std::string g_provider_config = "";
 static std::string g_record_file     = "";
+static int         g_commit_freq     = 0;
 
 static int         g_rank        = 0;
 static int         g_size        = 1;
@@ -84,6 +85,7 @@ void parse_command_line(int argc, char **argv) {
         TCLAP::SwitchArg progressThread("t", "use-progress-thread", "Use progress thread", cmd, false);
         TCLAP::ValueArg<std::string> providerConfig("p", "provider-file", "File listing provider addresses", true, "", "string", cmd);
         TCLAP::ValueArg<std::string> record("r", "record", "File containing records to insert", true, "", "string", cmd);
+        TCLAP::ValueArg<int> commitFreq("f", "commit-frequency", "Number of iterations between two commits", false, 0, "int", cmd);
 
         cmd.parse(argc, argv);
 
@@ -95,6 +97,7 @@ void parse_command_line(int argc, char **argv) {
         g_progress_thread = progressThread.getValue();
         g_provider_config = providerConfig.getValue();
         g_record_file     = record.getValue();
+        g_commit_freq     = commitFreq.getValue();
 
     } catch(TCLAP::ArgException &e) {
         std::cerr << "error: " << e.error()
@@ -156,15 +159,18 @@ void run_client() {
     std::vector<std::string> records = { g_record };
     std::list<snt::AsyncRequest> requests;
 
-    auto check_requests = [&]() {
+    auto check_requests = [&]() -> bool {
+        bool b = false;
         for(auto it = requests.begin(); it != requests.end();) {
             if(it->completed()) {
                 it->wait();
                 it = requests.erase(it);
+                b = true;
             } else {
                 ++it;
             }
         }
+        return b;
     };
 
     auto shard_index = g_rank % g_anomalies.size();
@@ -174,8 +180,14 @@ void run_client() {
         check_requests();
         spdlog::info("[{}] iteration {}, {} pending requests", g_rank, i, requests.size());
         snt::AsyncRequest req1, req2;
-        g_anomalies[shard_index].store_multi(records, nullptr, false, &req1);
-        g_normalexe[shard_index].store_multi(records, nullptr, false, &req2);
+        bool do_commit = false;
+        if(g_commit_freq > 0
+        && ((i + g_rank) % g_commit_freq) == 0
+        && g_rank < g_anomalies.size()) {
+            do_commit = true;
+        }
+        g_anomalies[shard_index].store_multi(records, nullptr, do_commit, &req1);
+        g_normalexe[shard_index].store_multi(records, nullptr, do_commit, &req2);
         requests.push_back(std::move(req1));
         requests.push_back(std::move(req2));
         tl::thread::sleep(g_engine, g_waittime);
@@ -183,9 +195,14 @@ void run_client() {
     MPI_Barrier(MPI_COMM_WORLD);
     spdlog::info("[{}] loop completed, waiting for {} remaining requests...", g_rank, requests.size());
     auto it = requests.begin();
+    int iterations_without_change = 0;
     while(!requests.empty()) {
-        it->wait();
-        it = requests.erase(it);
+        bool b = check_requests();
+        if(!b) iterations_without_change += 1;
+        else iterations_without_change = 0;
+        if(iterations_without_change == 10)
+            spdlog::warn("[{}] no request completion for the last 100 seconds", g_rank);
+        tl::thread::sleep(g_engine, 10000);
     }
     spdlog::info("[{}] done!", g_rank);
     MPI_Barrier(MPI_COMM_WORLD);
