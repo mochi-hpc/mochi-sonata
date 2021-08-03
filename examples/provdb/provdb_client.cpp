@@ -114,16 +114,16 @@ std::vector<snt::Database> list_databases() {
 
     std::ifstream f(g_provider_config.c_str());
     while(f >> addr >> provider_id) {
-        spdlog::info("Querying address {} and provider id {} for databases", addr, provider_id);
+        spdlog::trace("Querying address {} and provider id {} for databases", addr, provider_id);
         auto db_names = admin.listDatabases(addr, provider_id);
         for(auto& name : db_names) {
             g_db_names.emplace_back(addr, provider_id, name);
-            spdlog::info("Found database {} at address {} and provider id {}",
+            spdlog::trace("Found database {} at address {} and provider id {}",
                          name, addr, provider_id);
             result.push_back(client.open(addr, provider_id, name));
         }
     }
-    spdlog::info("Done listing databases");
+    spdlog::trace("Done listing databases");
 
     return result;
 }
@@ -146,7 +146,7 @@ std::vector<snt::Collection> setup_collection(const std::string& coll_name) {
     } else {
         MPI_Barrier(MPI_COMM_WORLD);
         for(auto& db : g_databases) {
-            result.push_back(db.open(coll_name));
+            result.push_back(db.open(coll_name, false));
         }
     }
     return result;
