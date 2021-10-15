@@ -15,8 +15,8 @@ Once you have spack installed and setup on your machine, you need to added the
 mochi namespace to it, as follows.
 
 ```
-git clone https://xgitlab.cels.anl.gov/sds/sds-repo.git
-spack repo add sds-repo
+git clone https://github.com/mochi-hpc/mochi-spack-packages.git
+spack repo add mochi-spack-packages
 ```
 
 You can now install Sonata as follows.
