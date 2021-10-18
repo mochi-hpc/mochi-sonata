@@ -15,9 +15,12 @@
             "type" : "fetch-multi",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -36,9 +39,12 @@
             "type" : "store",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -56,9 +62,12 @@
             "type" : "update-multi",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -71,35 +80,18 @@
                 "val-size" : [ 1, 64 ]
             },
             "batch-size" : 10,
-            "use-json" : false 
-        },
-        {
-            "type" : "erase-multi",
-            "repetitions" : 3,
-            "collection" : {
-                "type" : "unqlite",
-                "config" : {
-                    "path" : "mydb"
-                },
-                "database-name" : "mydb",
-                "collection-name" : "mycollection"
-            },
-            "num-operations" : 1000,
-            "records" : {
-                "num" : 100,
-                "fields" : 16,
-                "key-size" : [ 1, 64 ],
-                "val-size" : [ 1, 64 ]
-            },
-            "batch-size" : 10
+            "use-json" : false
         },
         {
             "type" : "all",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -117,9 +109,12 @@
             "type" : "store-multi",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -138,9 +133,12 @@
             "type" : "fetch",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -158,9 +156,12 @@
             "type" : "filter",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -179,9 +180,12 @@
             "type" : "update",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -199,9 +203,12 @@
             "type" : "all",
             "repetitions" : 3,
             "collection" : {
-                "type" : "unqlite",
+                "type" : "lazy",
                 "config" : {
-                    "path" : "mydb"
+                    "backend" : "unqlite",
+                    "config" : {
+                        "path" : "mydb"
+                    }
                 },
                 "database-name" : "mydb",
                 "collection-name" : "mycollection"
@@ -214,25 +221,6 @@
                 "val-size" : [ 1, 64 ]
             },
             "use-json" : true
-        },
-        {
-            "type" : "erase",
-            "repetitions" : 3,
-            "collection" : {
-                "type" : "unqlite",
-                "config" : {
-                    "path" : "mydb"
-                },
-                "database-name" : "mydb",
-                "collection-name" : "mycollection"
-            },
-            "num-operations" : 10,
-            "records" : {
-                "num" : 100,
-                "fields" : 16,
-                "key-size" : [ 1, 64 ],
-                "val-size" : [ 1, 64 ]
-            }
         }
     ]
 }
