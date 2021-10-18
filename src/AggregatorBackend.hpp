@@ -3,8 +3,8 @@
  *
  * See COPYRIGHT in top-level directory.
  */
-#ifndef __SONATA_LAZY_BACKEND_HPP
-#define __SONATA_LAZY_BACKEND_HPP
+#ifndef __SONATA_AGGREGATOR_BACKEND_HPP
+#define __SONATA_AGGREGATOR_BACKEND_HPP
 
 #include "sonata/Admin.hpp"
 #include "sonata/Backend.hpp"
@@ -23,23 +23,23 @@ namespace tl = thallium;
 using namespace std::string_literals;
 using nlohmann::json;
 
-class LazyBackend : public Backend {
+class AggregatorBackend : public Backend {
 
 public:
-  LazyBackend(std::unique_ptr<Backend> &&inner, const tl::pool &pool,
+  AggregatorBackend(std::unique_ptr<Backend> &&inner, const tl::pool &pool,
               bool flush_on_read, bool flush_on_exec,
               size_t batch_size, bool commit_on_flush)
       : m_db(std::move(inner)), m_pool(pool), m_flush_on_read(flush_on_read),
         m_flush_on_exec(flush_on_exec), m_batch_size(batch_size),
         m_commit_on_flush(commit_on_flush) {}
 
-  LazyBackend(LazyBackend &&) = delete;
+  AggregatorBackend(AggregatorBackend &&) = delete;
 
-  LazyBackend(const LazyBackend &) = delete;
+  AggregatorBackend(const AggregatorBackend &) = delete;
 
-  LazyBackend &operator=(LazyBackend &&) = delete;
+  AggregatorBackend &operator=(AggregatorBackend &&) = delete;
 
-  LazyBackend &operator=(const LazyBackend &) = delete;
+  AggregatorBackend &operator=(const AggregatorBackend &) = delete;
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
@@ -49,7 +49,7 @@ public:
                                          const tl::pool &pool,
                                          const json &config);
 
-  virtual ~LazyBackend() {}
+  virtual ~AggregatorBackend() {}
 
   virtual RequestResult<bool>
   createCollection(const std::string &coll_name) override {
@@ -394,9 +394,9 @@ private:
 
   struct PendingWrite {
 
-    LazyBackend &m_backend;
+    AggregatorBackend &m_backend;
 
-    PendingWrite(LazyBackend &backend) : m_backend(backend) {
+    PendingWrite(AggregatorBackend &backend) : m_backend(backend) {
       std::unique_lock<tl::mutex> lock(m_backend.m_batches_mtx);
       m_backend.m_pending_writes += 1;
     }

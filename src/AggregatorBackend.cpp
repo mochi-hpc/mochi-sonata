@@ -3,23 +3,23 @@
  *
  * See COPYRIGHT in top-level directory.
  */
-#include "LazyBackend.hpp"
+#include "AggregatorBackend.hpp"
 
 namespace sonata {
 
 namespace tl = thallium;
 using namespace std::string_literals;
 
-SONATA_REGISTER_BACKEND(lazy, LazyBackend);
+SONATA_REGISTER_BACKEND(aggregator, AggregatorBackend);
 
-std::unique_ptr<Backend> LazyBackend::create(const tl::engine &engine,
+std::unique_ptr<Backend> AggregatorBackend::create(const tl::engine &engine,
                                              const tl::pool &pool,
                                              const json &config) {
-  spdlog::trace("[lazy] Creating Cached database");
+  spdlog::trace("[aggregator] Creating Cached database");
   std::string backend_type = config.value("backend", "");
   if (backend_type.size() == 0) {
     throw Exception(
-        "LazyBackend needs to be initialized with a \"backend\" entry");
+        "AggregatorBackend needs to be initialized with a \"backend\" entry");
   }
   bool flush_on_read = config.value("flush_on_read", true);
   bool flush_on_exec = config.value("flush_on_exec", true);
@@ -28,23 +28,23 @@ std::unique_ptr<Backend> LazyBackend::create(const tl::engine &engine,
   const auto &inner_cfg = config["config"];
   std::unique_ptr<Backend> inner =
       BackendFactory::createBackend(backend_type, engine, pool, inner_cfg);
-  auto backend = std::make_unique<LazyBackend>(std::move(inner), pool,
+  auto backend = std::make_unique<AggregatorBackend>(std::move(inner), pool,
                                                flush_on_read,
                                                flush_on_exec,
                                                batch_size,
                                                commit_on_flush);
-  spdlog::trace("[lazy] Successfully created database");
+  spdlog::trace("[aggregator] Successfully created database");
   return backend;
 }
 
-std::unique_ptr<Backend> LazyBackend::attach(const thallium::engine &engine,
+std::unique_ptr<Backend> AggregatorBackend::attach(const thallium::engine &engine,
                                              const tl::pool &pool,
                                              const json &config) {
-  spdlog::trace("[lazy] Opening Cached database");
+  spdlog::trace("[aggregator] Opening Cached database");
   std::string backend_type = config.value("backend", "");
   if (backend_type.size() == 0) {
     throw Exception(
-        "LazyBackend needs to be initialized with a \"backend\" entry");
+        "AggregatorBackend needs to be initialized with a \"backend\" entry");
   }
   const auto &inner_cfg = config["config"];
   bool flush_on_read = config.value("flush_on_read", true);
@@ -53,12 +53,12 @@ std::unique_ptr<Backend> LazyBackend::attach(const thallium::engine &engine,
   bool commit_on_flush = config.value("commit_on_flush", true);
   std::unique_ptr<Backend> inner =
       BackendFactory::attachBackend(backend_type, engine, pool, inner_cfg);
-  auto backend = std::make_unique<LazyBackend>(std::move(inner), pool,
+  auto backend = std::make_unique<AggregatorBackend>(std::move(inner), pool,
                                                flush_on_read,
                                                flush_on_exec,
                                                batch_size,
                                                commit_on_flush);
-  spdlog::trace("[lazy] Successfully opened database");
+  spdlog::trace("[aggregator] Successfully opened database");
   return backend;
 }
 

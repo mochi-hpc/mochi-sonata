@@ -27,7 +27,7 @@ class AdminTest : public CppUnit::TestFixture
         std::string addr = engine->self();
 
         std::string cfg;
-        if(db_type == "lazy") {
+        if(db_type == "aggregator") {
             cfg += "{ \"backend\" : \"unqlite\", \"config\" : ";
             cfg += db_config;
             cfg += "}";
