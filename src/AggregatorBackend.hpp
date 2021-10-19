@@ -110,13 +110,14 @@ public:
     if(it == m_batches.end()) {
         lock.unlock();
         auto coll_exists = openCollection(coll_name);
+        lock.lock();
         if(coll_exists.success()) {
-            lock.lock();
             it = m_batches.find(coll_name);
             if(it == m_batches.end()) {
                 result.success() = false;
                 result.error() = "Unexpected error when trying"
                 " to open collection in storeMultiJson";
+                return result;
             }
         } else {
             result.success() = false;
@@ -185,13 +186,14 @@ public:
     if(it == m_batches.end()) {
         lock.unlock();
         auto coll_exists = openCollection(coll_name);
+        lock.lock();
         if(coll_exists.success()) {
-            lock.lock();
             it = m_batches.find(coll_name);
             if(it == m_batches.end()) {
                 result.success() = false;
                 result.error() = "Unexpected error when trying"
                 " to open collection in storeMultiJson";
+                return result;
             }
         } else {
             result.success() = false;
