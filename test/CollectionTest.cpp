@@ -63,12 +63,15 @@ class CollectionTest : public CppUnit::TestFixture,
         sonata::Collection coll = mydb.open("mycollection");
 
         uint64_t ref_record_id = 0;
+        uint64_t max_record_id = std::numeric_limits<uint64_t>::max();
         // Strings can be stored
         for(const auto& r : records_str) {
             uint64_t record_id;
             CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                     "coll.store should not throw.",
                     record_id = coll.store(r));
+            if(db_type == "aggregator")
+                ref_record_id = max_record_id;
             CPPUNIT_ASSERT_EQUAL_MESSAGE(
                     "record id should be correct.",
                     ref_record_id, record_id);
@@ -81,6 +84,8 @@ class CollectionTest : public CppUnit::TestFixture,
             CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                     "coll.store should not throw.",
                     record_id = coll.store(r));
+            if(db_type == "aggregator")
+                ref_record_id = max_record_id;
             CPPUNIT_ASSERT_EQUAL_MESSAGE(
                     "record id should be correct.",
                     ref_record_id, record_id);
@@ -95,6 +100,7 @@ class CollectionTest : public CppUnit::TestFixture,
         sonata::Collection coll = mydb.open("mycollection");
 
         uint64_t ref_record_id = 0;
+        uint64_t max_record_id = std::numeric_limits<uint64_t>::max();
         std::vector<uint64_t> ids(records_str.size());
         std::vector<sonata::AsyncRequest> requests(records_str.size());
         // Strings can be stored
@@ -109,9 +115,15 @@ class CollectionTest : public CppUnit::TestFixture,
             CPPUNIT_ASSERT_NO_THROW_MESSAGE(
                     "request.wait should not throw.",
                     requests[j].wait());
-            CPPUNIT_ASSERT_EQUAL_MESSAGE(
+            if(db_type == "aggregator") {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                    "record id should be correct.",
+                    max_record_id, ids[j]);
+            } else {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
                     "record id should be correct.",
                     (uint64_t)j, ids[j]);
+            }
         }
     }
 

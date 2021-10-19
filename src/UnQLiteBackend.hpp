@@ -302,6 +302,11 @@ public:
   virtual RequestResult<std::vector<uint64_t>>
   storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
+    RequestResult<std::vector<uint64_t>> result;
+    if(!records->is_array()) {
+        result.success() = false;
+        result.error() = "storeMultiJson expecting Json array";
+    }
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
             $ret = false;
@@ -318,7 +323,6 @@ public:
             }
         }
         )jx9";
-    RequestResult<std::vector<uint64_t>> result;
     try {
       std::unique_lock<tl::mutex> lock;
       if (m_mutex_mode == MutexMode::global)

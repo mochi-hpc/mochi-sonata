@@ -21,18 +21,20 @@ std::unique_ptr<Backend> AggregatorBackend::create(const tl::engine &engine,
     throw Exception(
         "AggregatorBackend needs to be initialized with a \"backend\" entry");
   }
-  bool flush_on_read = config.value("flush_on_read", true);
-  bool flush_on_exec = config.value("flush_on_exec", true);
-  size_t batch_size  = config.value("batch_size", (size_t)32);
-  bool commit_on_flush = config.value("commit_on_flush", true);
   const auto &inner_cfg = config["config"];
+  bool flush_on_read    = config.value("flush_on_read", true);
+  bool flush_on_exec    = config.value("flush_on_exec", true);
+  size_t batch_size     = config.value("batch_size", (size_t)32);
+  bool commit_on_flush  = config.value("commit_on_flush", true);
+  bool async_flush      = config.value("async_flush", false);
   std::unique_ptr<Backend> inner =
       BackendFactory::createBackend(backend_type, engine, pool, inner_cfg);
   auto backend = std::make_unique<AggregatorBackend>(std::move(inner), pool,
                                                flush_on_read,
                                                flush_on_exec,
                                                batch_size,
-                                               commit_on_flush);
+                                               commit_on_flush,
+                                               async_flush);
   spdlog::trace("[aggregator] Successfully created database");
   return backend;
 }
@@ -47,17 +49,19 @@ std::unique_ptr<Backend> AggregatorBackend::attach(const thallium::engine &engin
         "AggregatorBackend needs to be initialized with a \"backend\" entry");
   }
   const auto &inner_cfg = config["config"];
-  bool flush_on_read = config.value("flush_on_read", true);
-  bool flush_on_exec = config.value("flush_on_exec", true);
-  size_t batch_size  = config.value("batch_size", (size_t)32);
-  bool commit_on_flush = config.value("commit_on_flush", true);
+  bool flush_on_read    = config.value("flush_on_read", true);
+  bool flush_on_exec    = config.value("flush_on_exec", true);
+  size_t batch_size     = config.value("batch_size", (size_t)32);
+  bool commit_on_flush  = config.value("commit_on_flush", true);
+  bool async_flush      = config.value("async_flush", false);
   std::unique_ptr<Backend> inner =
       BackendFactory::attachBackend(backend_type, engine, pool, inner_cfg);
   auto backend = std::make_unique<AggregatorBackend>(std::move(inner), pool,
                                                flush_on_read,
                                                flush_on_exec,
                                                batch_size,
-                                               commit_on_flush);
+                                               commit_on_flush,
+                                               async_flush);
   spdlog::trace("[aggregator] Successfully opened database");
   return backend;
 }

@@ -61,9 +61,15 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "coll.store should not throw.",
                 coll.store_multi(records_str, record_ids.data()));
         for(uint64_t i = 0; i < record_ids.size(); i++) {
-            CPPUNIT_ASSERT_EQUAL_MESSAGE(
+            if(db_type == "aggregator") {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                    "record id should be correct.",
+                    std::numeric_limits<uint64_t>::max(), record_ids[i]);
+            } else {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
                     "record id should be correct.",
                     i, record_ids[i]);
+            }
         }
 
         tearDown();
@@ -74,9 +80,15 @@ class CollectionMultiTest : public CppUnit::TestFixture,
                 "coll.store should not throw.",
                 coll.store_multi(records_json_all, record_ids.data()));
         for(uint64_t i = 0; i < record_ids.size(); i++) {
-            CPPUNIT_ASSERT_EQUAL_MESSAGE(
+            if(db_type == "aggregator") {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
+                    "record id should be correct.",
+                    std::numeric_limits<uint64_t>::max(), record_ids[i]);
+            } else {
+                CPPUNIT_ASSERT_EQUAL_MESSAGE(
                     "record id should be correct.",
                     i, record_ids[i]);
+            }
         }
     }
 
