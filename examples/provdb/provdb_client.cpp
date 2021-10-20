@@ -65,7 +65,14 @@ int main(int argc, char** argv) {
     g_anomalies = setup_collection("anomalies");
     g_normalexe = setup_collection("normalexe");
 
-    run_client();
+    spdlog::info("The following record will be used:\n{}", g_record);
+
+    try {
+        run_client();
+    } catch(const std::exception& ex) {
+        spdlog::critical("Exception caught: {}", ex.what());
+        MPI_Abort(MPI_COMM_WORLD, -1);
+    }
 
     shutdown_servers();
 

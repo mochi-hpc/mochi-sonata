@@ -3,8 +3,14 @@
 #BSUB -J sonata
 #BSUB -o sonata.o%J
 #BSUB -W 30
-#BSUB -nnodes 11
+#BSUB -nnodes 31
 #BSUB -alloc_flags NVME
+
+PROTOCOL_SERVER="verbs://mlx5_0"
+#PROTOCOL_SERVER="ofi+tcp;ofi_rxm://ib0:5000"
+
+PROTOCOL_CLIENT="verbs://mlx5_0"
+#PROTOCOL_CLIENT="ofi+tcp;ofi_rxm://ib0"
 
 JOB_INFO=`bjobs -W -noheader $LSB_JOBID`
 JOB_INFO_ARRAY=($JOB_INFO)
@@ -22,6 +28,7 @@ NUM_CLIENTS_PER_NODE=${4:-42}
 export FI_MR_CACHE_MAX_COUNT=0
 # use shared recv context in RXM; should improve scalability
 export FI_OFI_RXM_USE_SRX=1
+export FI_UNIVERSE_SIZE=1600
 
 # required to have correct versions of glibc
 module swap xl gcc/9.1.0
@@ -56,12 +63,12 @@ done
 
 # run server
 jsrun --erf_input $EXP_DIR/servers.erf ./examples/provdb/provdb_server \
-       -a "verbs://mlx5_0" \
+       -a ${PROTOCOL_SERVER} \
        -o "${EXP_DIR}/providers.txt" \
        -s "${EXP_DIR}/sonata_config.json" \
        -c "${EXP_DIR}/server_margo.json" \
        ${all_providers} \
-       -v info 1> $EXP_DIR/server.out 2> $EXP_DIR/server.err &
+       -v debug 1> $EXP_DIR/server.out 2> $EXP_DIR/server.err &
 
 # wait until providers.txt file appears
 while [ ! -f $EXP_DIR/providers.txt ]; do sleep 10; done
@@ -70,9 +77,9 @@ sleep 10
 
 # run client
 jsrun --erf_input $EXP_DIR/clients.erf ./examples/provdb/provdb_client \
-       -a "verbs://mlx5_0" \
+       -a ${PROTOCOL_CLIENT} \
        -r "${EXP_DIR}/example_record.json" \
        -p "${EXP_DIR}/providers.txt" \
        -c "${EXP_DIR}/client_margo.json" \
-       -w 1000 -i 500 -f 10 \
+       -w 1000 -i 1000 -f 5 \
        -v info 1> $EXP_DIR/client.out 2> $EXP_DIR/client.err

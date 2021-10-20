@@ -139,6 +139,7 @@ void setup_server() {
         }
         base_config = std::move(config);
     }
+    g_providers.reserve(provider_info.size());
     for(const auto& p : provider_info) {
         ABT_pool pool = ABT_POOL_NULL;
         if(0 != margo_get_pool_by_name(mid, p.second.c_str(), &pool)) {

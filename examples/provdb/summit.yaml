@@ -7,6 +7,10 @@ spack:
   - mpi
   - nlohmann-json
   - mochi-thallium
+  - libfabric@1.9.0
+  - argobots@main
+  - mercury@master
+  - mochi-margo@main
   concretization: together
   compilers:
   - compiler:
@@ -63,7 +67,7 @@ spack:
         spec: cmake@3.18.2
       compiler: []
     libfabric:
-      variants: fabrics=verbs,rxm,mrail
+      variants: fabrics=tcp,verbs,rxm,mrail
       buildable: true
       version: []
       target: []

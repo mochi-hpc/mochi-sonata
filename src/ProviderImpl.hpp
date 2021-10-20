@@ -486,7 +486,7 @@ public:
   void store(const tl::request &req, const std::string &db_name,
              const std::string &coll_name, const std::string &record,
              bool commit) {
-    spdlog::trace("[provider:{}] Received store request", id(), db_name);
+    spdlog::trace("[provider:{}] Received store request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
     RequestResult<uint64_t> result;
@@ -500,7 +500,7 @@ public:
   void storeJson(const tl::request &req, const std::string &db_name,
                  const std::string &coll_name, const JsonWrapper &record,
                  bool commit) {
-    spdlog::trace("[provider:{}] Received store request", id(), db_name);
+    spdlog::trace("[provider:{}] Received store request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
     RequestResult<uint64_t> result;
@@ -514,20 +514,23 @@ public:
   void storeMulti(const tl::request &req, const std::string &db_name,
                   const std::string &coll_name,
                   const std::vector<std::string> &records, bool commit) {
-    spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
+    spdlog::trace("[provider:{}] Received store_multi request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
+    //spdlog::debug("[provider:{}] Received store_multi request", id());
     RequestResult<std::vector<uint64_t>> result;
     FIND_DATABASE(db);
     result = db->storeMulti(coll_name, records, commit);
+    //spdlog::debug("[provider:{}] store_multi executed", id());
     req.respond(result);
+    //spdlog::debug("[provider:{}] store_multi response sent", id());
     spdlog::trace("[provider:{}] Record successfully stored", id());
   }
 
   void storeMultiJson(const tl::request &req, const std::string &db_name,
                       const std::string &coll_name, const JsonWrapper &records,
                       bool commit) {
-    spdlog::trace("[provider:{}] Received store_multi request", id(), db_name);
+    spdlog::trace("[provider:{}] Received store_multi request", id());
     spdlog::trace("[provider:{}]    => database = {}", id(), db_name);
     spdlog::trace("[provider:{}]    => collection = {}", id(), coll_name);
     RequestResult<std::vector<uint64_t>> result;
