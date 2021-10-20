@@ -301,7 +301,7 @@ public:
                           value.data(), value.size());
     // update the header
     std::memcpy(header.data()+2, &last_record_id, 8);
-    std::memcpy(header.data()+10, &last_record_id, 8);
+    std::memcpy(header.data()+10, &total_records, 8);
     // write the header
     rc = unqlite_kv_store(m_db, coll_name.c_str(), coll_name.size(),
                           header.data(), header_size);
@@ -502,7 +502,7 @@ public:
 
     // update the header
     std::memcpy(header.data()+2, &last_record_id, 8);
-    std::memcpy(header.data()+10, &last_record_id, 8);
+    std::memcpy(header.data()+10, &total_records, 8);
     // write the header
     rc = unqlite_kv_store(m_db, coll_name.c_str(), coll_name.size(),
             header.data(), header_size);
