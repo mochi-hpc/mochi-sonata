@@ -39,26 +39,26 @@ add_test(NAME ProviderTest COMMAND ./ProviderTest ProviderTest.xml)
 
 add_test(NAME AdminTestUnQLite COMMAND ./AdminTest AdminTestUnQLite.xml unqlite)
 add_test(NAME AdminTestJsonCpp COMMAND ./AdminTest AdminTestJsonCpp.xml jsoncpp)
-add_test(NAME AdminTestLazy COMMAND ./AdminTest AdminTestJsonCpp.xml lazy)
+add_test(NAME AdminTestAggregator COMMAND ./AdminTest AdminTestJsonCpp.xml aggregator)
 add_test(NAME AdminTestVector COMMAND ./AdminTest AdminTestVector.xml vector)
 
 add_test(NAME ClientTestUnQLite COMMAND ./ClientTest ClientTestUnQLite.xml unqlite)
 add_test(NAME ClientTestJsonCpp COMMAND ./ClientTest ClientTestJsonCpp.xml jsoncpp)
-add_test(NAME ClientTestLazy COMMAND ./ClientTest ClientTestJsonCpp.xml lazy)
+add_test(NAME ClientTestAggregator COMMAND ./ClientTest ClientTestJsonCpp.xml aggregator)
 add_test(NAME ClientTestVector COMMAND ./ClientTest ClientTestVector.xml vector)
 
 add_test(NAME DatabaseTestUnQLite COMMAND ./DatabaseTest DatabaseTestUnQlite.xml unqlite)
 add_test(NAME DatabaseTestJsonCpp COMMAND ./DatabaseTest DatabaseTestJsonCpp.xml jsoncpp)
-add_test(NAME DatabaseTestLazy COMMAND ./DatabaseTest DatabaseTestJsonCpp.xml lazy)
+add_test(NAME DatabaseTestAggregator COMMAND ./DatabaseTest DatabaseTestJsonCpp.xml aggregator)
 
 add_test(NAME CollectionTestUnQLite COMMAND ./CollectionTest CollectionTestUnQLite.xml unqlite)
 add_test(NAME CollectionTestJsonCpp COMMAND ./CollectionTest CollectionTestJsonCpp.xml jsoncpp)
-#add_test(NAME CollectionTestLazy COMMAND ./CollectionTest CollectionTestJsonCpp.xml lazy)
+add_test(NAME CollectionTestAggregator COMMAND ./CollectionTest CollectionTestAggregator.xml aggregator)
 add_test(NAME CollectionTestVector COMMAND ./CollectionTest CollectionTestVector.xml vector)
 
 add_test(NAME CollectionMultiTestUnQLite COMMAND ./CollectionMultiTest CollectionMultiTestUnQLite.xml unqlite)
 add_test(NAME CollectionMultiTestJsonCpp COMMAND ./CollectionMultiTest CollectionMultiTestJsonCpp.xml jsoncpp)
-#add_test(NAME CollectionMultiTestLazy COMMAND ./CollectionMultiTest CollectionMultiTestJsonCpp.xml lazy)
+add_test(NAME CollectionMultiTestAggregator COMMAND ./CollectionMultiTest CollectionMultiTestJsonCpp.xml aggregator)
 add_test(NAME CollectionMultiTestVector COMMAND ./CollectionMultiTest CollectionMultiTestVector.xml vector)
 
 add_test(NAME ExecTest COMMAND ./ExecTest ExecTest.xml)

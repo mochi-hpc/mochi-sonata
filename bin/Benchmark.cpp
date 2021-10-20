@@ -47,7 +47,7 @@ struct RecordInfo {
   RecordInfo(const json &config) {
     num = config.value("num", 0);
     fields = config.value("fields", 0);
-    if (config["key-size"]) {
+    if (config.contains("key-size")) {
       if (config["key-size"].is_array() && config["key-size"].size() == 2) {
         min_key_size = config["key-size"][0].get<uint64_t>();
         max_key_size = config["key-size"][1].get<uint64_t>();
@@ -61,7 +61,7 @@ struct RecordInfo {
     if (min_key_size == 0 || min_key_size > max_key_size) {
       throw std::runtime_error("invalid key-size value(s)");
     }
-    if (config["val-size"]) {
+    if (config.contains("val-size")) {
       if (config["val-size"].is_array() && config["val-size"].size() == 2) {
         min_val_size = config["val-size"][0].get<uint64_t>();
         max_val_size = config["val-size"][1].get<uint64_t>();
@@ -110,19 +110,19 @@ struct RecordInfo {
 struct CollectionInfo {
 
   std::string type;
-  std::string path;
+  std::string config;
   std::string database_name;
   std::string collection_name;
   bool keep_db = false;
   bool shared_db = true;
 
-  CollectionInfo(const json &config) {
-    type = config.value("type", "unqlite");
-    path = config.value("path", ".");
-    database_name = config.value("database-name", "");
-    collection_name = config.value("collection-name", "");
-    shared_db = config.value("shared-database", true);
-    keep_db = config.value("keep-database", false);
+  CollectionInfo(const json &cfg) {
+    type = cfg.value("type", "unqlite");
+    config = cfg.value("config", json::object()).dump();
+    database_name = cfg.value("database-name", "");
+    collection_name = cfg.value("collection-name", "");
+    shared_db = cfg.value("shared-database", true);
+    keep_db = cfg.value("keep-database", false);
     if (database_name.size() == 0) {
       throw std::runtime_error("invalid database name");
     }
@@ -140,9 +140,10 @@ struct CollectionInfo {
     MPI_Comm_rank(team_comm, &rank);
     if (shared_db) {
       if (rank == 0) {
-        std::string db_config =
-            "{ \"path\" : \""s + path + "-" + std::to_string(team) + "\" }";
-        admin.createDatabase(address, 0, database_name, type, db_config);
+        auto db_config = json::parse(config);
+        if(db_config.contains("path"))
+          db_config["path"] = db_config["path"].get<std::string>() + "-" + std::to_string(team);
+        admin.createDatabase(address, 0, database_name, type, db_config.dump());
         snt::Database db = client.open(address, 0, database_name);
         snt::Collection coll = db.create(collection_name);
         MPI_Barrier(team_comm);
@@ -153,10 +154,12 @@ struct CollectionInfo {
         return db.open(collection_name);
       }
     } else {
-      auto db_config = "{ \"path\" : \""s + path + "-" + std::to_string(team) +
-                       "-" + std::to_string(rank) + "\" }";
+      auto db_config = json::parse(config);
+      if(db_config.contains("path"))
+        db_config["path"] = db_config["path"].get<std::string>() + "-" + std::to_string(team)
+                       + "-" + std::to_string(rank);
       auto db_name = database_name + "." + std::to_string(rank);
-      admin.createDatabase(address, 0, db_name, type, db_config);
+      admin.createDatabase(address, 0, db_name, type, db_config.dump());
       snt::Database db = client.open(address, 0, db_name);
       return db.create(collection_name);
     }
@@ -538,7 +541,7 @@ public:
         m_record_info(config["records"]),
         m_collection_info(config["collection"]) {
     m_use_json = config.value("use-json", false);
-    if (!config["num-operations"]) {
+    if (!config.contains("num-operations")) {
       throw std::runtime_error("Benchmark needs a num-operations parameter");
     }
     m_num_fetch = config["num-operations"].get<uint64_t>();
@@ -553,7 +556,7 @@ public:
       for (size_t i = 0; i < m_record_info.num; i++) {
         std::string r;
         m_record_info.generateRandomRecordString(&r);
-        m_collection.store(r);
+        m_collection.store(r, i == m_record_info.num-1);
       }
     }
   }
@@ -627,7 +630,7 @@ public:
   FilterBenchmark(json &config, T &&...args)
       : FetchBenchmark(config, std::forward<T>(args)...) {
     m_use_json = config.value("use-json", false);
-    if (!config["filter-selectivity"]) {
+    if (!config.contains("filter-selectivity")) {
       throw std::runtime_error(
           "Filter benchmark needs a filter-selectivity parameter");
     }

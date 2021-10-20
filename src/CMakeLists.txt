@@ -8,7 +8,7 @@ set(sonata-client-src
 set(sonata-server-src
 	Provider.cpp
 	Backend.cpp
-	LazyBackend.cpp
+	AggregatorBackend.cpp
 	JsonCppBackend.cpp
 	VectorBackend.cpp
 	NullBackend.cpp

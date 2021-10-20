@@ -24,7 +24,7 @@ class ClientTest : public CppUnit::TestFixture
         sonata::Admin admin(*engine);
         std::string addr = engine->self();
         std::strinf cfg;
-        if(db_type == "lazy") {
+        if(db_type == "aggregator") {
             cfg += "{ \"backend\" : \"unqlite\", \"config\" : ";
             cfg += db_config;
             cfg += "}";

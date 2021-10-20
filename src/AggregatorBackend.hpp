@@ -3,8 +3,8 @@
  *
  * See COPYRIGHT in top-level directory.
  */
-#ifndef __SONATA_LAZY_BACKEND_HPP
-#define __SONATA_LAZY_BACKEND_HPP
+#ifndef __SONATA_AGGREGATOR_BACKEND_HPP
+#define __SONATA_AGGREGATOR_BACKEND_HPP
 
 #include "sonata/Admin.hpp"
 #include "sonata/Backend.hpp"
@@ -23,21 +23,24 @@ namespace tl = thallium;
 using namespace std::string_literals;
 using nlohmann::json;
 
-class LazyBackend : public Backend {
+class AggregatorBackend : public Backend {
 
 public:
-  LazyBackend(std::unique_ptr<Backend> &&inner, const tl::pool &pool,
-              bool flush_on_read, bool flush_on_exec)
+  AggregatorBackend(std::unique_ptr<Backend> &&inner, const tl::pool &pool,
+              bool flush_on_read, bool flush_on_exec,
+              size_t batch_size, bool commit_on_flush,
+              bool async_flush)
       : m_db(std::move(inner)), m_pool(pool), m_flush_on_read(flush_on_read),
-        m_flush_on_exec(flush_on_exec) {}
+        m_flush_on_exec(flush_on_exec), m_batch_size(batch_size),
+        m_commit_on_flush(commit_on_flush), m_async_flush(async_flush) {}
 
-  LazyBackend(LazyBackend &&) = delete;
+  AggregatorBackend(AggregatorBackend &&) = delete;
 
-  LazyBackend(const LazyBackend &) = delete;
+  AggregatorBackend(const AggregatorBackend &) = delete;
 
-  LazyBackend &operator=(LazyBackend &&) = delete;
+  AggregatorBackend &operator=(AggregatorBackend &&) = delete;
 
-  LazyBackend &operator=(const LazyBackend &) = delete;
+  AggregatorBackend &operator=(const AggregatorBackend &) = delete;
 
   static std::unique_ptr<Backend> create(const tl::engine &engine,
                                          const tl::pool &pool,
@@ -47,21 +50,37 @@ public:
                                          const tl::pool &pool,
                                          const json &config);
 
-  virtual ~LazyBackend() {}
+  virtual ~AggregatorBackend() {
+    flush();
+  }
 
   virtual RequestResult<bool>
   createCollection(const std::string &coll_name) override {
-    return m_db->createCollection(coll_name);
+    auto result = m_db->createCollection(coll_name);
+    if(result.success()) {
+       std::unique_lock<tl::mutex> lock(m_batches_mtx);
+       auto& batches = m_batches[coll_name];
+       (void)batches;
+    }
+    return result;
   }
 
   virtual RequestResult<bool>
   openCollection(const std::string &coll_name) override {
-    return m_db->openCollection(coll_name);
+    auto result = m_db->openCollection(coll_name);
+    if(result.success()) {
+       std::unique_lock<tl::mutex> lock(m_batches_mtx);
+       auto& batches = m_batches[coll_name];
+       (void)batches;
+    }
+    return result;
   }
 
   virtual RequestResult<bool>
   dropCollection(const std::string &coll_name) override {
-    flush();
+    std::unique_lock<tl::mutex> lock(m_batches_mtx);
+    flush(coll_name, false);
+    m_batches.erase(coll_name);
     return m_db->dropCollection(coll_name);
   }
 
@@ -86,13 +105,41 @@ public:
     RequestResult<uint64_t> result;
     result.success() = true;
     result.value() = std::numeric_limits<uint64_t>::max();
-    // TODO check that collection exists
-    m_pool.make_thread(
-        [backend = this, coll_name, r = std::move(record), commit]() {
-          PendingWrite pw(*backend);
-          backend->m_db->storeJson(coll_name, r, commit);
-        },
-        tl::anonymous());
+    std::unique_lock<tl::mutex> lock(m_batches_mtx);
+    auto it = m_batches.find(coll_name);
+    if(it == m_batches.end()) {
+        lock.unlock();
+        auto coll_exists = openCollection(coll_name);
+        lock.lock();
+        if(coll_exists.success()) {
+            it = m_batches.find(coll_name);
+            if(it == m_batches.end()) {
+                result.success() = false;
+                result.error() = "Unexpected error when trying"
+                " to open collection in storeMultiJson";
+                return result;
+            }
+        } else {
+            result.success() = false;
+            result.error() = "Collection does not exist";
+            return result;
+        }
+    }
+    auto& batch = it->second;
+    batch.m_content->push_back(std::move(record.m_object));
+    if((batch.m_content->size() >= m_batch_size) || commit) {
+      auto batch_content = std::move(batch.m_content);
+      batch.reset();
+      auto do_store =
+        [backend = this, coll_name, content = std::move(batch_content), commit]() {
+            PendingWrite pw(*backend);
+            backend->m_db->storeMultiJson(coll_name, content, commit || backend->m_commit_on_flush);
+        };
+      if(m_async_flush)
+          m_pool.make_thread(std::move(do_store), tl::anonymous());
+      else
+          do_store();
+    }
     return result;
   }
 
@@ -111,7 +158,7 @@ public:
         result.success() = false;
         return result;
       }
-      wrapper->push_back(t);
+      wrapper->push_back(std::move(t));
     }
     return storeMultiJson(coll_name, wrapper, commit);
   }
@@ -133,13 +180,47 @@ public:
     result.success() = true;
     result.value() = std::vector<uint64_t>(
         records->size(), std::numeric_limits<uint64_t>::max());
-    // TODO check that collection exists
-    m_pool.make_thread(
-        [backend = this, coll_name, r = std::move(records), commit]() {
-          PendingWrite pw(*backend);
-          backend->m_db->storeMultiJson(coll_name, r, commit);
-        },
-        tl::anonymous());
+
+    std::unique_lock<tl::mutex> lock(m_batches_mtx);
+    auto it = m_batches.find(coll_name);
+    if(it == m_batches.end()) {
+        lock.unlock();
+        auto coll_exists = openCollection(coll_name);
+        lock.lock();
+        if(coll_exists.success()) {
+            it = m_batches.find(coll_name);
+            if(it == m_batches.end()) {
+                result.success() = false;
+                result.error() = "Unexpected error when trying"
+                " to open collection in storeMultiJson";
+                return result;
+            }
+        } else {
+            result.success() = false;
+            result.error() = "Collection does not exist";
+            return result;
+        }
+    }
+
+    auto& batch = it->second;
+    batch.m_content->insert(
+        batch.m_content->end(),
+        records->begin(),
+        records->end());
+
+    if((batch.m_content->size() >= m_batch_size) || commit) {
+      auto batch_content = std::move(batch.m_content);
+      batch.reset();
+      auto do_flush =
+        [backend = this, coll_name, content = std::move(batch_content), commit]() {
+            PendingWrite pw(*backend);
+            backend->m_db->storeMultiJson(coll_name, content, commit || backend->m_commit_on_flush);
+        };
+      if(m_async_flush)
+          m_pool.make_thread(std::move(do_flush), tl::anonymous());
+      else
+          do_flush();
+    }
     return result;
   }
 
@@ -280,45 +361,80 @@ public:
   }
 
   std::string getConfig() const override {
-    return "{\"flush-on-exec\": "s + (m_flush_on_exec ? "true" : "false") +
-           ", \"flush-on-read\": "s + (m_flush_on_read ? "true" : "false") +
-           ", \"config\": " + m_db->getConfig() + "}";
+    return "{\"flush_on_exec\":"s + (m_flush_on_exec ? "true" : "false") +
+           ",\"flush_on_read\":"s + (m_flush_on_read ? "true" : "false") +
+           ",\"commit_on_flush\":"s + (m_commit_on_flush ? "true" : "false") +
+           ",\"batch_size\":"s + std::to_string(m_batch_size) +
+           ",\"async_flush\":"s + (m_async_flush ? "true" : "false") +
+           ",\"config\":" + m_db->getConfig() + "}";
   }
 
 private:
-  void flush(const std::string &coll_name = "") {
-    std::unique_lock<tl::mutex> lock(m_pending_writes_mtx);
-    if (m_pending_writes == 0)
-      return;
-    m_pending_writes_cv.wait(lock, [this]() { return m_pending_writes == 0; });
+  void flush(const std::string &coll_name = "", bool use_lock=true) {
+    std::unique_lock<tl::mutex> lock;
+    if(use_lock)
+        lock = std::unique_lock<tl::mutex>(m_batches_mtx);
+    m_batches_cv.wait(lock, [this]() { return m_pending_writes == 0; });
+    if(coll_name.empty()) {
+      for(auto& p : m_batches) {
+        auto& coll = p.first;
+        auto& batch = p.second;
+        if(batch.m_content->empty())
+          continue;
+        m_db->storeMultiJson(coll, batch.m_content, m_commit_on_flush);
+        batch.reset();
+      }
+    } else {
+      auto it = m_batches.find(coll_name);
+      if(it == m_batches.end())
+        return;
+      auto& batch = it->second;
+      if(batch.m_content->empty())
+        return;
+      m_db->storeMultiJson(coll_name, batch.m_content, m_commit_on_flush);
+      batch.reset();
+    }
   }
 
-  bool m_flush_on_read = true;
-  bool m_flush_on_exec = true;
+  struct Batch {
+    JsonWrapper m_content;
+    Batch() { m_content = json::array(); }
+    void reset() {
+        m_content = json::array();
+    }
+  };
+
+  bool m_flush_on_read   = true;
+  bool m_flush_on_exec   = true;
+  bool m_commit_on_flush = true;
+  size_t m_batch_size    = 32;
+  bool m_async_flush     = false;
+
   std::unique_ptr<Backend> m_db;
   tl::pool m_pool;
+  std::unordered_map<std::string, Batch> m_batches;
+  tl::mutex m_batches_mtx;
+  tl::condition_variable m_batches_cv;
   uint64_t m_pending_writes = 0;
-  tl::mutex m_pending_writes_mtx;
-  tl::condition_variable m_pending_writes_cv;
 
   struct PendingWrite {
 
-    LazyBackend &m_backend;
+    AggregatorBackend &m_backend;
 
-    PendingWrite(LazyBackend &backend) : m_backend(backend) {
-      std::unique_lock<tl::mutex> lock(m_backend.m_pending_writes_mtx);
+    PendingWrite(AggregatorBackend &backend) : m_backend(backend) {
+      std::unique_lock<tl::mutex> lock(m_backend.m_batches_mtx);
       m_backend.m_pending_writes += 1;
     }
 
     ~PendingWrite() {
       bool notify = false;
       {
-        std::unique_lock<tl::mutex> lock(m_backend.m_pending_writes_mtx);
+        std::unique_lock<tl::mutex> lock(m_backend.m_batches_mtx);
         m_backend.m_pending_writes -= 1;
         notify = m_backend.m_pending_writes == 0;
       }
       if (notify)
-        m_backend.m_pending_writes_cv.notify_all();
+        m_backend.m_batches_cv.notify_all();
     }
   };
 };
