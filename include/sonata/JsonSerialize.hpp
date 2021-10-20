@@ -26,6 +26,9 @@ struct JsonWrapper {
     JsonWrapper& operator=(const JsonWrapper&) = default;
     JsonWrapper& operator=(JsonWrapper&&) = default;
 
+    JsonWrapper(json&& obj)
+    : m_object(std::move(obj)) {}
+
     const json* operator->() const {
         return &m_object;
     }

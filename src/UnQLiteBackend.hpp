@@ -13,6 +13,7 @@
 
 #include "UnQLiteMutex.hpp"
 #include "UnQLiteVM.hpp"
+#include "UnQLiteJsonEncoder.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -161,6 +162,9 @@ public:
   virtual RequestResult<uint64_t> store(const std::string &coll_name,
                                         const std::string &record,
                                         bool commit) override {
+    if(m_bypass) {
+        return storeDirect(coll_name, json::parse(record), commit);
+    }
     std::ostringstream ss;
     ss << "$input = " << record << ";"
        << R"jx9(
@@ -202,6 +206,9 @@ public:
   virtual RequestResult<uint64_t> storeJson(const std::string &coll_name,
                                             const JsonWrapper &record,
                                             bool commit) override {
+    if(m_bypass) {
+        return storeDirect(coll_name, record, commit);
+    }
     constexpr static const char *script = R"jx9(
         if(!db_exists($collection)) {
             $ret = false;
@@ -239,9 +246,77 @@ public:
     return result;
   }
 
+  RequestResult<uint64_t> storeDirect(const std::string &coll_name,
+                                      const JsonWrapper &record,
+                                      bool commit) {
+    RequestResult<uint64_t> result;
+    if(!record->is_object()) {
+        result.success() = false;
+        result.error() = "Record should be an object";
+        return result;
+    }
+    auto value = UnQLiteJsonEncoder::encode(record.m_object);
+    std::vector<char> header(24);
+    unqlite_int64 header_size = 24;
+    std::unique_lock<tl::mutex> lock;
+    if (m_mutex_mode == MutexMode::global)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+    // get the header (this is also a way to check that the collection exists)
+    int rc = unqlite_kv_fetch(m_db, coll_name.c_str(), coll_name.size(),
+                              header.data(), &header_size);
+    if(rc == UNQLITE_NOTFOUND) {
+        result.success() = false;
+        result.error() = "Collection does not exist";
+        return result;
+    }
+    // get the last_record_id and total_records from the header
+    uint64_t last_record_id, total_records;
+    std::memcpy(&last_record_id, header.data()+2, 8);
+    std::memcpy(&total_records, header.data()+10, 8);
+    // add the id to the record (it's kind of a hack)
+    json id_rec = json::object();
+    id_rec["__id"] = last_record_id;
+    auto id_rec_buf = UnQLiteJsonEncoder::encode(id_rec);
+    value.resize(value.size()+id_rec_buf.size()-2);
+    std::memcpy(value.data()+value.size()-id_rec_buf.size()+1,
+                id_rec_buf.data()+1, id_rec_buf.size()-1);
+    std::string key = coll_name + "_";
+    if(Endian::little) {
+        last_record_id = Endian::swap(last_record_id);
+        total_records = Endian::swap(total_records);
+        key += std::to_string(last_record_id);
+        result.value() = last_record_id;
+        last_record_id += 1;
+        total_records += 1;
+        last_record_id = Endian::swap(last_record_id);
+        total_records = Endian::swap(total_records);
+    } else {
+        key += std::to_string(last_record_id);
+        result.value() = last_record_id;
+        last_record_id += 1;
+        total_records += 1;
+    }
+    // write the value
+    rc = unqlite_kv_store(m_db, key.c_str(), key.size(),
+                          value.data(), value.size());
+    // update the header
+    std::memcpy(header.data()+2, &last_record_id, 8);
+    std::memcpy(header.data()+10, &last_record_id, 8);
+    // write the header
+    rc = unqlite_kv_store(m_db, coll_name.c_str(), coll_name.size(),
+                          header.data(), header_size);
+    return result;
+  }
+
   virtual RequestResult<std::vector<uint64_t>>
   storeMulti(const std::string &coll_name,
              const std::vector<std::string> &records, bool commit) override {
+    if(m_bypass) {
+        auto json_records = json::array();
+        for(auto& r : records)
+            json_records.push_back(json::parse(r));
+        return storeMultiDirect(coll_name, std::move(json_records), commit);
+    }
     std::ostringstream ss;
     ss << "$input = [";
     for (unsigned i = 0; i < records.size(); i++) {
@@ -302,6 +377,9 @@ public:
   virtual RequestResult<std::vector<uint64_t>>
   storeMultiJson(const std::string &coll_name, const JsonWrapper &records,
                  bool commit) override {
+    if(m_bypass) {
+        return storeMultiDirect(coll_name, records, commit);
+    }
     RequestResult<std::vector<uint64_t>> result;
     if(!records->is_array()) {
         result.success() = false;
@@ -343,6 +421,91 @@ public:
       result.success() = false;
       result.error() = e.what();
     }
+    return result;
+  }
+
+  RequestResult<std::vector<uint64_t>>
+  storeMultiDirect(const std::string &coll_name,
+                   const JsonWrapper &records,
+                   bool commit) {
+    RequestResult<std::vector<uint64_t>> result;
+    if(!records->is_array()) {
+        result.success() = false;
+        result.error() = "Records should be an array";
+        return result;
+    }
+    std::vector<std::vector<char>> values;
+    for(auto& obj : records.m_object) {
+        if(!obj.is_object()) {
+            result.success() = false;
+            result.error() = "On of the records is not an object";
+            return result;
+        }
+        values.push_back(UnQLiteJsonEncoder::encode(obj));
+    }
+
+    std::vector<char> header(24);
+    unqlite_int64 header_size = 24;
+
+    std::unique_lock<tl::mutex> lock;
+    if (m_mutex_mode == MutexMode::global)
+        lock = std::unique_lock<tl::mutex>(m_mutex);
+
+    // get the header (this is also a way to check that the collection exists)
+    int rc = unqlite_kv_fetch(m_db, coll_name.c_str(), coll_name.size(),
+                              header.data(), &header_size);
+    if(rc == UNQLITE_NOTFOUND) {
+        result.success() = false;
+        result.error() = "Collection does not exist";
+        return result;
+    }
+
+    // get the last_record_id and total_records from the header
+    uint64_t last_record_id, total_records;
+    std::memcpy(&last_record_id, header.data()+2, 8);
+    std::memcpy(&total_records, header.data()+10, 8);
+
+    auto record_id = last_record_id;
+    if(Endian::little) record_id = Endian::swap(record_id);
+
+    json id_rec = json::object();
+
+    for(size_t i = 0; i < values.size(); i++) {
+        auto& value = values[i];
+        // add the id to the record (it's kind of a hack)
+        id_rec["__id"] = Endian::big ? record_id : Endian::swap(record_id);
+        auto id_rec_buf = UnQLiteJsonEncoder::encode(id_rec);
+        value.resize(value.size()+id_rec_buf.size()-2);
+        std::memcpy(value.data()+value.size()-id_rec_buf.size()+1,
+                    id_rec_buf.data()+1, id_rec_buf.size()-1);
+        std::string key = coll_name + "_"
+            + std::to_string(Endian::big ? record_id : Endian::swap(record_id));
+
+        // write the value
+        rc = unqlite_kv_store(m_db, key.c_str(), key.size(),
+                value.data(), value.size());
+        result.value().push_back(record_id);
+        record_id += 1;
+    }
+
+    if(Endian::little) {
+        last_record_id = Endian::swap(last_record_id);
+        total_records = Endian::swap(total_records);
+        last_record_id += values.size();
+        total_records += values.size();
+        last_record_id = Endian::swap(last_record_id);
+        total_records = Endian::swap(total_records);
+    } else {
+        last_record_id += values.size();
+        total_records += values.size();
+    }
+
+    // update the header
+    std::memcpy(header.data()+2, &last_record_id, 8);
+    std::memcpy(header.data()+10, &last_record_id, 8);
+    // write the header
+    rc = unqlite_kv_store(m_db, coll_name.c_str(), coll_name.size(),
+            header.data(), header_size);
     return result;
   }
 
@@ -1086,6 +1249,7 @@ private:
   std::string m_filename;
   bool m_is_temporary;
   bool m_is_in_memory;
+  bool m_bypass;
   MutexMode m_mutex_mode = MutexMode::global;
   tl::mutex m_mutex; // used only if mutex_mode is "global"
 

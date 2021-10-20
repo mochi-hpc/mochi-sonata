@@ -28,6 +28,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
                                                 const json &config) {
   bool temporary = config.value("temporary", false);
   bool inmemory = config.value("in-memory", false);
+  bool bypass = config.value("bypass", false);
   std::string mutex_mode = config.value("mutex", unqlite_mutex_mode);
   if(mutex_mode != "none"
   && mutex_mode != "global"
@@ -97,6 +98,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
   backend->m_db = pDB;
   backend->m_is_temporary = temporary;
   backend->m_is_in_memory = inmemory;
+  backend->m_bypass = bypass;
   backend->m_filename = db_path;
   backend->m_client = Client(engine);
   backend->m_admin = Admin(engine);
@@ -108,6 +110,7 @@ std::unique_ptr<Backend> UnQLiteBackend::create(const tl::engine &engine,
 std::unique_ptr<Backend> UnQLiteBackend::attach(const tl::engine &engine,
                                                 const tl::pool &pool,
                                                 const json &config) {
+  bool bypass = config.value("bypass", false);
   std::string mutex_mode = config.value("mutex", unqlite_mutex_mode);
   if(mutex_mode != "none"
   && mutex_mode != "global"
@@ -164,6 +167,7 @@ std::unique_ptr<Backend> UnQLiteBackend::attach(const tl::engine &engine,
   backend->m_db = pDB;
   backend->m_is_temporary = false;
   backend->m_is_in_memory = false;
+  backend->m_bypass = bypass;
   backend->m_filename = db_path;
   backend->m_client = Client(engine);
   backend->m_admin = Admin(engine);
