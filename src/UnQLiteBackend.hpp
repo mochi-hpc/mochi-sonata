@@ -275,7 +275,10 @@ public:
     std::memcpy(&total_records, header.data()+10, 8);
     // add the id to the record (it's kind of a hack)
     json id_rec = json::object();
-    id_rec["__id"] = last_record_id;
+    if(Endian::little)
+        id_rec["__id"] = last_record_id;
+    else
+        id_rec["__id"] = Endian::swap(last_record_id);
     auto id_rec_buf = UnQLiteJsonEncoder::encode(id_rec);
     value.resize(value.size()+id_rec_buf.size()-2);
     std::memcpy(value.data()+value.size()-id_rec_buf.size()+1,
@@ -473,13 +476,12 @@ public:
     for(size_t i = 0; i < values.size(); i++) {
         auto& value = values[i];
         // add the id to the record (it's kind of a hack)
-        id_rec["__id"] = Endian::big ? record_id : Endian::swap(record_id);
+        id_rec["__id"] = record_id;
         auto id_rec_buf = UnQLiteJsonEncoder::encode(id_rec);
         value.resize(value.size()+id_rec_buf.size()-2);
         std::memcpy(value.data()+value.size()-id_rec_buf.size()+1,
                     id_rec_buf.data()+1, id_rec_buf.size()-1);
-        std::string key = coll_name + "_"
-            + std::to_string(Endian::big ? record_id : Endian::swap(record_id));
+        std::string key = coll_name + "_" + std::to_string(record_id);
 
         // write the value
         rc = unqlite_kv_store(m_db, key.c_str(), key.size(),
