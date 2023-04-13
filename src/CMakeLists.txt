@@ -40,7 +40,7 @@ set (sonata-pkg "share/cmake/sonata")
 #
 set (SONATA_VERSION_MAJOR 0)
 set (SONATA_VERSION_MINOR 6)
-set (SONATA_VERSION_PATCH 0)
+set (SONATA_VERSION_PATCH 3)
 set (sonata-vers "${SONATA_VERSION_MAJOR}.${SONATA_VERSION_MINOR}")
 set (SONATA_VERSION "${sonata-vers}.${SONATA_VERSION_PATCH}")
 

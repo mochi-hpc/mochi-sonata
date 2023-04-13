@@ -63,4 +63,8 @@ bool AsyncRequest::completed() const {
   return self->m_async_response.received();
 }
 
+AsyncRequest::operator bool() const {
+    return static_cast<bool>(self);
+}
+
 } // namespace sonata
